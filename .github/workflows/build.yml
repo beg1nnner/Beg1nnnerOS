@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish
+        run: dotnet publish Beg1nnnerOS.csproj -c Release -r win-x64 --self-contained true -o publish
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Build installer
+        shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp /DAppVersion=2.0.0 installer\Beg1nnnerOS.iss'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Beg1nnnerOS-Setup
+          path: installer/Output/*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Beg1nnnerOS-portable
+          path: publish/

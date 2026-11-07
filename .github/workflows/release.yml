@@ -1,0 +1,59 @@
+# Сборка установщика и публикация релиза.
+# Запуск: отправить тег версии, например `git tag v2.1.2 && git push origin v2.1.2`,
+# или вручную: Actions → Release → Run workflow (возьмёт версию из Core/Config.cs).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Номер версии
+        shell: pwsh
+        run: |
+          $code = (Select-String -Path Core/Config.cs -Pattern 'Version = "([^"]+)"').Matches[0].Groups[1].Value
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}".TrimStart('v')
+            if ($tag -ne $code) { throw "Тег v$tag не совпадает с Version = `"$code`" в Core/Config.cs" }
+          }
+          "VERSION=$code" >> $env:GITHUB_ENV
+
+      - name: Сборка программы
+        run: dotnet publish Beg1nnnerOS.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /Qp "/DAppVersion=$env:VERSION" installer\Beg1nnnerOS.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup завершился с ошибкой" }
+
+      - name: Описание релиза
+        shell: pwsh
+        run: |
+          # Раздел «## X.Y.Z» из CHANGELOG.md — его покажет кнопка «Что нового» в программе
+          $text = Get-Content CHANGELOG.md -Raw -Encoding utf8
+          $m = [regex]::Match($text, "(?ms)^##\s+$([regex]::Escape($env:VERSION))\b[^\n]*\n(.*?)(?=^##\s|\z)")
+          $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "Beg1nnnerOS $env:VERSION" }
+          Set-Content -Path release-notes.md -Value $notes -Encoding utf8
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Beg1nnnerOS ${{ env.VERSION }}
+          body_path: release-notes.md
+          files: installer/Output/Beg1nnnerOS-Setup-${{ env.VERSION }}.exe

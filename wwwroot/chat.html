@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/static/favicon.png">
+<title>Beg1nnnerOS — чат</title>
+<style>
+  :root { --fs:20px; --emote:1.6em; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; }
+  body { font:600 var(--fs)/1.35 "Segoe UI", system-ui, sans-serif; color:#fff; }
+  #chat { position:absolute; inset:0; padding:10px; display:flex; flex-direction:column; justify-content:flex-end; gap:6px; overflow:hidden; }
+  body.dir-top #chat { justify-content:flex-start; }
+  .msg { display:block; word-wrap:break-word; overflow-wrap:anywhere; animation:in .35s ease-out both; }
+  .msg.out { animation:out .6s ease-in forwards; }
+  @keyframes in { from { opacity:0; transform:translateY(12px); } }
+  @keyframes out { to { opacity:0; transform:translateX(-20px); } }
+  .badges { display:inline-flex; gap:3px; vertical-align:-.15em; margin-right:5px; }
+  .badges img { height:1em; width:auto; }
+  .name { font-weight:800; }
+  .sep { opacity:.7; margin-right:6px; }
+  .text { font-weight:500; }
+  .mention { font-weight:700; }
+  .emote-wrap { position:relative; display:inline-grid; vertical-align:middle; margin:-.25em 1px; }
+  .emote-wrap > img { grid-area:1/1; height:var(--emote); width:auto; justify-self:center; align-self:center; }
+  .emote-wrap > img.zw { pointer-events:none; }
+
+  /* 1. Классика: ник цветом, текст с тенью, без фона */
+  .t-classic .msg { text-shadow:0 1px 2px rgba(0,0,0,.95), 0 0 6px rgba(0,0,0,.6); }
+
+  /* 2. Карточки: каждое сообщение — полупрозрачная карточка */
+  .t-cards .msg { background:rgba(16,16,22,.78); border-radius:12px; padding:7px 12px; box-shadow:0 4px 14px rgba(0,0,0,.3);
+                  border-left:4px solid var(--uc, #9146ff); align-self:flex-start; max-width:calc(100% - 24px); }
+
+  /* 3. Пузыри: ник над сообщением, облачко цвета ника */
+  .t-bubbles .msg { align-self:flex-start; max-width:calc(100% - 20px); }
+  .t-bubbles .head { display:flex; align-items:center; gap:4px; font-size:.75em; margin:0 0 3px 10px; text-shadow:0 1px 2px #000; }
+  .t-bubbles .sep { display:none; }
+  .t-bubbles .body { display:inline-block; background:#fff; color:#15151d; border-radius:16px 16px 16px 4px; padding:7px 13px;
+                     box-shadow:0 3px 10px rgba(0,0,0,.25); border:2px solid var(--uc, #9146ff); }
+
+  /* 4. Неон: тёмная плашка, светящийся ник */
+  .t-neon .msg { background:rgba(6,6,18,.82); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:6px 12px;
+                 box-shadow:0 0 12px rgba(0,0,0,.4); }
+  .t-neon .name { text-shadow:0 0 8px var(--uc, #ff2bd6), 0 0 18px var(--uc, #ff2bd6); }
+  .t-neon .text { text-shadow:0 0 6px rgba(255,255,255,.25); }
+
+  /* 5. Терминал */
+  .t-retro { font-family:Consolas, "Cascadia Mono", "Courier New", monospace !important; }
+  .t-retro .msg { color:#33ff66; text-shadow:0 0 6px rgba(51,255,102,.6); background:rgba(0,0,0,.82); padding:3px 10px; border-left:2px solid #33ff66; }
+  .t-retro .name { color:#33ff66 !important; }
+  .t-retro .name::before { content:"<"; opacity:.6; } .t-retro .name::after { content:">"; opacity:.6; }
+  .t-retro .sep { display:none; }
+  .t-retro .badges { display:none; }
+
+  /* 6. Компакт: мелко, в одну строку, плотно */
+  .t-compact #chat { gap:2px; }
+  .t-compact .msg { font-size:.8em; background:rgba(0,0,0,.55); padding:2px 8px; border-radius:6px; align-self:flex-start; max-width:calc(100% - 20px);
+                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* 7. Светлая: белые карточки, тёмный текст */
+  .t-light .msg { background:rgba(255,255,255,.94); color:#1b1b24; border-radius:12px; padding:7px 12px; align-self:flex-start;
+                  max-width:calc(100% - 24px); box-shadow:0 4px 14px rgba(0,0,0,.18); }
+  .t-light .name { filter:brightness(.72) saturate(1.3); }
+</style>
+</head>
+<body class="t-classic">
+<div id="chat"></div>
+<script>
+const P = new URLSearchParams(location.search);
+const DEMO = P.has("demo");
+const chat = document.getElementById("chat");
+let cfg = {theme: "classic", font_size: 20, max_messages: 20, fade_sec: 0, direction: "bottom", show_badges: true,
+           hide_commands: true, hide_app: false, hidden_users: [], emotes: {"7tv": true, bttv: false, ffz: false}};
+let broadcasterId = "";
+const emotes = new Map();   // имя → {url, zw}
+const PALETTE = ["#ff4f6d", "#ff8a3d", "#ffd23f", "#57e389", "#2ec4b6", "#3d9cff", "#a77bff", "#ff6ad5", "#7ee0ff", "#c3f73a"];
+
+const colorFor = login => { let h = 0; for (const c of login || "") h = (h * 31 + c.charCodeAt(0)) >>> 0; return PALETTE[h % PALETTE.length]; };
+async function getJSON(url) { const r = await fetch(url, {cache: "no-store"}); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// ---------- смайлики 7TV / BTTV / FFZ ----------
+function add7tv(list) {
+  for (const e of list || []) {
+    const host = e.data && e.data.host; if (!host) continue;
+    const files = (host.files || []).map(f => f.name);
+    const file = files.includes("2x.webp") ? "2x.webp" : files.find(f => f.endsWith(".webp")) || files[0] || "2x.webp";
+    const zw = ((e.flags || 0) & 1) !== 0 || ((e.data.flags || 0) & 256) !== 0;
+    emotes.set(e.name, {url: (host.url.startsWith("//") ? "https:" : "") + host.url + "/" + file, zw});
+  }
+}
+function addBttv(list) { for (const e of list || []) emotes.set(e.code, {url: `https://cdn.betterttv.net/emote/${e.id}/2x.webp`, zw: false}); }
+function addFfz(sets) {
+  for (const s of Object.values(sets || {})) for (const e of s.emoticons || []) {
+    let url = e.animated ? (e.animated["2"] || e.animated["1"]) : (e.urls["2"] || e.urls["1"]);
+    if (!url) continue;
+    if (url.startsWith("//")) url = "https:" + url;
+    emotes.set(e.name, {url, zw: !!(e.modifier && !e.modifier_flags)});
+  }
+}
+async function loadEmotes() {
+  const next = new Map(), en = cfg.emotes || {};
+  const old = new Map(emotes); emotes.clear();
+  const jobs = [];
+  // сначала глобальные, затем канала — смайлики канала важнее
+  if (en.ffz) jobs.push(getJSON("https://api.frankerfacez.com/v1/set/global").then(d => addFfz(d.sets)).catch(() => {}));
+  if (en.bttv) jobs.push(getJSON("https://api.betterttv.net/3/cached/emotes/global").then(addBttv).catch(() => {}));
+  if (en["7tv"]) jobs.push(getJSON("https://7tv.io/v3/emote-sets/global").then(d => add7tv(d.emotes)).catch(() => {}));
+  await Promise.all(jobs);
+  if (broadcasterId) {
+    const ch = [];
+    if (en.ffz) ch.push(getJSON(`https://api.frankerfacez.com/v1/room/id/${broadcasterId}`).then(d => addFfz(d.sets)).catch(() => {}));
+    if (en.bttv) ch.push(getJSON(`https://api.betterttv.net/3/cached/users/twitch/${broadcasterId}`)
+      .then(d => { addBttv(d.sharedEmotes); addBttv(d.channelEmotes); }).catch(() => {}));
+    await Promise.all(ch);
+    if (en["7tv"]) await getJSON(`https://7tv.io/v3/users/twitch/${broadcasterId}`)
+      .then(d => add7tv(d.emote_set && d.emote_set.emotes)).catch(() => {});
+  }
+  if (emotes.size === 0 && old.size) for (const [k, v] of old) emotes.set(k, v);   // сеть недоступна — оставляем прежние
+}
+
+// ---------- отрисовка ----------
+function emoteImg(url, name, zw) {
+  const img = document.createElement("img");
+  img.src = url; img.alt = name; img.title = name; if (zw) img.className = "zw";
+  return img;
+}
+function appendEmote(body, url, name, zw) {
+  const last = body.lastElementChild;
+  // «нулевой ширины» (7TV) накладываются на предыдущий смайлик
+  if (zw && last && last.classList.contains("emote-wrap") && !(body.lastChild && body.lastChild.nodeType === 3 && body.lastChild.textContent.trim())) {
+    last.appendChild(emoteImg(url, name, true)); return;
+  }
+  const wrap = document.createElement("span"); wrap.className = "emote-wrap";
+  wrap.appendChild(emoteImg(url, name, false));
+  body.appendChild(wrap);
+}
+function renderText(body, text) {
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue;
+    const e = /\s/.test(part) ? null : emotes.get(part);
+    if (e) appendEmote(body, e.url, part, e.zw);
+    else {
+      // пробел между двумя смайликами нулевой ширины не должен ломать наложение
+      if (/^\s+$/.test(part) && body.lastElementChild && body.lastElementChild.classList.contains("emote-wrap")) {
+        body.appendChild(document.createTextNode(" ")); continue;
+      }
+      body.appendChild(document.createTextNode(part));
+    }
+  }
+}
+function visible(m) {
+  if (cfg.hide_commands && (m.text || "").trim().startsWith("!")) return false;
+  if (cfg.hide_app && m.own) return false;
+  const hidden = (cfg.hidden_users || []).map(u => u.toLowerCase().replace(/^@/, ""));
+  return !hidden.includes((m.login || "").toLowerCase());
+}
+function render(m) {
+  if (!visible(m)) return;
+  const el = document.createElement("div");
+  el.className = "msg"; el.dataset.id = m.id; el.dataset.user = m.user_id || "";
+  const color = m.color || colorFor(m.login);
+  el.style.setProperty("--uc", color);
+  const head = document.createElement("span"); head.className = "head";
+  if (cfg.show_badges && m.badges && m.badges.length) {
+    const b = document.createElement("span"); b.className = "badges";
+    for (const u of m.badges) { const i = document.createElement("img"); i.src = u; b.appendChild(i); }
+    head.appendChild(b);
+  }
+  const name = document.createElement("span"); name.className = "name"; name.textContent = m.name || m.login; name.style.color = color;
+  head.appendChild(name);
+  const sep = document.createElement("span"); sep.className = "sep"; sep.textContent = ":";
+  head.appendChild(sep);
+  const body = document.createElement("span"); body.className = "body text";
+  for (const f of m.fragments || [{t: "text", text: m.text || ""}]) {
+    if (f.t === "emote") appendEmote(body, f.url, f.name, false);
+    else if (f.t === "mention") { const s = document.createElement("span"); s.className = "mention"; s.textContent = f.text; body.appendChild(s); }
+    else renderText(body, f.text || "");
+  }
+  el.append(head, " ", body);
+  if (cfg.direction === "top") chat.prepend(el); else chat.appendChild(el);
+  trim();
+  if (cfg.fade_sec > 0) setTimeout(() => remove(el), cfg.fade_sec * 1000);
+}
+function remove(el) { if (!el || el.classList.contains("out")) return; el.classList.add("out"); setTimeout(() => el.remove(), 650); }
+function trim() {
+  const max = Math.max(1, cfg.max_messages || 20);
+  const items = [...chat.querySelectorAll(".msg:not(.out)")];
+  const extra = items.length - max;
+  if (extra > 0) (cfg.direction === "top" ? items.slice(-extra) : items.slice(0, extra)).forEach(e => e.remove());
+}
+// Своя тема (Pro): база + цвета, шрифт, скругления, рамка, тень и свой CSS
+const CHAT_BASES = ["classic", "cards", "bubbles", "neon", "retro", "compact", "light"];
+const SHADOWS = {none: "none", soft: "0 4px 14px rgba(0,0,0,.3)", strong: "0 8px 24px rgba(0,0,0,.6)", glow: "0 0 14px var(--accent)"};
+let customThemes = [], previewTheme = null, customKey = "";
+window.addEventListener("message", e => { if (e.data && e.data.type === "b1-theme") { previewTheme = e.data.theme; applyCfg(); } });
+function applyCustom(t) {
+  const key = t ? JSON.stringify(t) : "";
+  if (key === customKey) return;
+  customKey = key;
+  let el = document.getElementById("custom-theme");
+  if (!el) { el = document.createElement("style"); el.id = "custom-theme"; document.head.appendChild(el); }
+  if (!t) { el.textContent = ""; return; }
+  const box = t.base === "bubbles" ? ".body" : ".msg";
+  const css = [`:root { --accent:${t.accent}; }`, `body { color:${t.text_color}; }`];
+  if (t.font) css.push(`body { font-family: ${t.font}, "Segoe UI", sans-serif !important; }`);
+  css.push(`${box} { background:${t.background} !important; color:${t.text_color} !important; border-radius:${t.radius}px !important;
+    padding:${Math.round(t.padding / 2)}px ${t.padding}px !important; box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important;
+    ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  css.push(`.t-cards .msg, .t-neon .msg { border-left-color:var(--uc, ${t.accent}) !important; }`);
+  if (t.uppercase) css.push(".name { text-transform:uppercase; }");
+  el.textContent = css.join("\n") + "\n" + (t.css || "");
+}
+function applyCfg() {
+  const want = P.get("theme") || cfg.theme || "classic";
+  const ct = previewTheme || (want.startsWith("custom:") ? customThemes.find(t => "custom:" + t.id === want) : null);
+  const theme = ct ? (CHAT_BASES.includes(ct.base) ? ct.base : "classic") : want;
+  document.body.className = "t-" + theme + (cfg.direction === "top" ? " dir-top" : "");
+  document.documentElement.style.setProperty("--fs", (Number(P.get("size")) || cfg.font_size || 20) + "px");
+  applyCustom(ct);
+}
+
+// ---------- подключение ----------
+let emotesKey = "";
+async function loadConfig() {
+  try {
+    const {data} = await getJSON("/api/chat/overlay");
+    cfg = Object.assign(cfg, data.settings); broadcasterId = data.broadcaster_id || ""; customThemes = data.custom_themes || [];
+    applyCfg();
+    const key = JSON.stringify([cfg.emotes, broadcasterId]);
+    if (key !== emotesKey) { emotesKey = key; await loadEmotes(); }
+  } catch (e) {}
+}
+function connect() {
+  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/chat");
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "history") { chat.innerHTML = ""; (m.items || []).forEach(render); }
+    else if (m.type === "msg") render(m);
+    else if (m.type === "delete") remove(chat.querySelector(`.msg[data-id="${CSS.escape(m.id)}"]`));
+    else if (m.type === "clear_user") chat.querySelectorAll(`.msg[data-user="${CSS.escape(m.user_id)}"]`).forEach(remove);
+    else if (m.type === "clear") chat.querySelectorAll(".msg").forEach(remove);
+  };
+  ws.onclose = () => setTimeout(connect, 2000);
+}
+
+// ---------- демо для превью в панели ----------
+const DEMO_MSGS = [
+  {login: "kappa_fan", name: "Kappa_Fan", color: "#ff4f6d", fragments: [{t: "text", text: "Привет всем! "}, {t: "emote", name: "Kappa", url: "https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/2.0"}]},
+  {login: "moder", name: "Модер", color: "#57e389", badges: ["https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/2"], text: "Заказ музыки — за баллы канала Clap"},
+  {login: "viewer42", name: "viewer42", color: "", text: "этот трек огонь EZ Clap"},
+  {login: "night_owl", name: "Night_Owl", color: "#3d9cff", fragments: [{t: "text", text: "когда следующий стрим? "}, {t: "emote", name: "LUL", url: "https://static-cdn.jtvnw.net/emoticons/v2/425618/default/dark/2.0"}]},
+  {login: "subscriber", name: "Подписчик", color: "#a77bff", badges: ["https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/2"], text: "спасибо за стрим ❤ peepoHappy"},
+];
+async function demo() {
+  try { const {data} = await getJSON("/api/chat/overlay"); cfg = Object.assign(cfg, data.settings); customThemes = data.custom_themes || []; } catch (e) {}
+  cfg.fade_sec = 0; applyCfg(); await loadEmotes();
+  let i = 0;
+  const tick = () => { const m = Object.assign({id: "d" + i, user_id: "u" + (i % 5)}, DEMO_MSGS[i % DEMO_MSGS.length]); render(m); i++; };
+  for (let k = 0; k < 4; k++) tick();
+  setInterval(tick, 2200);
+}
+
+if (DEMO) demo();
+else { loadConfig().then(connect); setInterval(loadConfig, 5000); setInterval(() => { emotesKey = ""; }, 10 * 60 * 1000); }
+</script>
+</body>
+</html>

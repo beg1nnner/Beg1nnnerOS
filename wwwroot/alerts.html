@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/static/favicon.png">
+<title>Beg1nnnerOS — МедиаАлерты</title>
+<style>
+  html,body { margin:0; width:100vw; height:100vh; background:transparent; overflow:hidden; }
+  #stage { position:fixed; inset:0; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script src="/static/alert-render.js"></script>
+<script>
+const stage = document.getElementById("stage");
+let current = null, master = 100, alertId = null;
+function connect() {
+  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/alerts");
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "hello") master = m.master;
+    if (m.type === "show") {
+      if (current) current.remove();
+      master = m.master; alertId = m.alert.id;
+      current = renderAlert(stage, m.alert, {master});
+    }
+    if ((m.type === "end" || m.type === "stop") && current) { current.remove(); current = null; }
+    if (m.type === "volume") {
+      master = m.master;
+      if (current) current.setVolume(master, m.alerts[alertId]);
+    }
+  };
+  ws.onclose = () => setTimeout(connect, 2000);
+}
+connect();
+</script>
+</body>
+</html>

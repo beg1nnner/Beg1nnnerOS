@@ -1,0 +1,1617 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/static/favicon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Beg1nnnerOS</title>
+<link rel="stylesheet" href="/static/style.css">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("hub-theme") || "twitch"; } catch (e) {}</script>
+<style>
+  body { display:flex; min-height:100vh; }
+  nav { width:210px; flex:none; background:var(--panel); border-right:1px solid var(--line); padding:18px 12px;
+        position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px; }
+  nav .logo { font-weight:800; font-size:18px; padding:0 10px 14px; letter-spacing:.02em; }
+  nav .logo b { color:var(--accent); }
+  nav button { text-align:left; background:none; border:none; padding:10px 12px; border-radius:8px; color:var(--muted); font-size:14.5px; }
+  nav button.on { background:var(--panel2); color:var(--fg); box-shadow:inset 3px 0 0 var(--accent); }
+  nav .ver { margin-top:auto; padding:10px; font-size:11.5px; color:var(--muted); }
+  main { flex:1; padding:24px 28px 60px; max-width:1180px; min-width:0; }
+  .ready { display:flex; flex-direction:column; gap:4px; }
+  .ready .t { font-size:12px; color:var(--muted); } .ready .v { font-weight:600; }
+  .np-title { font-size:18px; font-weight:700; }
+  .upd { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 18px; padding:12px 16px; border-radius:12px;
+         background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, var(--panel)), var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .upd .t { flex:1; min-width:240px; }
+  .upd .t b { font-size:15px; }
+  .upd-notes { white-space:pre-wrap; margin:-8px 0 18px; padding:12px 16px; border-radius:10px; background:var(--panel); border:1px solid var(--line); font-size:13.5px; max-height:260px; overflow:auto; }
+  .bar { height:6px; background:var(--panel2); border-radius:4px; overflow:hidden; margin:10px 0 4px; }
+  .bar i { display:block; height:100%; background:var(--accent); width:0; }
+  .vars code { cursor:pointer; margin:0 3px 3px 0; display:inline-block; }
+  .drop { border:2px dashed var(--line); border-radius:10px; padding:16px; text-align:center; color:var(--muted); cursor:pointer; }
+  .drop.over { border-color:var(--accent); color:var(--fg); }
+  #p-pro input[type=color] { width:64px; height:36px; padding:3px; cursor:pointer; }
+  iframe.ov { border:1px solid var(--line); border-radius:8px; background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px;
+    transform-origin:0 0; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo"><img src="/static/icon.png" alt="" style="width:26px;height:26px;vertical-align:-6px;margin-right:8px;border-radius:7px">Beg1nnner<b>OS</b></div>
+  <button data-p="live" class="on">📡 Эфир</button>
+  <button data-p="music">🎵 Музыка</button>
+  <button data-p="chat">💬 Чат</button>
+  <button data-p="alerts">✨ МедиаАлерты</button>
+  <button data-p="events">🔔 События</button>
+  <button data-p="settings">⚙️ Настройки</button>
+  <button data-p="pro" id="nav-pro">🚀 Дополнительно</button>
+  <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" style="margin-top:auto" title="Поддержать разработчика через DonationAlerts">💜 Поблагодарить разработчика</a>
+  <a class="contact-btn" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" style="margin-top:8px" title="Предложения по улучшению и сообщения об ошибках"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#29a9eb"/><path fill="#fff" d="M5.4 11.7l11.2-4.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg> Связь и предложения</a>
+  <div class="ver" id="ver" style="margin-top:0"></div>
+</nav>
+<main>
+<div id="upd-bar" class="upd hidden"></div>
+<div id="upd-notes" class="upd-notes hidden"></div>
+
+<!-- ================= ЭФИР ================= -->
+<section id="p-live">
+  <h2>Эфир</h2>
+  <div class="grid" id="ready"></div>
+  <div class="row" style="align-items:stretch">
+    <div class="card grow" style="min-width:320px">
+      <div class="muted small">Сейчас играет</div>
+      <div class="np-title" id="np-title">—</div>
+      <div class="muted small" id="np-who"></div>
+      <div class="bar"><i id="np-bar"></i></div>
+      <div class="row small muted"><span id="np-pos"></span><span class="grow"></span><span id="np-votes"></span></div>
+      <div class="row" style="margin-top:10px">
+        <button onclick="api('/music/pause',{})">⏯ Пауза</button>
+        <button onclick="api('/music/skip',{})">⏭ Пропуск</button>
+        <button onclick="if(confirm('Заблокировать текущий трек и пропустить?')) api('/music/block',{})">🚫 Блок</button>
+        <span class="small muted">Громкость</span>
+        <input type="range" min="0" max="100" id="live-vol" class="grow" style="max-width:220px">
+        <span id="live-volv" class="small"></span>
+      </div>
+      <div style="margin-top:12px"><div class="muted small">Очередь</div><ol id="live-q" style="margin:4px 0 0;padding-left:1.3em"></ol></div>
+    </div>
+    <div class="card" style="width:320px">
+      <h3>Быстрые действия</h3>
+      <div class="muted small">Ближайший таймер</div>
+      <div id="next-timer" style="margin-bottom:12px">—</div>
+      <div class="row" style="flex-direction:column;align-items:stretch">
+        <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)">⏸ Пауза уведомлений</button>
+        <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))">⏹ Остановить все МедиаАлерты</button>
+      </div>
+      <div class="muted small" id="alerts-q" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Сообщение в чат</h3>
+    <div class="row"><input id="chat-msg" class="grow" placeholder="Текст будет опубликован в Twitch от выбранного отправителя"><button class="primary" onclick="sendChat()">Отправить</button></div>
+  </div>
+  <div class="card">
+    <div class="row"><h3 class="grow" style="margin:0">Журнал действий и ошибок</h3>
+      <select id="log-kind" style="width:auto" onchange="loadLog()">
+        <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
+        <option value="command">Команды</option><option value="event">События</option><option value="timer">Таймеры</option>
+        <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
+      </select>
+      <button class="sm" onclick="api('/log/clear',{}).then(loadLog)">Очистить</button></div>
+    <div class="log" id="log" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<!-- ================= МУЗЫКА ================= -->
+<section id="p-music" class="hidden">
+  <h2>Музыка</h2>
+  <div class="tabs" data-group="music">
+    <button data-t="player" class="on">Плеер</button><button data-t="orders">Заказы</button>
+    <button data-t="blocks">Блокировки</button><button data-t="overlay">Оверлей OBS</button><button data-t="mstats">Статистика музыки</button>
+  </div>
+  <div data-tab="player">
+    <div class="card">
+      <h3>Ручной заказ</h3>
+      <div class="row"><input id="m-add" class="grow" placeholder="Ссылка YouTube / Spotify или «исполнитель — название»">
+        <button class="primary" id="m-add-btn" onclick="manualAdd()">+ Добавить</button></div>
+      <div class="muted small" style="margin-top:6px">Ручное добавление не списывает баллы и не применяет лимиты заказов.</div>
+    </div>
+    <div class="card"><div class="row"><h3 class="grow" style="margin:0">Очередь</h3>
+      <button class="sm danger" onclick="if(confirm('Очистить очередь?')) api('/music/clear',{})">Очистить</button></div>
+      <table style="margin-top:8px"><thead><tr><th>#</th><th>Трек</th><th>Длит.</th><th>Заказ</th><th></th></tr></thead><tbody id="m-queue"></tbody></table>
+    </div>
+  </div>
+  <div data-tab="orders" class="hidden">
+    <div class="card hl">
+      <div class="row"><h3 class="grow" style="margin:0">Награды за баллы канала</h3>
+        <label class="switch"><input type="checkbox" data-s="music.rewards_enabled"> Музыкальные награды включены</label>
+        <button class="sm" onclick="api('/rewards/sync',{}).then(r=>toast('Награды: '+r.status))">Синхронизировать с Twitch</button></div>
+      <table style="margin-top:10px"><thead><tr><th>Награда</th><th>Название в Twitch</th><th>Цена</th><th>Вкл.</th></tr></thead><tbody>
+        <tr><td>Заказать музыку</td><td><input data-s="music.rewards.order.title" maxlength="45"></td><td><input type="number" min="1" data-s="music.rewards.order.cost"></td><td><input type="checkbox" data-s="music.rewards.order.enabled"></td></tr>
+        <tr><td>Трек вне очереди</td><td><input data-s="music.rewards.priority.title" maxlength="45"></td><td><input type="number" min="1" data-s="music.rewards.priority.cost"></td><td><input type="checkbox" data-s="music.rewards.priority.enabled"></td></tr>
+        <tr><td>Пропустить трек</td><td><input data-s="music.rewards.skip.title" maxlength="45"></td><td><input type="number" min="1" data-s="music.rewards.skip.cost"></td><td><input type="checkbox" data-s="music.rewards.skip.enabled"></td></tr>
+      </tbody></table>
+      <div class="muted small" style="margin-top:8px">Приоритетный заказ не обрывает текущий трек. Неподходящий заказ отклоняется, баллы возвращаются через Twitch.</div>
+    </div>
+    <div class="card">
+      <h3>Источники и ограничения</h3>
+      <div class="row" style="margin-bottom:12px">
+        <label class="switch"><input type="checkbox" data-s="music.sources.youtube"> Ссылки YouTube</label>
+        <label class="switch"><input type="checkbox" data-s="music.sources.yandex"> Яндекс Музыка</label>
+        <label class="switch"><input type="checkbox" data-s="music.sources.spotify"> Ссылки Spotify (поиск совпадения)</label>
+        <label class="switch"><input type="checkbox" data-s="music.sources.search"> Поиск по названию в YouTube</label>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <label class="f"><span>Где искать сначала (название и Spotify)</span>
+          <select data-s="music.search_first"><option value="youtube">YouTube</option><option value="yandex">Яндекс Музыка</option></select></label>
+        <span class="small muted" style="margin-top:16px">Для Яндекс Музыки сохраните токен в «Настройках».</span>
+      </div>
+      <div class="row">
+        <label class="f"><span>Лимит заказов от зрителя</span><input type="number" min="1" data-s="music.per_user_limit"></label>
+        <label class="f"><span>Длина очереди</span><input type="number" min="1" data-s="music.queue_limit"></label>
+        <label class="f"><span>Макс. длительность трека, мин</span><input type="number" min="1" data-s="music.max_duration_min"></label>
+        <label class="f"><span>Голосов для !skip</span><input type="number" min="1" data-s="music.skip_votes"></label>
+        <label class="f"><span>Мин. просмотров на YouTube (0 — без фильтра)</span><input type="number" min="0" step="1000" data-s="music.min_views"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="switch"><input type="checkbox" data-s="music.skip_vote_enabled"> Голосование !skip</label>
+        <label class="switch"><input type="checkbox" data-s="music.vip_priority"> Приоритет VIP</label>
+        <label class="switch"><input type="checkbox" data-s="music.sub_priority"> Приоритет подписчиков</label>
+        <label class="switch"><input type="checkbox" data-s="music.announce"> Сообщать в чат о принятом заказе</label>
+        <label class="switch"><input type="checkbox" data-s="music.chat_errors"> Писать в чат, если трек не удалось включить</label>
+      </div>
+      <div class="row" style="margin-top:12px;align-items:flex-end">
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.order_sound"> 🔔 Звук при новом заказе</label>
+        <label class="f"><span>Звук</span><select data-s="music.order_sound_style" id="chime-style">
+          <option value="bell">Колокольчик</option><option value="marimba">Маримба</option><option value="soft">Мягкий аккорд</option><option value="drop">Капля</option></select></label>
+        <label class="f"><span>Громкость звука, %</span><input type="number" min="0" max="100" step="5" data-s="music.order_sound_volume" id="chime-vol"></label>
+        <button class="sm" onclick="api('/music/chime',{style:$('chime-style').value,volume:+$('chime-vol').value})">▶ Прослушать</button>
+      </div>
+      <div class="muted small" style="margin-top:6px">Звук играет на устройстве вывода музыки, когда зритель заказывает трек за баллы. Ошибки YouTube (18+, видео удалено, недоступно в стране и т. п.) пишутся в чат на русском.</div>
+      <label class="f" style="margin-top:12px"><span>Запрещённые слова (по одному в строке; также для запрета исполнителя)</span><textarea data-s="music.banned_words" data-list></textarea></label>
+    </div>
+  </div>
+  <div data-tab="blocks" class="hidden">
+    <div class="card">
+      <h3>Блокировки</h3>
+      <div class="muted small" style="margin-bottom:10px">Это ограничение музыкальных заказов, а не бан в Twitch.</div>
+      <div class="row" style="align-items:stretch">
+        <label class="f grow"><span>Ники зрителей (по одному в строке)</span><textarea data-s="music.blocked_users" data-list style="min-height:160px"></textarea></label>
+        <label class="f grow"><span>Треки: ID видео YouTube, ссылка или точное название</span><textarea data-s="music.blocked_tracks" data-list style="min-height:160px"></textarea></label>
+      </div>
+    </div>
+  </div>
+  <div data-tab="overlay" class="hidden">
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Тема плеера в OBS</h3><span class="small muted">Выбор сохраняется сразу</span></div>
+      <div class="theme-grid" id="ov-themes" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))"></div>
+      <div class="muted small" style="margin-top:10px">Для отдельной сцены можно задать тему прямо в адресе источника: <code>/?theme=neon</code>. Положение очереди тоже можно задать в адресе: <code>/?queue=above</code> или <code>/?queue=below</code>. В превью показан демо-трек, если сейчас ничего не играет.</div>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <div class="card" style="width:380px">
+        <h3>Оформление</h3>
+        <label class="switch" style="margin-bottom:10px"><input type="checkbox" data-s="overlay.custom_colors" id="ov-custom"> Свои цвета вместо палитры темы</label>
+        <div class="row">
+          <label class="f"><span>Ширина</span><input type="number" data-s="overlay.width"></label>
+          <label class="f"><span>Высота</span><input type="number" data-s="overlay.height"></label>
+          <label class="f"><span>Размер шрифта</span><input type="number" data-s="overlay.font_size"></label>
+          <label class="f"><span>Акцент</span><input type="color" data-s="overlay.accent" style="height:38px"></label>
+          <label class="f"><span>Цвет текста</span><input type="color" data-s="overlay.text_color" style="height:38px"></label>
+          <label class="f"><span>Фон (CSS)</span><input data-s="overlay.background"></label>
+          <label class="f"><span>Треков в очереди</span><input type="number" min="0" max="15" data-s="overlay.queue_size"></label>
+          <label class="f"><span>Где показывать очередь</span>
+            <select data-s="overlay.queue_position"><option value="below">Под текущим треком</option><option value="above">Над текущим треком</option></select></label>
+        </div>
+        <div class="row" style="margin-top:10px;flex-direction:column;align-items:flex-start">
+          <label class="switch"><input type="checkbox" data-s="overlay.show_queue"> Показывать очередь</label>
+          <label class="switch"><input type="checkbox" data-s="overlay.show_requester"> Показывать заказавшего</label>
+          <label class="switch"><input type="checkbox" data-s="overlay.show_progress"> Полоса прогресса</label>
+          <label class="switch"><input type="checkbox" data-s="overlay.toasts"> Уведомление о новом треке</label>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button onclick="copy(base()+'/')">Скопировать адрес</button>
+          <button onclick="api('/music/toast',{}).then(()=>toast('Уведомление отправлено в OBS'))">Показать уведомление в OBS</button>
+        </div>
+        <div class="muted small" style="margin-top:8px">Предпросмотр обновляется после сохранения. Карточка звук не передаёт — настройте захват аудио в OBS.</div>
+      </div>
+      <div class="card grow"><h3>Предпросмотр</h3><div id="ov-wrap" style="overflow:hidden"><iframe class="ov" id="ov-frame" src="/?demo"></iframe></div></div>
+    </div>
+  </div>
+  <div data-tab="mstats" class="hidden">
+    <div class="card"><div class="row"><h3 class="grow" style="margin:0">Статистика музыки</h3>
+      <select id="ms-period" style="width:auto" onchange="loadStats()"><option value="stream">Стрим / сеанс</option><option value="week">7 дней</option><option value="all">Всё время</option></select></div>
+      <div id="ms-body" style="margin-top:12px"></div></div>
+  </div>
+</section>
+
+<!-- ================= ЧАТ ================= -->
+<section id="p-chat" class="hidden">
+  <h2>Чат</h2>
+  <div class="tabs" data-group="chat">
+    <button data-t="cmds" class="on">Команды и таймеры</button><button data-t="vtimers">Разовые таймеры</button><button data-t="cstats">Статистика</button><button data-t="tools">Инструменты</button><button data-t="obschat">Чат в OBS</button>
+  </div>
+  <div data-tab="cmds">
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
+      <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Ответ</th><th>Доступ</th><th>Кулдаун</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-custom"></tbody></table>
+      <div class="row small muted" style="margin-top:10px">Общий лимит запросов одного зрителя:
+        <input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" style="width:80px"> сек</div>
+    </div>
+    <div class="card">
+      <h3>Автосообщение в начале стрима</h3>
+      <div class="muted small" style="margin-bottom:8px">Публикуется выбранным отправителем один раз за стрим, в том числе при запуске приложения посреди эфира.
+        Публичного API закрепления у Twitch нет — закрепите сообщение в чате вручную, если нужно.</div>
+      <div class="row"><textarea data-s="autopost.text" class="grow" placeholder="Например: Правила чата — !правила. Заказ музыки — за баллы канала"></textarea></div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" data-s="autopost.enabled"> Включено</label>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Стандартные команды</h3>
+        <button class="sm" onclick="if(confirm('Вернуть весь стандартный набор? Имена, шаблоны и доступ сбросятся. Свои команды не удаляются.')) api('/commands/reset',{}).then(loadCommands)">Восстановить стандартные команды</button></div>
+      <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Назначение</th><th>Доступ</th><th>Кулдаун на зрителя</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-std"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Таймеры</h3><button class="primary sm" onclick="editTimer()">+ Добавить таймер</button></div>
+      <div class="muted small" style="margin-top:4px">Срабатывают во время эфира, когда выполнены оба условия: прошёл интервал и набралось нужное число новых сообщений (0 — без условия активности).</div>
+      <table style="margin-top:8px"><thead><tr><th>Название</th><th>Текст</th><th>Интервал</th><th>Мин. сообщений</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-timers"></tbody></table>
+    </div>
+  </div>
+  <div data-tab="vtimers" class="hidden">
+    <div class="card"><h3>Разовые таймеры зрителей</h3>
+      <div class="muted small">Создаются командой <code>!timer 15м текст</code> (от 5 секунд до 24 часов). Просроченные более чем на час после перезапуска не отправляются.</div>
+      <table style="margin-top:8px"><thead><tr><th>ID</th><th>Зритель</th><th>Текст</th><th>Через</th><th></th></tr></thead><tbody id="c-vtimers"></tbody></table></div>
+  </div>
+  <div data-tab="tools" class="hidden">
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">ShazamIO</h3><label class="switch"><input type="checkbox" data-s="tools.shazam.enabled"> Включено</label></div>
+      <div class="muted small" id="sh-avail" style="margin:4px 0 8px"></div>
+      <div class="row">
+        <label class="f grow"><span>Устройство, на котором звучит музыка (записывается его выход через WASAPI, не микрофон)</span><select data-s="tools.shazam.device" id="sh-dev"></select></label>
+        <button class="sm" style="margin-top:16px" onclick="loadTools(true)">Найти устройства звука</button>
+        <label class="f" style="width:170px"><span>Интервал нового распознавания, сек (0–60)</span><input type="number" min="0" max="60" data-s="tools.shazam.interval"></label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="sh-btn" onclick="shazamNow()">Распознать сейчас</button><span id="sh-out" class="muted"></span></div>
+      <div class="muted small" style="margin-top:6px">Запись длится 10 секунд, затем отпечаток отправляется сервису. Экспериментальный неофициальный интерфейс: речь и шум мешают распознаванию.</div>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Локальный перевод</h3>
+        <label class="switch"><input type="checkbox" data-s="tools.translate.enabled"> Перевод включён</label>
+        <label class="switch"><input type="checkbox" data-s="tools.translate.auto"> Автоматический перевод чата</label></div>
+      <div class="muted small" id="tr-avail" style="margin:4px 0 8px"></div>
+      <div class="row">
+        <label class="f"><span>Язык источника (auto, en, de…)</span><input data-s="tools.translate.source"></label>
+        <label class="f"><span>Целевой язык (ru, en…)</span><input data-s="tools.translate.target"></label>
+      </div>
+      <div class="row" style="margin-top:10px"><input id="tr-in" class="grow" placeholder="Текст для проверки"><button onclick="trTest()">Перевести</button></div>
+      <div id="tr-out" class="muted" style="margin-top:6px"></div>
+      <div class="muted small" style="margin-top:6px">В чате: <code>!translate текст</code> или ответьте командой на сообщение зрителя. «auto» определяет язык по алфавиту (латиница считается английским).</div>
+      <h3 style="margin-top:16px">Сервер перевода (LibreTranslate)</h3>
+      <div class="row">
+        <label class="f grow"><span>Адрес сервера</span><input data-s="tools.translate.url" placeholder="http://127.0.0.1:5000"></label>
+        <label class="f grow"><span>API-ключ (если нужен)</span><input type="password" data-s="tools.translate.api_key" data-secret="tools.translate.has_api_key" autocomplete="new-password"></label>
+        <button style="margin-top:16px" onclick="trLanguages()">Проверить</button>
+      </div>
+      <div id="tr-langs" class="small muted" style="margin-top:8px"></div>
+      <details style="margin-top:8px"><summary class="small" style="cursor:pointer">Как запустить локальный перевод</summary><ol class="small muted">
+        <li>LibreTranslate работает на тех же локальных моделях Argos Translate: перевод выполняется на вашем компьютере, без облака.</li>
+        <li>Установите Python 3.10+ и выполните в командной строке: <code>pip install libretranslate</code></li>
+        <li>Запустите только нужные языки: <code>libretranslate --load-only en,ru</code> — модели скачаются при первом запуске (сотни МБ).</li>
+        <li>Оставьте адрес <code>http://127.0.0.1:5000</code> и нажмите «Проверить». Можно указать и другой совместимый сервер с ключом.</li></ol></details>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Автоматическое исправление раскладки</h3><label class="switch"><input type="checkbox" data-s="tools.layout.enabled"> Включено</label></div>
+      <div class="muted small" style="margin:4px 0 8px">При уверенном обнаружении текста в неверной RU/EN-раскладке отправитель публикует исправленный вариант с именем зрителя. Оригинал не меняется; команды, ссылки и обычный английский пропускаются. Распознаются и короткие слова со сленгом (re → ку, kj[ → лох), и обратное направление (руддщ → hello); ники и эмоуты не трогаются.</div>
+      <div class="row"><input id="ly-in" class="grow" value="ghbdtn rfr ltkf?"><button onclick="layoutTest()">Проверить</button></div>
+      <div id="ly-out" class="muted" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <div data-tab="obschat" class="hidden">
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Тема чата в OBS</h3><span class="small muted">Выбор сохраняется сразу</span></div>
+      <div class="theme-grid" id="chat-themes" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))"></div>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <div class="card grow" style="min-width:360px">
+        <h3>Адрес для OBS</h3>
+        <div class="row"><code id="chat-url"></code><button class="sm" onclick="copy(base()+'/chat')">Скопировать адрес</button></div>
+        <div class="muted small" style="margin-top:6px">В OBS: «Источник → Браузер», вставьте адрес, размер например 420×640. Новые сообщения появляются снизу (или сверху — см. ниже).
+          Для отдельной сцены тему и размер шрифта можно задать в адресе: <code>/chat?theme=bubbles&amp;size=24</code>.</div>
+        <h3 style="margin-top:16px">Смайлики</h3>
+        <div class="row">
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.7tv"> 7TV</label>
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.bttv"> BTTV</label>
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.ffz"> FFZ</label>
+        </div>
+        <div class="muted small" style="margin-top:6px">Смайлики Twitch показываются всегда. 7TV/BTTV/FFZ: глобальные и смайлики вашего канала; обновляются каждые 10 минут.</div>
+        <h3 style="margin-top:16px">Вид</h3>
+        <div class="row">
+          <label class="f"><span>Размер шрифта, px</span><input type="number" min="10" max="72" data-s="chat_overlay.font_size"></label>
+          <label class="f"><span>Сообщений на экране</span><input type="number" min="1" max="60" data-s="chat_overlay.max_messages"></label>
+          <label class="f"><span>Скрывать через, сек (0 — не скрывать)</span><input type="number" min="0" max="600" data-s="chat_overlay.fade_sec"></label>
+          <label class="f"><span>Новые сообщения</span><select data-s="chat_overlay.direction"><option value="bottom">Снизу</option><option value="top">Сверху</option></select></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.show_badges"> Значки (модератор, VIP, подписчик)</label>
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.hide_commands"> Скрывать команды (!…)</label>
+          <label class="switch"><input type="checkbox" data-s="chat_overlay.hide_app"> Скрывать ответы Beg1nnnerOS</label>
+        </div>
+        <label class="f" style="margin-top:12px"><span>Скрытые ники — боты и т. п. (по одному в строке)</span><textarea data-s="chat_overlay.hidden_users" data-list></textarea></label>
+        <div class="muted small" style="margin-top:6px">Сообщения, удалённые модераторами, и очистка чата сразу убираются и с экрана.</div>
+      </div>
+      <div class="card" style="width:440px"><h3>Предпросмотр</h3>
+        <div style="height:560px;border-radius:8px;overflow:hidden;background:repeating-conic-gradient(#2a2a33 0 25%, #22222a 0 50%) 0 0/24px 24px">
+          <iframe id="chat-frame" src="about:blank" style="border:0;width:100%;height:100%"></iframe></div>
+        <div class="muted small" style="margin-top:6px">Демо-сообщения; обновляется после сохранения.</div></div>
+    </div>
+  </div>
+  <div data-tab="cstats" class="hidden">
+    <div class="card"><div class="row"><h3 class="grow" style="margin:0">Активность чата</h3>
+      <select id="cs-period" style="width:auto" onchange="loadStats()"><option value="stream">Стрим / сеанс</option><option value="week">7 дней</option><option value="all">Всё время</option></select></div>
+      <div id="cs-body" style="margin-top:12px"></div>
+      <div class="muted small">Учитываются только сообщения, полученные во время работы приложения.</div></div>
+  </div>
+</section>
+
+<!-- инструменты (вкладка чата) -->
+<!-- ================= МЕДИААЛЕРТЫ ================= -->
+<section id="p-alerts" class="hidden">
+  <h2>МедиаАлерты</h2>
+  <div class="card hl">
+    <div class="row">
+      <label class="switch"><input type="checkbox" data-s="alerts.enabled" data-autosave> МедиаАлерты включены</label>
+      <span class="grow"></span>
+      <span class="small muted">Общая громкость</span><input type="range" min="0" max="100" id="al-master" style="width:180px"><span id="al-masterv" class="small"></span>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <span class="small muted">Адрес для OBS:</span><code id="al-url"></code><button class="sm" onclick="copy(base()+'/alerts')">Скопировать адрес OBS</button>
+      <span class="grow"></span>
+      <button class="danger" onclick="api('/alerts/stop',{})">⏹ Остановить все МедиаАлерты</button>
+      <button class="primary" onclick="editAlert()">+ Добавить алерт</button>
+    </div>
+    <div class="muted small" style="margin-top:8px">В OBS: отдельный источник «Браузер» 1920×1080 (или размер холста), поверх остальных, с управлением аудио через OBS. Запуск в эфире — только через награду за баллы.</div>
+  </div>
+  <div class="card">
+    <table><thead><tr><th>Алерт</th><th>Награда</th><th>Цена</th><th>Длит.</th><th>Громкость</th><th>Вкл.</th><th></th></tr></thead><tbody id="al-list"></tbody></table>
+  </div>
+</section>
+
+<!-- ================= СОБЫТИЯ ================= -->
+<section id="p-events" class="hidden">
+  <h2>События</h2>
+  <div class="card">
+    <div class="row">
+      <label class="f"><span>Интервал сообщений о событиях, сек (1–60)</span><input type="number" min="1" max="60" data-s="events.interval_sec"></label>
+      <label class="f"><span>Окно объединения подаренных подписок, сек (0–30)</span><input type="number" min="0" max="30" data-s="events.gift_merge_sec"></label>
+      <span class="grow"></span>
+      <button id="btn-pause-ev2" onclick="api('/events/pause',{}).then(poll)">⏸ Пауза уведомлений</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><h3 class="grow" style="margin:0">Подключение DonationAlerts</h3><span id="da-status" class="pill"></span></div>
+    <p class="small muted" style="margin:6px 0 10px">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в таблице ниже).</p>
+    <div class="row">
+      <label class="f grow"><span>ID приложения</span><input data-s="donationalerts.client_id" autocomplete="off" placeholder="например 12345"></label>
+      <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" onclick="login('da')">🔑 Войти через DonationAlerts</button>
+      <button class="sm danger" onclick="if(confirm('Отключить DonationAlerts?')) api('/logout/da',{}).then(loadSettings)">Выйти</button>
+    </div>
+    <details style="margin-top:12px" id="da-help"><summary class="small" style="cursor:pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
+      <li>Откройте <a href="https://www.donationalerts.com/application/clients" target="_blank">страницу приложений DonationAlerts</a> (войдите в свой аккаунт) и нажмите «Создать приложение».
+        Название — любое, например <code>Beg1nnnerOS</code>. URL перенаправления: <code>http://localhost:4343/da</code> <button class="sm" onclick="copy('http://localhost:4343/da')">Копировать</button></li>
+      <li>Скопируйте из созданного приложения <b>ID приложения</b> и <b>API-ключ</b> в поля выше.</li>
+      <li>Нажмите «Войти через DonationAlerts» и в открывшемся окне браузера разрешите доступ. Статус справа сверху сменится на «подключено».</li></ol>
+      <p class="small muted">Программа сама продлевает доступ. Ключ браузерного виджета («Секретный токен» из настроек виджетов) здесь не нужен.</p></details>
+    <details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
+      <label class="f" style="margin-top:8px"><span>OAuth access token (права oauth-user-show и oauth-donation-subscribe)</span>
+        <input type="password" data-s="donationalerts.token" data-secret="donationalerts.has_token" autocomplete="new-password"></label></details>
+  </div>
+  <div class="card">
+    <table><thead><tr><th>Событие</th><th>Шаблон</th><th>Вкл.</th><th></th></tr></thead><tbody id="ev-list"></tbody></table>
+    <div class="muted small" style="margin-top:8px">Предпросмотр использует демонстрационные данные и ничего не отправляет в чат. Доступность событий зависит от прав аккаунта и статуса канала.</div>
+  </div>
+</section>
+
+<!-- ================= НАСТРОЙКИ ================= -->
+<section id="p-settings" class="hidden">
+  <h2>Настройки</h2>
+  <div class="card hl">
+    <h3>Ключи и дополнительные параметры</h3>
+    <div class="row">
+      <label class="f grow"><span>Client ID</span><input data-s="twitch.client_id" autocomplete="off"></label>
+      <label class="f grow"><span>Client Secret</span><input type="password" data-s="twitch.client_secret" id="secret" autocomplete="new-password"></label>
+    </div>
+    <details style="margin-top:10px"><summary class="small" style="cursor:pointer">Открыть инструкцию: где получить ключи</summary>
+      <ol class="small muted">
+        <li>Откройте <a href="https://dev.twitch.tv/console/apps/create" target="_blank">консоль разработчика Twitch</a> и зарегистрируйте приложение (<a href="https://dev.twitch.tv/docs/authentication/register-app" target="_blank">официальная инструкция</a>).</li>
+        <li>Адрес перенаправления (OAuth Redirect URL): <code>http://localhost:4343/callback</code> <button class="sm" onclick="copy('http://localhost:4343/callback')">Копировать</button></li>
+        <li>Категория — любая, тип клиента — <b>Confidential</b>.</li>
+        <li>Скопируйте Client ID, создайте Client Secret («New Secret»), вставьте сюда и сохраните. Не передавайте секрет другим людям.</li>
+      </ol></details>
+  </div>
+  <div class="card">
+    <h3>Аккаунт Twitch</h3>
+    <div class="row"><div class="grow" id="acc-streamer"></div>
+      <button class="primary" onclick="login('streamer')">Войти в Twitch заново</button>
+      <button class="sm danger" onclick="if(confirm('Выйти из аккаунта стримера?')) api('/logout/streamer',{}).then(poll)">Выйти</button></div>
+  </div>
+  <div class="card">
+    <h3>Чат-бот</h3>
+    <div class="row">
+      <label class="f"><span>От чьего имени писать в чат</span>
+        <select data-s="twitch.sender"><option value="streamer">Аккаунт стримера</option><option value="bot">Отдельный чат-бот</option></select></label>
+      <label class="f"><span>Ник аккаунта бота</span><input data-s="twitch.bot_login" placeholder="my_bot"></label>
+      <label class="switch" style="margin-top:16px"><input type="checkbox" data-s="twitch.allow_send"> Разрешить отправку сообщений в чат Twitch</label>
+    </div>
+    <div class="row" style="margin-top:12px"><div class="grow" id="acc-bot"></div>
+      <button onclick="login('bot')">Войти в аккаунт бота</button>
+      <button class="sm danger" onclick="api('/logout/bot',{}).then(poll)">Выйти</button></div>
+    <div class="muted small" style="margin-top:6px">Перед входом бота переключитесь в браузере на его аккаунт. Приложение проверяет соответствие ника.</div>
+  </div>
+  <div class="card">
+    <h3>Яндекс Музыка</h3>
+    <div class="row">
+      <label class="f grow"><span>Токен</span><input type="password" data-s="yandex.token" data-secret="yandex.has_token" autocomplete="new-password"></label>
+      <button style="margin-top:16px" onclick="api('/tools/yandex',{}).then(r=>toast(r))">Проверить</button>
+      <button class="sm danger" style="margin-top:16px" onclick="if(confirm('Удалить токен Яндекса?')) api('/secret/clear',{name:'yandex'}).then(loadSettings)">Удалить</button>
+    </div>
+    <details style="margin-top:8px"><summary class="small" style="cursor:pointer">Открыть инструкцию: как получить токен</summary><ol class="small muted">
+      <li>Откройте <a href="https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d" target="_blank">страницу авторизации Яндекса</a> и войдите.</li>
+      <li>После перехода скопируйте из адресной строки только значение <code>access_token</code> — между <code>access_token=</code> и <code>&amp;</code>, без остального адреса.</li>
+      <li>Вставьте сюда и сохраните. Полные треки доступны с подпиской Плюс.</li></ol></details>
+  </div>
+  <div class="card">
+    <h3>Тема программы</h3>
+    <div class="theme-grid" id="ui-themes"></div>
+    <div class="muted small" style="margin-top:8px">Применяется сразу к панели и док-панели OBS.</div>
+  </div>
+  <div class="card">
+    <h3>Интерфейс и управление</h3>
+    <label class="switch"><input type="checkbox" data-s="ui.tray"> Значок в трее (меню: панель, музыка, уведомления, алерты, выход) — после перезапуска</label>
+    <label class="f" style="margin-top:10px;max-width:360px"><span>При нажатии на крестик окна</span>
+      <select data-s="ui.close_action"><option value="ask">Спрашивать</option><option value="tray">Всегда сворачивать в трей</option><option value="exit">Закрывать программу</option></select></label>
+    <div class="small muted" id="tray-status" style="margin:4px 0 12px"></div>
+    <div class="row"><h3 class="grow" style="margin:0">Глобальные горячие клавиши</h3><label class="switch"><input type="checkbox" data-s="hotkeys.enabled"> Включены</label></div>
+    <div class="muted small" style="margin:4px 0 8px">Работают из любой программы, пока запущен Beg1nnnerOS. Формат: <code>ctrl+alt+p</code>; модификаторы Ctrl, Alt, Shift, Win.</div>
+    <table><tbody id="hk-list"></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Звук и сервер</h3>
+    <div class="row">
+      <label class="f grow"><span>Устройство вывода музыки</span><select data-s="music.audio_device" id="dev"></select></label>
+      <label class="f"><span>Порт панели (нужен перезапуск)</span><input type="number" data-s="server.port"></label>
+      <label class="switch" style="margin-top:16px"><input type="checkbox" data-s="server.open_browser"> Открывать панель при запуске</label>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Док-панель OBS</h3>
+    <div class="row"><code id="dock-url"></code><button class="sm" onclick="copy(base()+'/dock')">Скопировать адрес</button></div>
+    <div class="muted small" style="margin-top:6px">OBS → «Док-панели» → «Пользовательские док-панели браузера» → добавьте строку Beg1nnnerOS с этим адресом.</div>
+  </div>
+  <div class="card">
+    <h3>О программе</h3>
+    <div class="row" style="align-items:center">
+      <img src="/static/icon.png" alt="" style="width:56px;height:56px;border-radius:14px">
+      <div class="grow"><b>Beg1nnnerOS</b> <span class="muted" id="about-ver"></span>
+        <div class="small" id="upd-status" style="margin:4px 0 6px"></div>
+        <div class="row" style="gap:10px;align-items:center;margin-bottom:6px">
+          <button class="sm" onclick="updCheck()">🔄 Проверить обновления</button>
+          <label class="switch"><input type="checkbox" id="upd-auto" onchange="api('/update/auto',{on:this.checked})"> Проверять автоматически</label>
+        </div>
+        <div class="muted small">Если программа помогает вашему стриму — можно поблагодарить разработчика.</div>
+        <div class="muted small">Есть идея, как сделать программу лучше, или нашли ошибку? Напишите в Telegram: опишите, что делали и что пошло не так, и приложите строку из журнала, если она есть.</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener">💜 Поблагодарить разработчика</a>
+        <a class="contact-btn" href="https://t.me/Beg1nnner" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#29a9eb"/><path fill="#fff" d="M5.4 11.7l11.2-4.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg> Предложения и ошибки — Telegram</a>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><h3 class="grow" style="margin:0">Резервные копии</h3><button onclick="api('/backups',{}).then(loadBackups)">Создать копию</button></div>
+    <div class="muted small" style="margin:6px 0">В копию входят настройки, команды, таймеры и файлы алертов. Ключи, входы и статистика не входят.</div>
+    <div id="backups"></div>
+  </div>
+</section>
+
+<!-- ================= ДОПОЛНИТЕЛЬНО ================= -->
+<section id="p-pro" class="hidden">
+  <h2 style="margin:0">🚀 Дополнительно</h2>
+  <div id="cloud-offer" class="card hl hidden" style="margin-top:12px"></div>
+  <div class="tabs" data-group="pro" style="margin-top:14px">
+    <button data-t="themes" class="on">Темы оверлеев</button><button data-t="tts">Озвучка</button>
+    <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши и игры</button><button data-t="prof">Профили и облако</button>
+  </div>
+
+  <!-- Темы -->
+  <div data-tab="themes">
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Свои темы</h3>
+        <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button></div>
+      <table style="margin-top:10px"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list"></tbody></table>
+      <div class="small muted" style="margin-top:8px">«Применить» выбирает тему для источника в OBS. Для отдельной сцены адрес с темой: <code>/?theme=custom:ID</code> или <code>/chat?theme=custom:ID</code>.</div>
+    </div>
+    <div class="card hidden" id="th-editor">
+      <div class="row"><h3 class="grow" style="margin:0" id="th-title">Новая тема</h3><button class="sm" onclick="closeTheme()">Закрыть</button></div>
+      <div class="row" style="align-items:flex-start;gap:20px;margin-top:10px">
+        <div style="flex:1;min-width:300px">
+          <div class="row">
+            <label class="f grow"><span>Название</span><input id="th-name" data-th maxlength="40"></label>
+            <label class="f"><span>Основа (готовая тема)</span><select id="th-base" data-th></select></label>
+          </div>
+          <div class="row">
+            <label class="f"><span>Акцент</span><input type="color" id="th-accent" data-th></label>
+            <label class="f"><span>Фон</span><input type="color" id="th-bgc" data-th></label>
+            <label class="f grow"><span>Прозрачность фона: <b id="th-bgav"></b>%</span><input type="range" min="0" max="100" id="th-bga" data-th></label>
+            <label class="f"><span>Текст</span><input type="color" id="th-text" data-th></label>
+          </div>
+          <div class="row">
+            <label class="f grow"><span>Скругление: <b id="th-radiusv"></b> px</span><input type="range" min="0" max="60" id="th-radius" data-th></label>
+            <label class="f grow"><span>Отступы: <b id="th-paddingv"></b> px</span><input type="range" min="0" max="40" id="th-padding" data-th></label>
+          </div>
+          <div class="row">
+            <label class="f grow"><span>Рамка: <b id="th-bwv"></b> px</span><input type="range" min="0" max="12" id="th-bw" data-th></label>
+            <label class="f"><span>Цвет рамки</span><input type="color" id="th-bc" data-th></label>
+            <label class="f"><span>Тень</span><select id="th-shadow" data-th><option value="none">Без тени</option><option value="soft">Мягкая</option><option value="strong">Сильная</option><option value="glow">Свечение акцентом</option></select></label>
+          </div>
+          <div class="row">
+            <label class="f grow"><span>Шрифт</span><input id="th-font" data-th list="th-fonts" placeholder="как в основе"></label>
+            <datalist id="th-fonts"><option>Segoe UI</option><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Trebuchet MS</option><option>Georgia</option><option>Times New Roman</option><option>Consolas</option><option>Courier New</option><option>Impact</option><option>Comic Sans MS</option></datalist>
+            <label class="switch" style="margin-top:18px"><input type="checkbox" id="th-upper" data-th> ЗАГЛАВНЫЕ буквы</label>
+          </div>
+          <label class="f"><span>Свой CSS (для опытных, необязательно)</span><textarea id="th-css" data-th rows="4" style="font-family:Consolas,monospace;font-size:12.5px" placeholder="#wrap .title { letter-spacing: .05em; }"></textarea></label>
+          <div class="row" style="margin-top:10px"><button class="primary" onclick="saveTheme()">Сохранить тему</button><span class="grow"></span><span class="small muted">Предпросмотр меняется сразу</span></div>
+        </div>
+        <div style="flex:none">
+          <div class="small muted" style="margin-bottom:6px">Предпросмотр</div>
+          <div style="width:420px;height:300px;overflow:hidden;border-radius:10px;border:1px solid var(--line);background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px">
+            <iframe id="th-frame" style="border:0;width:700px;height:500px;transform:scale(.6);transform-origin:0 0"></iframe></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Озвучка -->
+  <div data-tab="tts" class="hidden">
+    <div class="card hl">
+      <div class="row"><h3 class="grow" style="margin:0">Озвучка</h3><span id="tts-status" class="pill"></span>
+        <label class="switch"><input type="checkbox" data-s="pro.tts.enabled"> Включена</label></div>
+      <div class="row" style="margin-top:12px">
+        <label class="f"><span>Голоса</span><select data-s="pro.tts.engine" id="tts-engine"><option value="windows">Голоса Windows (бесплатно, офлайн)</option><option value="yandex">Yandex SpeechKit (живые голоса)</option></select></label>
+        <label class="f grow"><span>Устройство вывода звука</span><select data-s="pro.tts.device" id="tts-dev"></select></label>
+        <label class="f"><span>Громкость: <b id="tts-volv"></b></span><input type="range" min="0" max="100" data-s="pro.tts.volume" id="tts-vol"></label>
+      </div>
+      <div class="row tts-win">
+        <label class="f grow"><span>Голос Windows</span><select data-s="pro.tts.voice" id="tts-voice"></select></label>
+        <label class="f"><span>Скорость (−10…10)</span><input type="number" min="-10" max="10" data-s="pro.tts.rate"></label>
+      </div>
+      <div class="tts-ya">
+        <div class="row">
+          <label class="f grow"><span>API-ключ Yandex Cloud</span><input type="password" data-s="pro.tts.yandex_key" data-secret="pro.tts.has_yandex_key" autocomplete="new-password"></label>
+          <label class="f"><span>Голос</span><select data-s="pro.tts.yandex_voice" id="tts-yvoice"></select></label>
+          <label class="f"><span>Скорость (0.5–2)</span><input type="number" min="0.5" max="2" step="0.1" data-s="pro.tts.yandex_speed"></label>
+        </div>
+        <details class="small muted"><summary style="cursor:pointer">Как получить API-ключ Yandex SpeechKit</summary><ol>
+          <li>Зайдите в консоль Yandex Cloud, создайте платёжный аккаунт и каталог.</li>
+          <li>Создайте сервисный аккаунт с ролью <code>ai.speechkit-tts.user</code>.</li>
+          <li>В сервисном аккаунте создайте API-ключ и вставьте его сюда. Синтез платный по тарифам Yandex Cloud.</li></ol></details>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input id="tts-test" class="grow" placeholder="Текст для проверки" value="Проверка озвучки. Спасибо за донат!">
+        <button onclick="api('/pro/tts/test',{text:$('tts-test').value}).then(()=>toast('Готово'))">▶ Проверить голос</button>
+        <button class="sm" onclick="api('/pro/tts/skip',{})">⏭ Пропустить</button>
+        <button class="sm" onclick="api('/pro/tts/clear',{})">Очистить очередь</button>
+      </div>
+      <div class="small muted" style="margin-top:6px">Перед проверкой сохраните настройки. Звук озвучки попадает в стрим через «Звук с рабочего стола» в OBS, как и музыка.</div>
+    </div>
+    <div class="card">
+      <h3>Что озвучивать</h3>
+      <div class="row">
+        <label class="switch"><input type="checkbox" data-s="pro.tts.donations"> Донаты DonationAlerts</label>
+        <label class="f"><span>от суммы</span><input type="number" min="0" data-s="pro.tts.min_donation" style="width:110px"></label>
+        <label class="switch"><input type="checkbox" data-s="pro.tts.bits"> Биты (Cheer)</label>
+        <label class="f"><span>от количества</span><input type="number" min="1" data-s="pro.tts.min_bits" style="width:110px"></label>
+      </div>
+      <div class="row">
+        <label class="f grow"><span>Награда за баллы для озвучки (название как на Twitch, с вводом текста)</span><input data-s="pro.tts.reward_title" maxlength="45" placeholder="Например: Озвучить сообщение"></label>
+      </div>
+      <div class="row">
+        <label class="switch"><input type="checkbox" data-s="pro.tts.command"> Команда <code>!tts текст</code></label>
+        <label class="f"><span>Кому доступна</span><select data-s="pro.tts.command_access" id="tts-access"></select></label>
+        <label class="f"><span>Кулдаун на зрителя, сек</span><input type="number" min="0" data-s="pro.tts.command_cooldown" style="width:110px"></label>
+      </div>
+      <div class="small muted">Награду для озвучки создайте сами в панели автора Twitch (с полем «Требуется ввод текста») — программа озвучит текст зрителя.</div>
+    </div>
+    <div class="card">
+      <h3>Фильтры</h3>
+      <div class="row">
+        <label class="switch"><input type="checkbox" data-s="pro.tts.read_name"> Читать имя («Ник задонатил 100 рублей…»)</label>
+        <label class="switch"><input type="checkbox" data-s="pro.tts.skip_links"> Не читать ссылки</label>
+        <label class="switch"><input type="checkbox" data-s="pro.tts.duck_music"> Приглушать музыку на время озвучки</label>
+        <label class="f"><span>Макс. длина, символов</span><input type="number" min="20" max="1000" data-s="pro.tts.max_length" style="width:110px"></label>
+      </div>
+      <label class="f"><span>Запрещённые слова (по одному в строке) — такие сообщения не озвучиваются</span><textarea data-s="pro.tts.banned_words" data-list rows="3"></textarea></label>
+    </div>
+  </div>
+
+  <!-- Статистика стримов -->
+  <div data-tab="sstats" class="hidden">
+    <div class="row"><span class="grow muted small">Статистика собирается автоматически, пока программа запущена во время эфира.</span>
+      <select id="ss-days" onchange="loadStreams()" style="width:160px"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option><option value="365">Год</option></select></div>
+    <div class="grid" id="ss-total" style="margin-top:12px"></div>
+    <div class="card"><table><thead><tr><th>Дата</th><th>Стрим</th><th>Длит.</th><th>Пик</th><th>Сред.</th><th>Сообщ.</th><th>Чаттеров</th><th>Фолловы</th><th>Подписки</th><th>Биты</th><th>Донаты</th><th>Заказы</th></tr></thead>
+      <tbody id="ss-list"></tbody></table></div>
+    <div class="card hidden" id="ss-detail"></div>
+  </div>
+
+  <!-- Розыгрыши и игры -->
+  <div data-tab="give" class="hidden">
+    <div class="card hl">
+      <div class="row"><h3 class="grow" style="margin:0">Розыгрыш</h3><span id="gv-status" class="pill"></span></div>
+      <div id="gv-form">
+        <div class="row" style="margin-top:10px">
+          <label class="f grow"><span>Что разыгрываем</span><input id="gv-prize" maxlength="120" placeholder="Например: игра в Steam"></label>
+          <label class="f"><span>Слово для участия</span><input id="gv-keyword" placeholder="!участвую"></label>
+          <label class="f"><span>…или награда за баллы</span><input id="gv-reward" placeholder="Название награды"></label>
+        </div>
+        <div class="row">
+          <label class="f"><span>Приём заявок, мин (0 — вручную)</span><input type="number" min="0" max="240" id="gv-minutes" style="width:120px"></label>
+          <label class="f"><span>Победителей</span><input type="number" min="1" max="20" id="gv-winners" style="width:90px"></label>
+          <label class="f"><span>Шанс подписчиков ×</span><input type="number" min="1" max="10" id="gv-luck" style="width:90px"></label>
+          <label class="switch" style="margin-top:18px"><input type="checkbox" id="gv-subs"> Только подписчики</label>
+          <label class="switch" style="margin-top:18px"><input type="checkbox" id="gv-follow"> Только фолловеры</label>
+        </div>
+        <div class="row" style="margin-top:8px"><button class="primary" onclick="gvStart()">🎉 Начать розыгрыш</button></div>
+      </div>
+      <div id="gv-run" class="hidden" style="margin-top:12px">
+        <div id="gv-info" class="np-title"></div>
+        <div class="row" style="margin-top:10px">
+          <button onclick="api('/pro/giveaway/close',{}).then(loadGiveaway)" id="gv-close">Закрыть приём заявок</button>
+          <button class="primary" onclick="api('/pro/giveaway/draw',{}).then(loadGiveaway)">🏆 Выбрать победителя</button>
+          <span class="grow"></span>
+          <button class="sm danger" onclick="if(confirm('Завершить розыгрыш и очистить список участников?')) api('/pro/giveaway/finish',{}).then(loadGiveaway)">Завершить</button>
+        </div>
+        <div id="gv-winners-list" style="margin-top:12px"></div>
+        <div class="small muted" style="margin-top:10px">Участники (новые сверху):</div>
+        <div id="gv-entries" class="log" style="max-height:220px;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Мини-игры в чате</h3><label class="switch"><input type="checkbox" data-s="pro.games.enabled"> Включены</label></div>
+      <div class="row" style="margin-top:10px">
+        <label class="switch"><input type="checkbox" data-s="pro.games.dice"> <code>!кости</code> — бросок против бота</label>
+        <label class="switch"><input type="checkbox" data-s="pro.games.duel"> <code>!дуэль @ник</code> → <code>!принять</code></label>
+        <label class="f"><span>Кулдаун на зрителя, сек</span><input type="number" min="0" data-s="pro.games.cooldown" style="width:100px"></label>
+        <label class="f"><span>Время на принятие дуэли, сек</span><input type="number" min="15" max="300" data-s="pro.games.duel_timeout" style="width:100px"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <b class="grow">«Угадай число»: <span id="gs-state" class="muted"></span></b>
+        <label class="f"><span>от 1 до</span><input type="number" min="10" data-s="pro.games.guess_max" id="gs-max" style="width:110px"></label>
+        <button onclick="api('/pro/games/guess',{max:+$('gs-max').value}).then(loadGames)">Загадать</button>
+        <button class="sm" onclick="api('/pro/games/guess/stop',{}).then(loadGames)">Остановить</button>
+      </div>
+      <div class="small muted">Зрители пишут в чат числа; первый угадавший побеждает. Баллы канала программа начислять не может — так устроен Twitch.</div>
+    </div>
+  </div>
+
+  <!-- Профили и облако -->
+  <div data-tab="prof" class="hidden">
+    <div class="card">
+      <h3>Профили</h3>
+      <div class="small muted">У каждого профиля свои входы Twitch, команды, алерты, настройки и статистика. Работает один профиль за раз: при переключении программа перезапустится.</div>
+      <div id="pf-list" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:12px">
+        <input id="pf-name" class="grow" placeholder="Название нового профиля, например название канала" maxlength="40">
+        <label class="switch"><input type="checkbox" id="pf-copy" checked> Скопировать команды, таймеры и алерты из текущего</label>
+        <button class="primary" onclick="pfCreate()">+ Создать</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">Облачная копия</h3><span id="cl-status" class="pill"></span>
+        <label class="switch"><input type="checkbox" data-s="pro.cloud.enabled"> Включена</label></div>
+      <div class="small muted" style="margin-top:6px">Копия профиля сохраняется в папку облака на этом компьютере — Яндекс Диск, Google Drive, OneDrive или Dropbox сами перенесут её на другой ПК.</div>
+      <div class="row" style="margin-top:10px">
+        <label class="f grow"><span>Папка облака</span><input data-s="pro.cloud.folder" id="cl-folder" placeholder="Например C:\Users\Имя\YandexDisk"></label>
+      </div>
+      <div id="cl-found" class="row small"></div>
+      <div class="row" style="margin-top:6px">
+        <label class="switch"><input type="checkbox" data-s="pro.cloud.auto"> Сохранять автоматически (каждые 5 минут при изменениях и при выходе)</label>
+      </div>
+      <div class="row">
+        <label class="switch"><input type="checkbox" data-s="pro.cloud.include_secrets"> Добавить ключи и входы (зашифрованы паролем)</label>
+        <label class="f"><span>Пароль копии</span><input type="password" data-s="pro.cloud.password" data-secret="pro.cloud.has_password" autocomplete="new-password"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" onclick="api('/pro/cloud/save',{}).then(r=>{toast('Копия сохранена');loadPro();})">Сохранить сейчас</button>
+        <button onclick="cloudRestore()">Восстановить из облака</button>
+        <span class="grow small muted" id="cl-file"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="savebar" class="savebar hidden" style="position:fixed;left:240px;right:28px;bottom:16px">
+  <span class="grow">Есть несохранённые изменения</span>
+  <button onclick="loadSettings()">Отменить</button><button class="primary" onclick="saveSettings()">Сохранить</button>
+</div>
+</main>
+
+<div id="modal" class="modal-bg hidden" onclick="if(event.target===this) closeModal()"><div class="modal" id="modal-body"></div></div>
+
+<script src="/static/alert-render.js"></script>
+<script>
+// ---------- утилиты ----------
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
+const base = () => location.origin.replace("localhost", "127.0.0.1");
+let S = null, META = {}, ST = null, ACCESS = {};
+async function api(path, body, method) {
+  const opt = {method: method || (body === undefined ? "GET" : "POST"), headers:{}};
+  if (body instanceof FormData) opt.body = body;
+  else if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const r = await fetch("/api" + path, opt);
+  const j = await r.json().catch(() => ({ok:false, error:r.statusText}));
+  if (!j.ok) {
+    toast(j.error || "Не получилось выполнить действие", true);
+    if (j.field) showFieldError(j.field);
+    throw new Error(j.error);
+  }
+  return j.data !== undefined && Object.keys(j).length <= 2 ? j.data : j;
+}
+// Ошибки API уже показаны пользователю во всплывающем сообщении — не дублируем их в консоли
+window.addEventListener("unhandledrejection", e => e.preventDefault());
+/** Открывает раздел с полем, где ошибка, подсвечивает его и ставит курсор. */
+function showFieldError(field) {
+  const el = document.querySelector(`[data-s="${field}"]`);
+  if (!el) return;
+  const sec = el.closest("main > section");
+  if (sec && sec.classList.contains("hidden")) go(sec.id.slice(2));
+  const tab = el.closest("[data-tab]");
+  if (tab && tab.classList.contains("hidden")) {
+    const btn = tab.parentElement.querySelector(`:scope > .tabs button[data-t="${tab.dataset.tab}"]`);
+    if (btn) btn.click();
+  }
+  el.classList.add("field-error");
+  const label = el.closest("label");
+  if (label) label.classList.add("field-error-label");
+  const clear = () => { el.classList.remove("field-error"); if (label) label.classList.remove("field-error-label"); };
+  el.addEventListener("input", clear, {once: true});
+  el.addEventListener("change", clear, {once: true});
+  setTimeout(() => { el.scrollIntoView({block: "center", behavior: "smooth"}); el.focus({preventScroll: true}); }, 60);
+}
+function toast(text, err) {
+  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : ""); t.textContent = text;
+  document.body.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3000);
+}
+function copy(text) { navigator.clipboard.writeText(text).then(() => toast("Скопировано: " + text), () => prompt("Скопируйте:", text)); }
+const getPath = (o, p) => p.split(".").reduce((a, k) => a == null ? a : a[k], o);
+const setPath = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k] ??= {}, o)[last] = v; };
+
+// ---------- навигация ----------
+document.querySelectorAll("nav button[data-p]").forEach(b => b.onclick = () => go(b.dataset.p));
+function go(p, sub) {
+  document.querySelectorAll("nav button[data-p]").forEach(x => x.classList.toggle("on", x.dataset.p === p));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "p-" + p));
+  if (sub) { const g = document.querySelector(`#p-${p} .tabs button[data-t="${sub}"]`); if (g) g.click(); }
+  if (p === "chat") { loadCommands(); loadTimers(); }
+  if (p === "alerts") loadAlerts();
+  if (p === "events") { renderEvents(); loadTools(); }
+  if (p === "settings") { loadBackups(); loadTools(); }
+  if (p === "pro") loadPro();
+  try { history.replaceState(null, "", "#" + p); } catch (e) {}
+}
+document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelectorAll("button").forEach(b => b.onclick = () => {
+  tabs.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  tabs.parentElement.querySelectorAll(":scope > [data-tab]").forEach(d => d.classList.toggle("hidden", d.dataset.tab !== b.dataset.t));
+  if (["mstats", "cstats"].includes(b.dataset.t)) loadStats();
+  if (b.dataset.t === "overlay") fitOverlay();
+  if (b.dataset.t === "vtimers") loadTimers();
+  if (b.dataset.t === "tools") loadTools();
+  if (b.dataset.t === "obschat") renderChatThemes(true);
+  if (b.dataset.t === "sstats") loadStreams();
+  if (["themes", "tts", "give", "prof"].includes(b.dataset.t)) loadPro();
+}));
+
+// ---------- настройки (data-s) ----------
+async function loadSettings() {
+  const j = await api("/settings");
+  S = j.data; ACCESS = j.access; META.events = j.event_types;
+  $("dev").innerHTML = '<option value="">Системное по умолчанию</option>' + j.devices.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  $("tts-dev").innerHTML = $("dev").innerHTML;
+  $("tts-access").innerHTML = Object.entries(j.access).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  document.querySelectorAll("[data-s]").forEach(el => {
+    const v = getPath(S, el.dataset.s);
+    if (el.type === "checkbox") el.checked = !!v;
+    else if (el.hasAttribute("data-list")) el.value = (v || []).join("\n");
+    else el.value = v ?? "";
+  });
+  $("secret").placeholder = S.twitch.has_secret ? "•••••• сохранён (пусто — оставить прежний)" : "";
+  document.querySelectorAll("[data-secret]").forEach(el => el.placeholder = getPath(S, el.dataset.secret) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
+  META.hotkeys = j.hotkey_actions;
+  $("hk-list").innerHTML = Object.entries(j.hotkey_actions).map(([k, t]) => `<tr><td>${t}</td>
+    <td style="width:220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
+  $("savebar").classList.add("hidden");
+  applyUiTheme(S.ui.theme || "twitch"); renderUiThemes(); renderChatThemes(true);
+  renderEvents(); fitOverlay();
+}
+function collect() {
+  const out = JSON.parse(JSON.stringify(S));
+  document.querySelectorAll("[data-s]").forEach(el => {
+    let v;
+    if (el.tagName === "SELECT" && !el.options.length) return;   // список ещё не загружен — не трогаем значение
+    if (el.type === "checkbox") v = el.checked;
+    else if (el.type === "number") v = el.value === "" ? 0 : +el.value;
+    else if (el.hasAttribute("data-list")) v = el.value.split("\n").map(x => x.trim()).filter(Boolean);
+    else v = el.value;
+    setPath(out, el.dataset.s, v);
+  });
+  return out;
+}
+async function saveSettings() {
+  const r = await api("/settings", collect());
+  toast(r.restart_required ? "Сохранено. Новый порт заработает после перезапуска." : "Сохранено");
+  await loadSettings(); poll();
+  if (!$("p-settings").classList.contains("hidden") || !$("p-chat").classList.contains("hidden")) loadTools();
+}
+document.addEventListener("input", e => { if (e.target.closest("[data-s]") && !e.target.hasAttribute("data-autosave")) $("savebar").classList.remove("hidden"); });
+document.addEventListener("change", e => {
+  if (e.target.hasAttribute("data-autosave")) saveSettings();
+  else if (e.target.closest("[data-s]")) $("savebar").classList.remove("hidden");
+});
+
+// ---------- Эфир ----------
+let volBusy = 0;
+$("live-vol").oninput = e => { volBusy = Date.now(); $("live-volv").textContent = e.target.value; api("/music/volume", {volume:+e.target.value}); };
+let masterBusy = 0;
+$("al-master").oninput = e => { masterBusy = Date.now(); $("al-masterv").textContent = e.target.value; api("/alerts/volume", {volume:+e.target.value}); };
+function card(title, value, cls, fix, note) {
+  return `<div class="card ready"><span class="t">${title}</span><span class="v ${cls}">${value}</span>
+    ${note ? `<span class="small muted">${note}</span>` : ""}
+    ${fix ? `<button class="sm" style="align-self:flex-start;margin-top:4px" onclick="go('${fix[0]}','${fix[1] || ""}')">Исправить</button>` : ""}</div>`;
+}
+let UPD_HIDE = "", UPD_NOTES = false;
+function renderUpdate(u) {
+  if (!u) return;
+  const bar = $("upd-bar"), notes = $("upd-notes");
+  const show = u.available && (u.downloading || (!u.skipped && UPD_HIDE !== u.latest));
+  bar.classList.toggle("hidden", !show);
+  notes.classList.toggle("hidden", !(show && UPD_NOTES && u.notes));
+  if (show) {
+    const act = u.downloading
+      ? `<div style="min-width:220px"><div class="small">${esc(u.status)} ${u.progress}%</div><div class="bar" style="margin:6px 0 0"><i style="width:${u.progress}%"></i></div></div>`
+      : (u.installer ? `<button onclick="updInstall()">⬇ Обновить${u.size_mb ? " (" + u.size_mb + " МБ)" : ""}</button>`
+                     : `<a href="${esc(u.page)}" target="_blank" rel="noopener" style="font-weight:600">Открыть страницу релиза ↗</a>`)
+        + (u.notes ? `<button class="sm" onclick="UPD_NOTES=!UPD_NOTES;renderUpdate(ST.update)">${UPD_NOTES ? "Скрыть" : "Что нового"}</button>` : "")
+        + `<button class="sm" onclick="UPD_HIDE='${esc(u.latest)}';renderUpdate(ST.update)">Позже</button>`
+        + `<button class="sm" onclick="updSkip('${esc(u.latest)}')">Пропустить версию</button>`;
+    const html = `<div class="t"><b>🎉 Доступна новая версия ${esc(u.latest)}</b><div class="muted small">У вас ${esc(u.current)}. Обновление установится в ту же папку, настройки сохранятся, программа перезапустится сама.</div></div>${act}`;
+    if (bar.dataset.html !== html) { bar.innerHTML = html; bar.dataset.html = html; }
+    if (UPD_NOTES && notes.dataset.v !== u.latest) { notes.textContent = u.notes; notes.dataset.v = u.latest; }
+  }
+  const st = u.available ? `доступна версия <b>${esc(u.latest)}</b>` + (u.skipped ? " (пропущена)" : "") : esc(u.status);
+  $("upd-status").innerHTML = `Обновления: ${st}${u.checked_at ? ` <span class="muted">· проверено ${esc(u.checked_at)}</span>` : ""}`
+    + (u.available && u.skipped && u.installer && !u.downloading ? ` <button class="sm" onclick="updInstall()">Всё-таки обновить</button>` : "");
+  if (document.activeElement !== $("upd-auto")) $("upd-auto").checked = u.auto;
+  $("ver").textContent = "Версия " + u.current + (u.available ? " · есть " + u.latest : "");
+}
+async function updCheck() {
+  try { const u = await api("/update/check", {}); ST.update = u; UPD_HIDE = ""; renderUpdate(u);
+        toast(u.available ? "Доступна версия " + u.latest : "Обновления: " + u.status); } catch (e) {}
+}
+async function updInstall() {
+  if (!confirm("Скачать и установить обновление? Программа закроется на время установки и запустится снова.")) return;
+  try { ST.update = await api("/update/install", {}); renderUpdate(ST.update); } catch (e) {}
+}
+async function updSkip(v) {
+  try { ST.update = await api("/update/skip", {version: v}); renderUpdate(ST.update); } catch (e) {}
+}
+
+async function poll() {
+  try { ST = (await api("/state")); } catch (e) { return; }
+  const r = ST.ready, m = ST.music;
+  $("ver").textContent = "Версия " + ST.version;
+  $("about-ver").textContent = "версия " + ST.version;
+  renderUpdate(ST.update);
+  const cards = [];
+  cards.push(card("Ключи Twitch", r.keys ? "Указаны" : "Не указаны", r.keys ? "ok" : "err", r.keys ? null : ["settings"]));
+  cards.push(card("Стример", r.streamer.ok ? r.streamer.login : "Нет входа", r.streamer.ok ? (r.streamer.problem ? "warn" : "ok") : "err",
+    r.streamer.ok && !r.streamer.problem && !r.streamer.missing_scopes.length ? null : ["settings"],
+    r.streamer.problem || (r.streamer.missing_scopes.length ? "Не хватает прав — войдите заново" : "")));
+  const sm = r.sender.mode === "bot" ? "Бот" : "Стример";
+  cards.push(card("Отправитель сообщений", r.sender.ok ? `${sm}: ${r.sender.login}` : (r.sender.allow ? `${sm}: не готов` : "Отправка выключена"),
+    r.sender.ok ? (r.sender.error ? "warn" : "ok") : "err", r.sender.ok && !r.sender.error ? null : ["settings"], esc(r.sender.error)));
+  const failed = Object.keys(r.eventsub.failed || {});
+  cards.push(card("Чат и события (EventSub)", r.eventsub.ok ? "Подключено" : "Нет соединения", r.eventsub.ok ? (failed.length ? "warn" : "ok") : "err", null,
+    failed.length ? "Недоступно: " + failed.map(x => x.replace("channel.", "")).join(", ") : ""));
+  cards.push(card("Источник /alerts", r.alerts_source ? `Подключён (${r.alerts_source})` : "Не подключён", r.alerts_source ? "ok" : "warn",
+    r.alerts_source ? null : ["alerts"], "Это соединение, а не видимость в сцене"));
+  if (r.donationalerts.configured) cards.push(card("DonationAlerts", r.donationalerts.ok ? "Подключено" : "Нет соединения",
+    r.donationalerts.ok ? "ok" : "err", r.donationalerts.ok ? null : ["events"], esc(r.donationalerts.status)));
+  cards.push(card("Трансляция", r.stream.live ? "В эфире · " + r.stream.uptime : "Не в эфире", r.stream.live ? "ok" : "muted", null,
+    esc([r.stream.title, r.stream.category].filter(Boolean).join(" · "))));
+  cards.push(card("Награды за баллы", esc(r.rewards), /ошибк|нет|не /.test(r.rewards) ? "warn" : "ok", null));
+  $("ready").innerHTML = cards.join("");
+  const c = m.current;
+  $("np-title").textContent = c ? c.title : "—";
+  $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "") : "";
+  $("np-bar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";
+  $("np-pos").textContent = c ? fmt(c.position) + " / " + fmt(c.duration) : "";
+  $("np-votes").textContent = c && m.votes ? `Голосов за пропуск: ${m.votes}/${m.votes_needed}` : "";
+  if (Date.now() - volBusy > 1500) { $("live-vol").value = m.volume; $("live-volv").textContent = m.volume; }
+  if (Date.now() - masterBusy > 1500) { $("al-master").value = ST.alerts.volume; $("al-masterv").textContent = ST.alerts.volume; }
+  $("live-q").innerHTML = m.queue.slice(0, 8).map(t => `<li>${esc(t.title)} <span class="muted small">${esc(t.requester)}</span></li>`).join("") || '<span class="muted small">Пусто</span>';
+  if (m.queue.length > 8) $("live-q").innerHTML += `<span class="muted small">…и ещё ${m.queue.length - 8}</span>`;
+  $("m-queue").innerHTML = m.queue.map((t, i) => `<tr><td>${i + 1}${t.priority === 3 ? " ⚡" : t.priority ? " ★" : ""}</td>
+    <td><a href="${esc(t.page_url)}" target="_blank">${esc(t.title)}</a></td><td>${fmt(t.duration)}</td><td>${esc(t.requester) || '<span class="muted">вручную</span>'}</td>
+    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:-1})">↑</button><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:1})">↓</button>
+    <button class="sm danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">✕${t.paid ? " ↩" : ""}</button></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">Очередь пуста</td></tr>';
+  const nt = ST.next_timer;
+  $("next-timer").innerHTML = nt ? `<b>${esc(nt.name)}</b> через ${fmt(nt.seconds)}${nt.messages_left ? ` · ждёт ещё ${nt.messages_left} сообщ. чата` : ""}` : '<span class="muted">Нет активных (таймеры работают во время эфира)</span>';
+  const pe = ST.paused_events;
+  ["btn-pause-ev", "btn-pause-ev2"].forEach(id => { $(id).textContent = pe ? "▶ Возобновить уведомления" : "⏸ Пауза уведомлений"; $(id).classList.toggle("primary", pe); });
+  $("alerts-q").textContent = `Алертов в очереди: ${ST.alerts.pending}` + (ST.alerts.current ? ` · показ: ${ST.alerts.current.name}` : "");
+  $("acc-streamer").innerHTML = r.streamer.ok ? `<span class="pill ok">Подключён</span> <b>${esc(r.streamer.login)}</b>` +
+    (r.streamer.missing_scopes.length ? ` <span class="pill warn">не хватает прав: ${r.streamer.missing_scopes.length}</span>` : "") : '<span class="pill err">Не подключён</span>';
+  $("acc-bot").innerHTML = r.bot.ok ? `Бот: <span class="pill ok">Подключён</span> <b>${esc(r.bot.login)}</b>` : 'Бот: <span class="pill">не подключён</span>';
+  const port = ST.port;
+  $("al-url").textContent = base() + "/alerts"; $("dock-url").textContent = base() + "/dock";
+}
+async function loadLog() {
+  const items = await api("/log" + ($("log-kind").value ? "?kind=" + $("log-kind").value : ""));
+  $("log").innerHTML = items.slice().reverse().map(i => `<div class="kind-${i.kind}"><span class="k">${new Date(i.ts * 1000).toLocaleTimeString()}</span>
+    <span class="pill">${i.kind}</span> ${esc(i.text)}</div>`).join("") || '<span class="muted">Пусто</span>';
+}
+async function sendChat() {
+  const t = $("chat-msg").value.trim(); if (!t) return;
+  await api("/chat/send", {text:t}); $("chat-msg").value = ""; toast("Отправлено в чат Twitch");
+}
+async function login(kind) {
+  if (!$("savebar").classList.contains("hidden")) await saveSettings();
+  const r = await api("/auth/" + kind, {});
+  if (!r.opened) window.open(r.url, "_blank");
+  toast("Подтвердите доступ в браузере и вернитесь сюда");
+  if (kind === "da") { let n = 0; const t = setInterval(async () => { await loadTools(); if (TOOLS?.donationalerts?.connected || ++n > 60) clearInterval(t); }, 2000); }
+}
+
+// ---------- Музыка ----------
+async function manualAdd() {
+  const q = $("m-add").value.trim(); if (!q) return;
+  $("m-add-btn").disabled = true; $("m-add-btn").textContent = "Ищу…";
+  try { const r = await api("/music/add", {query:q}); toast(r.message); $("m-add").value = ""; }
+  finally { $("m-add-btn").disabled = false; $("m-add-btn").textContent = "+ Добавить"; poll(); }
+}
+$("m-add").onkeydown = e => { if (e.key === "Enter") manualAdd(); };
+function fitOverlay() {
+  if (!S) return;
+  const f = $("ov-frame"), w = S.overlay.width, h = S.overlay.height, avail = Math.max(200, $("ov-wrap").clientWidth || 600);
+  const k = Math.min(1, avail / w);
+  f.style.width = w + "px"; f.style.height = h + "px"; f.style.transform = `scale(${k})`;
+  $("ov-wrap").style.height = (h * k) + "px";
+  f.src = "/?demo&t=" + Date.now();
+  renderOverlayThemes();
+}
+async function loadStats() {
+  const ms = await api("/stats?period=" + $("ms-period").value);
+  const m = ms.music;
+  $("ms-body").innerHTML = `<div class="grid">${[["Заказов", m.orders], ["Отказов", m.rejected], ["Пропусков", m.skips], ["Потрачено баллов", m.points]]
+    .map(([t, v]) => `<div class="card ready"><span class="t">${t}</span><span class="v" style="font-size:22px">${v}</span></div>`).join("")}</div>
+    <div class="row" style="align-items:flex-start"><div class="grow"><h3>Топ композиций</h3><ol>${m.top_tracks.map(([t, c]) => `<li>${esc(t)} — ${c}</li>`).join("") || '<span class="muted">Пусто</span>'}</ol></div>
+    <div class="grow"><h3>Топ зрителей</h3><ol>${m.top_users.map(([t, c]) => `<li>${esc(t)} — ${c}</li>`).join("") || '<span class="muted">Пусто</span>'}</ol></div></div>`;
+  const cs = (await api("/stats?period=" + $("cs-period").value)).chat;
+  $("cs-body").innerHTML = `<div class="row" style="margin-bottom:10px"><span class="pill">Сообщений: ${cs.messages}</span><span class="pill">Зрителей: ${cs.users}</span></div>
+    <ol>${cs.top.map(([n, c]) => `<li>${esc(n)} — ${c}</li>`).join("") || '<span class="muted">Пусто</span>'}</ol>`;
+}
+
+// ---------- модальные окна ----------
+function modal(html) { $("modal-body").innerHTML = html; $("modal").classList.remove("hidden"); }
+function closeModal() { $("modal").classList.add("hidden"); $("modal-body").innerHTML = ""; }
+const accessOptions = v => Object.entries(ACCESS).map(([k, t]) => `<option value="${k}" ${k === v ? "selected" : ""}>${t}</option>`).join("");
+const VARS = ["{user}", "{login}", "{args}", "{channel}", "{uptime}", "{random}"];
+function varsHtml(list, target) {
+  return `<div class="vars small muted" style="margin-top:6px">Подстановки: ${list.map(v => `<code onclick="insertVar('${target}','${v}')">${v}</code>`).join("")}</div>`;
+}
+function insertVar(id, v) {
+  const el = $(id); const s = el.selectionStart ?? el.value.length;
+  el.value = el.value.slice(0, s) + v + el.value.slice(el.selectionEnd ?? s); el.focus();
+}
+
+// ---------- Команды ----------
+let CMDS = {custom:[], standard:{}};
+async function loadCommands() {
+  CMDS = await api("/commands");
+  const tog = (kind, id, on) => `<input type="checkbox" ${on ? "checked" : ""} onchange="api('/commands/toggle',{kind:'${kind}',id:'${id}',enabled:this.checked})">`;
+  $("c-custom").innerHTML = CMDS.custom.map(c => `<tr><td><b>${esc(c.name)}</b> <span class="muted small">${esc(c.aliases.join(" "))}</span></td>
+    <td class="ellipsis" style="max-width:340px">${esc(c.response)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("custom", c.id, c.enabled)}</td>
+    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editCustom('${c.id}')">Изменить</button>
+    <button class="sm danger" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">✕</button></td></tr>`).join("")
+    || '<tr><td colspan="6" class="muted">Своих команд пока нет. Пример: !привет → «Привет, {user}! Добро пожаловать на канал»</td></tr>';
+  $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<tr><td><b>${esc(c.name)}</b> <span class="muted small">${esc(c.aliases.join(" "))}</span></td>
+    <td class="muted">${esc(c.desc)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("standard", k, c.enabled)}</td>
+    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editStd('${k}')">Изменить</button>
+    <button class="sm danger" onclick="if(confirm('Удалить ${esc(c.name)}? Обработка команды отключится.')) api('/commands/standard/${k}',undefined,'DELETE').then(loadCommands)">✕</button></td></tr>`).join("");
+}
+function cmdForm(c, isStd) {
+  return `<div class="row">
+      <label class="f grow"><span>Имя</span><input id="e-name" value="${esc(c.name)}" placeholder="!правила"></label>
+      <label class="f grow"><span>Псевдонимы через пробел</span><input id="e-aliases" value="${esc((c.aliases || []).join(" "))}" placeholder="!rules"></label></div>
+    <label class="f" style="margin-top:10px"><span>${isStd ? "Шаблон ответа ({result} — результат встроенной функции)" : "Ответ"}</span>
+      <textarea id="e-text">${esc(isStd ? c.template : c.response)}</textarea></label>
+    ${varsHtml(isStd ? ["{result}", ...VARS] : VARS, "e-text")}
+    <div class="row" style="margin-top:10px">
+      <label class="f"><span>Доступ</span><select id="e-access">${accessOptions(c.access)}</select></label>
+      <label class="f"><span>${isStd ? "Кулдаун на зрителя, сек" : "Кулдаун, сек"}</span><input type="number" id="e-cd" min="0" value="${c.cooldown}"></label>
+      <label class="f"><span>Максимальное случайное число (1–1000)</span><input type="number" id="e-rm" min="1" max="1000" value="${c.random_max}"></label>
+      <label class="switch" style="margin-top:16px"><input type="checkbox" id="e-on" ${c.enabled ? "checked" : ""}> Включена</label></div>
+    <div class="card" style="margin-top:14px;background:var(--panel2)"><div class="row">
+      <input id="p-user" placeholder="Пробный ник" value="Зритель" style="width:150px"><input id="p-args" placeholder="Аргументы" class="grow">
+      <button onclick="previewCmd()">Показать ответ</button></div><div id="p-out" style="margin-top:8px" class="muted">Предпросмотр не отправляет сообщение в Twitch.</div></div>`;
+}
+async function previewCmd() {
+  const out = await api("/commands/preview", {template:$("e-text").value, user:$("p-user").value, args:$("p-args").value, random_max:+$("e-rm").value});
+  $("p-out").textContent = out;
+}
+function cmdBody() {
+  return {name:$("e-name").value.trim(), aliases:$("e-aliases").value.trim().split(/\s+/).filter(Boolean), access:$("e-access").value,
+    cooldown:+$("e-cd").value, random_max:+$("e-rm").value, enabled:$("e-on").checked};
+}
+function editCustom(id) {
+  const c = CMDS.custom.find(x => x.id === id) || {name:"!", aliases:[], response:"", access:"everyone", cooldown:5, random_max:100, enabled:true};
+  modal(`<h2>${id ? "Изменить команду" : "Новая команда"}</h2>${cmdForm(c, false)}
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button onclick="closeModal()">Отмена</button><button class="primary" id="e-save">Сохранить</button></div>`);
+  $("e-save").onclick = async () => { await api("/commands/custom", {...cmdBody(), id, response:$("e-text").value}); closeModal(); loadCommands(); toast("Команда сохранена"); };
+}
+function editStd(k) {
+  const c = CMDS.standard[k];
+  modal(`<h2>Стандартная команда: ${esc(c.desc)}</h2>${cmdForm(c, true)}
+    <div class="muted small" style="margin-top:8px">После переименования старое имя перестаёт работать, если не оставить его среди псевдонимов.</div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button onclick="closeModal()">Отмена</button><button class="primary" id="e-save">Сохранить</button></div>`);
+  $("e-save").onclick = async () => { await api("/commands/standard/" + k, {...cmdBody(), template:$("e-text").value}); closeModal(); loadCommands(); toast("Сохранено"); };
+}
+
+// ---------- Таймеры ----------
+let TIMERS = {repeating:[], viewer:[]};
+async function loadTimers() {
+  TIMERS = await api("/timers");
+  $("c-timers").innerHTML = TIMERS.repeating.map(t => `<tr><td><b>${esc(t.name)}</b></td><td class="ellipsis" style="max-width:340px">${esc(t.text)}</td>
+    <td>${t.interval} мин</td><td>${t.min_messages}</td>
+    <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></td>
+    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editTimer('${t.id}')">Изменить</button>
+    <button class="sm danger" onclick="if(confirm('Удалить таймер?')) api('/timers/${t.id}',undefined,'DELETE').then(loadTimers)">✕</button></td></tr>`).join("")
+    || '<tr><td colspan="6" class="muted">Таймеров нет</td></tr>';
+  const now = Date.now() / 1000;
+  $("c-vtimers").innerHTML = TIMERS.viewer.map(t => `<tr><td><code>${t.id}</code></td><td>${esc(t.name)}</td><td>${esc(t.text)}</td>
+    <td>${fmt(t.due - now)}</td><td><button class="sm danger" onclick="api('/viewer_timers/${t.id}',undefined,'DELETE').then(loadTimers)">Отменить</button></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">Активных разовых таймеров нет</td></tr>';
+}
+function editTimer(id) {
+  const t = TIMERS.repeating.find(x => x.id === id) || {name:"", text:"", interval:15, min_messages:10, enabled:true};
+  modal(`<h2>${id ? "Изменить таймер" : "Новый таймер"}</h2>
+    <label class="f"><span>Название (для управления)</span><input id="t-name" value="${esc(t.name)}"></label>
+    <label class="f" style="margin-top:10px"><span>Текст сообщения (публикуется как есть)</span><textarea id="t-text">${esc(t.text)}</textarea></label>
+    <div class="row" style="margin-top:10px">
+      <label class="f"><span>Интервал, мин</span><input type="number" id="t-int" min="1" value="${t.interval}"></label>
+      <label class="f"><span>Минимум новых сообщений чата</span><input type="number" id="t-min" min="0" value="${t.min_messages}"></label>
+      <label class="switch" style="margin-top:16px"><input type="checkbox" id="t-on" ${t.enabled ? "checked" : ""}> Включён</label></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button onclick="closeModal()">Отмена</button><button class="primary" id="t-save">Сохранить</button></div>`);
+  $("t-save").onclick = async () => { await api("/timers", {id, name:$("t-name").value, text:$("t-text").value, interval:+$("t-int").value,
+    min_messages:+$("t-min").value, enabled:$("t-on").checked}); closeModal(); loadTimers(); toast("Таймер сохранён"); };
+}
+
+// ---------- События ----------
+function renderEvents() {
+  if (!S || !META.events) return;
+  $("ev-list").innerHTML = Object.entries(META.events).map(([k, e]) => {
+    const t = S.events.templates[k] || {enabled:false, text:""};
+    return `<tr><td><b>${e.title}</b><div class="small muted">${e.vars.map(v => "{" + v + "}").join(" ")}</div></td>
+      <td class="ellipsis" style="max-width:420px">${esc(t.text)}</td>
+      <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="toggleEvent('${k}',this.checked)"></td>
+      <td><button class="sm" onclick="editEvent('${k}')">Настроить</button></td></tr>`;
+  }).join("");
+}
+async function toggleEvent(k, on) {
+  await api("/settings", {events:{templates:{[k]:{enabled:on}}}}); await loadSettings(); toast(on ? "Включено" : "Выключено");
+}
+function editEvent(k) {
+  const e = META.events[k], t = S.events.templates[k];
+  modal(`<h2>${e.title}</h2><label class="f"><span>Шаблон сообщения</span><textarea id="ev-text">${esc(t.text)}</textarea></label>
+    ${varsHtml(e.vars.map(v => "{" + v + "}"), "ev-text")}
+    <div class="card" style="margin-top:12px;background:var(--panel2)"><button class="sm" id="ev-prev">Предпросмотр</button> <span id="ev-out" class="muted"></span></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button onclick="closeModal()">Отмена</button><button class="primary" id="ev-save">Сохранить</button></div>`);
+  $("ev-prev").onclick = async () => $("ev-out").textContent = await api("/events/preview", {type:k, text:$("ev-text").value});
+  $("ev-save").onclick = async () => { await api("/settings", {events:{templates:{[k]:{text:$("ev-text").value}}}}); closeModal(); await loadSettings(); toast("Шаблон сохранён"); };
+}
+
+// ---------- МедиаАлерты ----------
+let ALERTS = [];
+async function loadAlerts() {
+  const d = await api("/alerts"); ALERTS = d.items;
+  $("al-list").innerHTML = ALERTS.map(a => `<tr><td><b>${esc(a.name)}</b><div class="small muted">${a.media ? (a.media_kind === "video" ? "🎬 видео" : "🖼 изображение") : ""}${a.sound ? " 🔊 звук" : ""}${a.text ? " 📝 текст" : ""}</div></td>
+    <td>${esc(a.reward_title)}</td><td>${a.cost}</td><td>${a.duration} с</td>
+    <td><input type="range" min="0" max="100" value="${a.volume}" style="width:100px" oninput="api('/alerts/volume',{id:'${a.id}',volume:+this.value})"></td>
+    <td><input type="checkbox" ${a.enabled ? "checked" : ""} onchange="api('/alerts/toggle',{id:'${a.id}',enabled:this.checked})"></td>
+    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editAlert('${a.id}')">Изменить</button>
+    <button class="sm danger" onclick="if(confirm('Удалить алерт и его награду?')) api('/alerts/${a.id}',undefined,'DELETE').then(loadAlerts)">✕</button></td></tr>`).join("")
+    || '<tr><td colspan="7" class="muted">Алертов пока нет</td></tr>';
+}
+let AE = null;
+function editAlert(id) {
+  const a = ALERTS.find(x => x.id === id) || {name:"", media:"", media_kind:null, sound:"", text:"", duration_mode:"manual", duration:5, random_pos:true,
+    x:100, y:100, scale:1, volume:80, cooldown_global:30, cooldown_user:0, reward_title:"", cost:300, enabled:true};
+  AE = JSON.parse(JSON.stringify(a));
+  modal(`<h2>${id ? "Изменить алерт" : "Новый МедиаАлерт"}</h2>
+    <div class="row"><label class="f grow"><span>Название (до 60 символов)</span><input id="a-name" maxlength="60" value="${esc(a.name)}"></label>
+      <label class="switch" style="margin-top:16px"><input type="checkbox" id="a-on" ${a.enabled ? "checked" : ""}> Включён</label></div>
+    <div class="row" style="margin-top:10px;align-items:stretch">
+      <div class="drop grow" id="a-drop">Изображение / GIF / видео — нажмите или перетащите<div class="small" id="a-media-n">${esc(a.media || "PNG, JPG, GIF, WebP до 12 МБ · MP4, WebM до 50 МБ")}</div></div>
+      <div class="drop grow" id="a-sdrop">Отдельный звук<div class="small" id="a-sound-n">${esc(a.sound || "WAV, MP3, OGG до 12 МБ")}</div></div></div>
+    <div class="row small" style="margin-top:4px"><button class="sm" onclick="AE.media='';AE.media_kind=null;$('a-media-n').textContent='убрано';prev()">Убрать медиа</button>
+      <button class="sm" onclick="AE.sound='';$('a-sound-n').textContent='убрано';prev()">Убрать звук</button></div>
+    <input type="file" id="a-file" class="hidden" accept=".png,.jpg,.jpeg,.gif,.webp,.mp4,.webm"><input type="file" id="a-sfile" class="hidden" accept=".wav,.mp3,.ogg">
+    <label class="f" style="margin-top:10px"><span>Текст (необязательно)</span><input id="a-text" value="${esc(a.text)}"></label>
+    <div class="row" style="margin-top:10px">
+      <label class="f"><span>Длительность</span><select id="a-mode"><option value="manual">Вручную</option><option value="file">По длительности файла</option></select></label>
+      <label class="f"><span>Секунд (1–3600)</span><input type="number" id="a-dur" min="1" max="3600" step="0.1" value="${a.duration}"></label>
+      <label class="f"><span>Масштаб</span><input type="number" id="a-scale" min="0.05" max="5" step="0.05" value="${a.scale}"></label>
+      <label class="f"><span>Громкость</span><input type="range" id="a-vol" min="0" max="100" value="${a.volume}"></label></div>
+    <div class="row" style="margin-top:10px">
+      <label class="switch grow"><input type="checkbox" id="a-rand" ${a.random_pos ? "checked" : ""}> Случайное положение при каждом показе</label>
+      <label class="f" style="min-width:90px;width:110px"><span>X, px</span><input type="number" id="a-x" value="${a.x}"></label>
+      <label class="f" style="min-width:90px;width:110px"><span>Y, px</span><input type="number" id="a-y" value="${a.y}"></label></div>
+    <div class="row" style="margin-top:10px">
+      <label class="f"><span>Общий кулдаун, сек</span><input type="number" id="a-cdg" min="0" value="${a.cooldown_global}"></label>
+      <label class="f"><span>Кулдаун на зрителя, сек</span><input type="number" id="a-cdu" min="0" value="${a.cooldown_user}"></label>
+      <label class="f grow"><span>Название награды Twitch (до 45)</span><input id="a-rt" maxlength="45" value="${esc(a.reward_title)}"></label>
+      <label class="f" style="min-width:100px"><span>Цена</span><input type="number" id="a-cost" min="1" value="${a.cost}"></label></div>
+    <div class="row" style="margin-top:12px"><h3 class="grow" style="margin:0">Предпросмотр (1920×1080)</h3>
+      <label class="switch small"><input type="checkbox" id="a-psound"> со звуком</label><button class="sm" onclick="prev()">▶ Повторить</button></div>
+    <div class="preview-wrap" id="a-pw" style="margin-top:8px"><div class="preview-stage" id="a-stage"></div></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button onclick="closeModal()">Отмена</button><button class="primary" id="a-save">Сохранить алерт</button></div>`);
+  $("a-mode").value = a.duration_mode;
+  const pick = (drop, input, kindSound) => {
+    $(drop).onclick = () => $(input).click();
+    $(drop).ondragover = e => { e.preventDefault(); $(drop).classList.add("over"); };
+    $(drop).ondragleave = () => $(drop).classList.remove("over");
+    $(drop).ondrop = e => { e.preventDefault(); $(drop).classList.remove("over"); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0], kindSound); };
+    $(input).onchange = () => { if ($(input).files[0]) upload($(input).files[0], kindSound); };
+  };
+  pick("a-drop", "a-file", false); pick("a-sdrop", "a-sfile", true);
+  ["a-text", "a-scale", "a-rand", "a-x", "a-y"].forEach(i => $(i).addEventListener("change", prev));
+  $("a-save").onclick = async () => {
+    const body = {...AE, id, name:$("a-name").value, text:$("a-text").value, duration_mode:$("a-mode").value, duration:+$("a-dur").value,
+      scale:+$("a-scale").value, volume:+$("a-vol").value, random_pos:$("a-rand").checked, x:+$("a-x").value, y:+$("a-y").value,
+      cooldown_global:+$("a-cdg").value, cooldown_user:+$("a-cdu").value, reward_title:$("a-rt").value, cost:+$("a-cost").value, enabled:$("a-on").checked};
+    await api("/alerts", body); closeModal(); loadAlerts(); toast("Алерт сохранён. Награда синхронизируется с Twitch.");
+  };
+  requestAnimationFrame(() => { const k = $("a-pw").clientWidth / 1920; $("a-stage").style.transform = `scale(${k})`; prev(); });
+}
+async function upload(file, isSound) {
+  const fd = new FormData(); fd.append("file", file);
+  const n = isSound ? "a-sound-n" : "a-media-n"; $(n).textContent = "Загрузка…";
+  try {
+    const r = await api("/alerts/upload", fd);
+    if (isSound !== (r.kind === "audio")) { toast(isSound ? "Нужен звуковой файл" : "Нужно изображение или видео", true); $(n).textContent = "—"; return; }
+    if (isSound) AE.sound = r.file; else { AE.media = r.file; AE.media_kind = r.kind; }
+    if (!r.duration && (r.kind === "video" || r.kind === "audio")) {
+      r.duration = await measureDuration("/media/" + r.file, r.kind);
+      if (r.duration) { if (isSound) AE.sound_duration = r.duration; else AE.media_duration = r.duration; }
+    }
+    $(n).textContent = file.name + (r.duration ? ` · ${r.duration} с` : "");
+    if (r.duration || file.name.toLowerCase().endsWith(".gif")) $("a-mode").value = "file";
+    if (r.duration) $("a-dur").value = Math.max(+$("a-dur").value, Math.min(3600, Math.ceil(r.duration * 10) / 10));
+    prev();
+  } catch (e) { $(n).textContent = "Ошибка загрузки"; }
+}
+function measureDuration(url, kind) {
+  return new Promise(res => {
+    const el = document.createElement(kind === "audio" ? "audio" : "video");
+    el.preload = "metadata"; el.muted = true;
+    el.onloadedmetadata = () => res(isFinite(el.duration) ? Math.round(el.duration * 100) / 100 : null);
+    el.onerror = () => res(null);
+    setTimeout(() => res(null), 8000);
+    el.src = url;
+  });
+}
+let prevObj = null, prevTimer = null;
+function prev() {
+  if (!AE || !$("a-stage")) return;
+  if (prevObj) prevObj.remove(); clearTimeout(prevTimer);
+  const a = {...AE, text:$("a-text").value, scale:+$("a-scale").value || 1, volume:+$("a-vol").value, random_pos:$("a-rand").checked,
+    x:+$("a-x").value, y:+$("a-y").value, media_url:AE.media ? "/media/" + AE.media : "", sound_url:AE.sound ? "/media/" + AE.sound : ""};
+  prevObj = renderAlert($("a-stage"), a, {width:1920, height:1080, muted:!$("a-psound").checked, master:ST ? ST.alerts.volume : 100});
+  prevTimer = setTimeout(() => { if (prevObj) prevObj.remove(); prevObj = null; }, (+$("a-dur").value || 5) * 1000);
+}
+
+// ---------- темы ----------
+const UI_THEMES = {
+  twitch:   ["Twitch (тёмная)", ["#0f0f14", "#17171f", "#9146ff", "#e8e8ef"]],
+  light:    ["Светлая", ["#f4f4f8", "#ffffff", "#7c3aed", "#1b1b24"]],
+  midnight: ["Полночь", ["#0b1020", "#111a30", "#3b82f6", "#e3e9f7"]],
+  neon:     ["Неон", ["#07070d", "#151526", "#ff2bd6", "#2de2ff"]],
+  graphite: ["Графит", ["#121212", "#242424", "#d4d4d4", "#ececec"]],
+  sunset:   ["Закат", ["#1a1013", "#2e1c22", "#ff7a45", "#fbeee6"]],
+  forest:   ["Лес", ["#0d1411", "#1a2720", "#22c55e", "#e4f1e8"]],
+};
+const OV_THEMES = {
+  classic: ["Классика", "Карточка с акцентной полосой"],
+  minimal: ["Минимал", "Только текст с тенью, без фона"],
+  neon:    ["Неон", "Светящаяся рамка и заголовок"],
+  vinyl:   ["Винил", "Вращающаяся пластинка"],
+  bar:     ["Полоса", "Одна строка внизу кадра"],
+  glass:   ["Стекло", "Светлая матовая карточка"],
+  retro:   ["Терминал", "Моноширинный шрифт, ASCII-прогресс"],
+};
+function applyUiTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("hub-theme", t); } catch (e) {}
+}
+function renderUiThemes() {
+  const cur = S.ui.theme || "twitch";
+  $("ui-themes").innerHTML = Object.entries(UI_THEMES).map(([k, [name, sw]]) => `<button class="theme-card ${k === cur ? "on" : ""}" onclick="setUiTheme('${k}')">
+    <div class="sw">${sw.map(c => `<i style="background:${c}"></i>`).join("")}</div>${name}</button>`).join("");
+}
+async function setUiTheme(t) {
+  applyUiTheme(t);
+  await api("/settings", {ui:{theme:t}}); S.ui.theme = t; renderUiThemes();
+}
+let ovThemesBuilt = "";
+function renderOverlayThemes() {
+  const cur = S.overlay.theme || "classic";
+  const key = Object.keys(OV_THEMES).join();
+  const visible = !document.querySelector('#p-music [data-tab="overlay"]').classList.contains("hidden");
+  if (ovThemesBuilt !== key && visible) {
+    $("ov-themes").innerHTML = Object.entries(OV_THEMES).map(([k, [name, desc]]) => `<div class="ov-card" data-k="${k}" onclick="setOvTheme('${k}')">
+      <div class="thumb"><iframe src="/?demo&theme=${k}" loading="lazy" tabindex="-1"></iframe></div>
+      <div class="name">${name} <span class="muted small" style="font-weight:400">— ${desc}</span></div></div>`).join("");
+    ovThemesBuilt = key;
+  }
+  document.querySelectorAll("#ov-themes .ov-card").forEach(c => c.classList.toggle("on", c.dataset.k === cur));
+  const custom = $("ov-custom").checked;
+  ["overlay.accent", "overlay.text_color", "overlay.background"].forEach(k => {
+    const el = document.querySelector(`[data-s="${k}"]`); el.disabled = !custom; el.closest("label").style.opacity = custom ? 1 : .45;
+  });
+}
+async function setOvTheme(t) {
+  await api("/settings", {overlay:{theme:t}}); S.overlay.theme = t;
+  renderOverlayThemes(); $("ov-frame").src = "/?demo&t=" + Date.now();
+  toast("Тема плеера: " + OV_THEMES[t][0]);
+}
+$("ov-custom").addEventListener("change", () => renderOverlayThemes());
+
+// ---------- чат в OBS ----------
+const CHAT_THEMES = {
+  classic: ["Классика", "Ник цветом, текст с тенью"],
+  cards:   ["Карточки", "Каждое сообщение в карточке"],
+  bubbles: ["Пузыри", "Облачка, ник над сообщением"],
+  neon:    ["Неон", "Светящиеся ники"],
+  retro:   ["Терминал", "Моноширинный, зелёный"],
+  compact: ["Компакт", "Мелко, в одну строку"],
+  light:   ["Светлая", "Белые карточки"],
+};
+let chatThemesBuilt = false;
+function renderChatThemes(reloadPreview) {
+  if (!S || !$("chat-themes")) return;
+  const cur = S.chat_overlay.theme || "classic";
+  const visible = !document.querySelector('#p-chat [data-tab="obschat"]').classList.contains("hidden");
+  if (!chatThemesBuilt && visible) {
+    $("chat-themes").innerHTML = Object.entries(CHAT_THEMES).map(([k, [name, desc]]) => `<div class="ov-card" data-k="${k}" onclick="setChatTheme('${k}')">
+      <div class="thumb" style="height:150px"><iframe src="/chat?demo&theme=${k}&size=14" loading="lazy" tabindex="-1"
+        style="width:100%;height:100%;transform:none;left:0;top:0"></iframe></div>
+      <div class="name">${name} <span class="muted small" style="font-weight:400">— ${desc}</span></div></div>`).join("");
+    chatThemesBuilt = true;
+  }
+  document.querySelectorAll("#chat-themes .ov-card").forEach(c => c.classList.toggle("on", c.dataset.k === cur));
+  $("chat-url").textContent = base() + "/chat";
+  if (visible && reloadPreview) $("chat-frame").src = "/chat?demo&t=" + Date.now();
+}
+async function setChatTheme(t) {
+  await api("/settings", {chat_overlay: {theme: t}}); S.chat_overlay.theme = t;
+  renderChatThemes(true); toast("Тема чата: " + CHAT_THEMES[t][0]);
+}
+
+// ---------- инструменты ----------
+let TOOLS = null;
+async function loadTools(devicesOnly) {
+  TOOLS = await api("/tools");
+  const sh = TOOLS.shazam, tr = TOOLS.translate;
+  const cur = S.tools.shazam.device;
+  $("sh-dev").innerHTML = '<option value="">Устройство по умолчанию</option>' + sh.devices.map(d => `<option value="${esc(d.id)}" ${d.id === cur ? "selected" : ""}>${esc(d.name)}</option>`).join("");
+  if (devicesOnly) { toast(`Найдено устройств: ${sh.devices.length}`); }
+  $("sh-avail").innerHTML = sh.available ? `Состояние: ${esc(sh.state)}` + (sh.last && sh.last.text ? ` · последний результат: <b>${esc(sh.last.text)}</b>` : "") : `<span class="err">${esc(sh.why)}</span>`;
+  $("tr-avail").innerHTML = tr.status ? `Сервер перевода: ${esc(tr.status)}` : "";
+  for (const [k, st] of Object.entries(TOOLS.hotkeys || {})) if ($("hk-" + k)) $("hk-" + k).innerHTML = `<span class="${st === "работает" ? "ok" : "muted"}">${esc(st)}</span>`;
+  $("tray-status").textContent = "Состояние значка: " + TOOLS.tray;
+  const da = TOOLS.donationalerts; $("da-status").textContent = da.status; $("da-status").className = "pill " + (da.connected ? "ok" : "");
+}
+async function shazamNow() {
+  $("sh-btn").disabled = true; $("sh-out").textContent = "Запись 10 секунд и распознавание…";
+  try { $("sh-out").textContent = await api("/tools/shazam", {}); } catch (e) { $("sh-out").textContent = ""; }
+  finally { $("sh-btn").disabled = false; loadTools(); }
+}
+async function trTest() {
+  const r = await api("/tools/translate/test", {text:$("tr-in").value});
+  $("tr-out").textContent = `[${r.source}] ${r.text}`;
+}
+async function trLanguages() {
+  if (!$("savebar").classList.contains("hidden")) await saveSettings();
+  $("tr-langs").textContent = "Проверяю…";
+  try {
+    const langs = await api("/tools/translate/languages", {});
+    $("tr-langs").innerHTML = `<span class="ok">Сервер отвечает.</span> Языки: ` + langs.map(l => `<code>${esc(l.code)}</code> ${esc(l.name)}`).join(", ");
+  } catch (e) { $("tr-langs").textContent = ""; }
+}
+async function layoutTest() {
+  const r = await api("/tools/layout", {text:$("ly-in").value});
+  $("ly-out").textContent = r ? "Исправлено: " + r : "Ошибочная раскладка не обнаружена — сообщение не изменится";
+}
+
+// ---------- копии ----------
+async function loadBackups() {
+  const list = await api("/backups");
+  $("backups").innerHTML = list.map(b => `<div class="list-item"><span class="grow mono">${esc(b.name)}</span><span class="small muted">${Math.round(b.size / 1024)} КБ</span>
+    <button class="sm" onclick="if(confirm('Восстановить ${esc(b.name)}? Текущее состояние сохранится отдельной копией.')) api('/backups/restore',{name:'${esc(b.name)}'}).then(r=>toast(r.message))">Восстановить</button></div>`).join("")
+    || '<span class="muted small">Копий пока нет</span>';
+}
+
+// ---------- старт ----------
+window.addEventListener("resize", () => { if (!$("p-music").classList.contains("hidden")) fitOverlay(); });
+(async () => {
+  await loadSettings(); await poll(); loadLog();
+  setInterval(poll, 1500); setInterval(loadLog, 4000);
+  setInterval(() => { if (!$("p-chat").classList.contains("hidden")) loadTimers(); }, 5000);
+  const h = location.hash.slice(1); if (h && $("p-" + h)) go(h);
+})();
+
+// ================= ДОПОЛНИТЕЛЬНО =================
+let PRO = null, editingTheme = null;
+const YA_VOICES = {alena:"Алёна", filipp:"Филипп", ermil:"Ермил", jane:"Джейн", madirus:"Мадирус", omazh:"Омаж", zahar:"Захар",
+  dasha:"Даша", julia:"Юлия", lera:"Лера", masha:"Маша", marina:"Марина", alexander:"Александр", kirill:"Кирилл", anton:"Антон"};
+$("tts-yvoice").innerHTML = Object.entries(YA_VOICES).map(([k, v]) => `<option value="${k}">${v} (${k})</option>`).join("");
+const PLAYER_BASES = {classic:"Классика", minimal:"Минимал", neon:"Неон", vinyl:"Винил", bar:"Полоса", glass:"Стекло", retro:"Терминал"};
+const CHAT_BASE_NAMES = {classic:"Классика", cards:"Карточки", bubbles:"Пузыри", neon:"Неон", retro:"Терминал", compact:"Компакт", light:"Светлая"};
+
+async function loadPro() {
+  try { PRO = await api("/pro"); } catch (e) { return; }
+  if (!S) return;
+  // озвучка
+  const T = PRO.tts;
+  $("tts-status").textContent = T.status + (T.queue ? ` · в очереди ${T.queue}` : "");
+  $("tts-status").className = "pill " + (T.status.startsWith("ошибка") ? "err" : T.status === "говорит" ? "ok" : "");
+  const vs = T.voices.length ? T.voices : [];
+  $("tts-voice").innerHTML = '<option value="">Русский голос по умолчанию</option>' +
+    vs.map(v => `<option value="${esc(v.name)}">${esc(v.name)} — ${esc(v.culture)}</option>`).join("");
+  $("tts-voice").value = getPath(S, "pro.tts.voice") || "";
+  $("tts-yvoice").value = getPath(S, "pro.tts.yandex_voice") || "alena";
+  ttsEngineUi();
+  renderThemes(); renderGiveaway(PRO.giveaway); renderGames(PRO.games); renderProfiles(); renderCloud();
+}
+function ttsEngineUi() {
+  const ya = $("tts-engine").value === "yandex";
+  document.querySelectorAll(".tts-ya").forEach(x => x.classList.toggle("hidden", !ya));
+  document.querySelectorAll(".tts-win").forEach(x => x.classList.toggle("hidden", ya));
+  $("tts-volv").textContent = $("tts-vol").value;
+}
+$("tts-engine").addEventListener("change", ttsEngineUi);
+$("tts-vol").addEventListener("input", ttsEngineUi);
+
+// ---------- свои темы ----------
+function renderThemes() {
+  const list = (S.pro && S.pro.themes) || [];
+  $("th-list").innerHTML = list.map(t => {
+    const used = (t.kind === "player" ? S.overlay.theme : S.chat_overlay.theme) === "custom:" + t.id;
+    const baseName = (t.kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES)[t.base] || t.base;
+    return `<tr><td><b>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
+      <td>${esc(baseName)}</td><td>${used ? '<span class="ok">✓ выбрана</span>' : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
+      <td style="text-align:right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
+      <button class="sm danger" onclick="if(confirm('Удалить тему?')) api('/pro/themes/${t.id}',undefined,'DELETE').then(async()=>{await loadSettings();renderThemes();})">✕</button></td></tr>`;
+  }).join("") || '<tr><td colspan="5" class="muted">Своих тем пока нет — создайте тему плеера или чата</td></tr>';
+}
+async function applyTheme(id, kind) {
+  const body = kind === "player" ? {overlay: {theme: "custom:" + id}} : {chat_overlay: {theme: "custom:" + id}};
+  await api("/settings", body); await loadSettings(); renderThemes(); toast("Тема применена — OBS обновится сам");
+}
+function hexToRgb(h) { h = (h || "#000000").replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  return [parseInt(h.slice(0,2),16) || 0, parseInt(h.slice(2,4),16) || 0, parseInt(h.slice(4,6),16) || 0]; }
+const rgbToHex = (r, g, b) => "#" + [r, g, b].map(x => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("");
+function parseColor(c, defHex) {
+  c = String(c || "").trim();
+  let m = c.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/i);
+  if (m) { let a = m[4] === undefined ? 1 : (m[4].endsWith("%") ? parseFloat(m[4]) / 100 : parseFloat(m[4])); return {hex: rgbToHex(+m[1], +m[2], +m[3]), a}; }
+  if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(c)) return {hex: c.slice(0, 7), a: c.length === 9 ? parseInt(c.slice(7), 16) / 255 : 1};
+  if (/^#[0-9a-f]{3}$/i.test(c)) return {hex: rgbToHex(...hexToRgb(c)), a: 1};
+  if (c === "transparent") return {hex: defHex, a: 0};
+  return {hex: defHex, a: 1};
+}
+function editTheme(id, kind) {
+  const t = id ? S.pro.themes.find(x => x.id === id) : null;
+  kind = t ? t.kind : kind;
+  editingTheme = {id: t ? t.id : "", kind};
+  const bases = kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES;
+  $("th-base").innerHTML = Object.entries(bases).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  const d = t || {name: "", base: "classic", accent: "#9146ff", background: "rgba(16,16,22,0.78)", text_color: "#ffffff",
+    border_color: "#ffffff", border_width: 0, radius: 14, padding: 14, shadow: "soft", font: "", uppercase: false, css: ""};
+  $("th-title").textContent = (t ? "Тема: " + t.name : "Новая тема") + (kind === "player" ? " · плеер" : " · чат в OBS");
+  $("th-name").value = d.name; $("th-base").value = d.base;
+  $("th-accent").value = parseColor(d.accent, "#9146ff").hex;
+  const bg = parseColor(d.background, "#101016"); $("th-bgc").value = bg.hex; $("th-bga").value = Math.round(bg.a * 100);
+  $("th-text").value = parseColor(d.text_color, "#ffffff").hex;
+  $("th-bc").value = parseColor(d.border_color, "#ffffff").hex; $("th-bw").value = d.border_width;
+  $("th-radius").value = d.radius; $("th-padding").value = d.padding; $("th-shadow").value = d.shadow;
+  $("th-font").value = d.font; $("th-upper").checked = !!d.uppercase; $("th-css").value = d.css || "";
+  $("th-editor").classList.remove("hidden");
+  const src = kind === "player" ? "/?demo&preview=1" : "/chat?demo&size=22";
+  $("th-frame").onload = () => setTimeout(themePreview, 300);
+  $("th-frame").src = src;
+  themePreview();
+  $("th-editor").scrollIntoView({behavior: "smooth", block: "start"});
+}
+function themeData() {
+  const [r, g, b] = hexToRgb($("th-bgc").value), a = (+$("th-bga").value / 100).toFixed(2);
+  return {id: editingTheme.id, kind: editingTheme.kind, name: $("th-name").value.trim(), base: $("th-base").value,
+    accent: $("th-accent").value, background: `rgba(${r},${g},${b},${a})`, text_color: $("th-text").value,
+    border_color: $("th-bc").value, border_width: +$("th-bw").value, radius: +$("th-radius").value, padding: +$("th-padding").value,
+    shadow: $("th-shadow").value, font: $("th-font").value.trim(), uppercase: $("th-upper").checked, css: $("th-css").value};
+}
+function themePreview() {
+  if (!editingTheme) return;
+  for (const [k, v] of [["th-bgav", "th-bga"], ["th-radiusv", "th-radius"], ["th-paddingv", "th-padding"], ["th-bwv", "th-bw"]]) $(k).textContent = $(v).value;
+  try { $("th-frame").contentWindow.postMessage({type: "b1-theme", theme: themeData()}, "*"); } catch (e) {}
+}
+document.querySelectorAll("[data-th]").forEach(el => el.addEventListener("input", themePreview));
+function closeTheme() { editingTheme = null; $("th-editor").classList.add("hidden"); $("th-frame").src = "about:blank"; }
+async function saveTheme() {
+  const t = await api("/pro/themes", themeData());
+  editingTheme.id = t.id;
+  toast("Тема сохранена");
+  await loadSettings(); renderThemes();
+}
+
+// ---------- статистика стримов ----------
+const dt = ts => new Date(ts * 1000).toLocaleString("ru-RU", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
+const money = d => Object.entries(d || {}).filter(([, v]) => v).map(([c, v]) => `${Math.round(v).toLocaleString("ru-RU")} ${c}`).join(", ") || "—";
+const statCard = (t, v, note) => `<div class="card ready"><span class="t">${t}</span><span class="v" style="font-size:22px">${v}</span>${note ? `<span class="small muted">${note}</span>` : ""}</div>`;
+async function loadStreams() {
+  let r;
+  try { r = await api("/pro/streams?days=" + $("ss-days").value); }
+  catch (e) { $("ss-list").innerHTML = '<tr><td colspan="12" class="muted">Не удалось загрузить статистику</td></tr>'; $("ss-total").innerHTML = ""; return; }
+  const t = r.total;
+  $("ss-total").innerHTML = statCard("Стримов", t.count, `${t.hours} ч в эфире`) + statCard("Пик зрителей", t.peak, `в среднем ${t.avg}`) +
+    statCard("Сообщений в чате", t.messages.toLocaleString("ru-RU")) + statCard("Новых фолловеров", t.follows) +
+    statCard("Подписок", t.subs, `битов: ${t.bits.toLocaleString("ru-RU")}`) + statCard("Донаты", money(t.donations), `заказов музыки: ${t.orders}`);
+  $("ss-list").innerHTML = r.streams.map(s => `<tr style="cursor:pointer" onclick="showStream('${esc(s.id)}')">
+    <td>${dt(s.started)}</td><td class="ellipsis" style="max-width:260px" title="${esc(s.title)}">${esc(s.title || "—")}<div class="small muted">${esc(s.category)}</div></td>
+    <td>${fmt(s.duration)}</td><td>${s.peak}</td><td>${s.avg}</td><td>${s.messages}</td><td>${s.chatters}</td><td>${s.follows}</td>
+    <td>${s.subs}</td><td>${s.bits}</td><td>${money(s.donations)}</td><td>${s.orders}</td></tr>`).join("")
+    || '<tr><td colspan="12" class="muted">За этот период стримов нет. Статистика появится после первого эфира с запущенной программой.</td></tr>';
+}
+function viewersChart(points) {
+  if (points.length < 2) return '<div class="muted small">Замеров зрителей пока мало для графика</div>';
+  const W = 900, H = 220, L = 44, R = 12, T = 14, B = 26;
+  const t0 = points[0][0], t1 = points[points.length - 1][0], max = Math.max(1, ...points.map(p => p[1]));
+  const X = t => L + (t - t0) / Math.max(1, t1 - t0) * (W - L - R), Y = v => T + (1 - v / max) * (H - T - B);
+  const path = points.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join(" ");
+  const area = path + ` L${X(t1).toFixed(1)} ${H - B} L${L} ${H - B} Z`;
+  const ticks = [0, .25, .5, .75, 1].map(k => Math.round(max * k));
+  const hh = t => new Date(t * 1000).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"});
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`).join("")}
+    <path d="${area}" fill="var(--accent)" fill-opacity=".15"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    <text x="${L}" y="${H - 6}" font-size="11" fill="var(--muted)">${hh(t0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" font-size="11" fill="var(--muted)">${hh(t1)}</text></svg>`;
+}
+async function showStream(id) {
+  const d = await api("/pro/streams/" + encodeURIComponent(id));
+  const s = d.summary;
+  const evName = {donation: "💸 Донат", follow: "💜 Фоллов", sub: "⭐ Подписка", cheer: "💎 Биты", raid: "🚀 Рейд"};
+  $("ss-detail").innerHTML = `<div class="row"><h3 class="grow" style="margin:0">${esc(s.title || "Стрим")} · ${dt(s.started)}</h3>
+      <button class="sm" onclick="$('ss-detail').classList.add('hidden')">Закрыть</button></div>
+    <div class="small muted">${esc(s.category)} · ${fmt(s.duration)} · пик ${s.peak}, в среднем ${s.avg} зрителей</div>
+    <h3 style="margin-top:14px">Зрители</h3>${viewersChart(d.viewers)}
+    <div class="row" style="align-items:flex-start;gap:24px;margin-top:10px">
+      <div class="grow"><h3>Самые активные в чате</h3>${(d.top_chat || []).map((x, i) => `<div>${i + 1}. ${esc(x[0])} <span class="muted">— ${x[1]}</span></div>`).join("") || '<span class="muted">—</span>'}</div>
+      <div class="grow"><h3>Больше всех заказывали музыку</h3>${(d.top_requesters || []).map((x, i) => `<div>${i + 1}. ${esc(x[0])} <span class="muted">— ${x[1]}</span></div>`).join("") || '<span class="muted">—</span>'}</div>
+      <div class="grow"><h3>События</h3><div class="log" style="max-height:220px">${(d.events || []).map(e => `<div><span class="k">${new Date(e.ts * 1000).toLocaleTimeString("ru-RU")}</span>
+        ${evName[e.type] || e.type}: ${esc(e.name)} ${e.type === "donation" ? `${e.amount} ${esc(e.currency)}` : e.type === "cheer" ? `${e.amount} bits` : e.type === "raid" ? `(${e.amount})` : e.type === "sub" && e.amount > 1 ? `×${e.amount}` : ""}</div>`).join("") || '<span class="muted">Событий нет</span>'}</div></div>
+    </div>`;
+  $("ss-detail").classList.remove("hidden");
+  $("ss-detail").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+// ---------- розыгрыши и игры ----------
+function gvFill() {
+  const g = (S.pro && S.pro.giveaway) || {};
+  $("gv-prize").value = g.prize || ""; $("gv-keyword").value = g.keyword ?? "!участвую"; $("gv-reward").value = g.reward_title || "";
+  $("gv-minutes").value = g.minutes ?? 0; $("gv-winners").value = g.winners ?? 1; $("gv-luck").value = g.sub_luck ?? 2;
+  $("gv-subs").checked = !!g.subs_only; $("gv-follow").checked = !!g.followers_only;
+}
+async function gvStart() {
+  const g = await api("/pro/giveaway/start", {prize: $("gv-prize").value, keyword: $("gv-keyword").value.trim(), reward_title: $("gv-reward").value.trim(),
+    minutes: +$("gv-minutes").value, winners: +$("gv-winners").value, sub_luck: +$("gv-luck").value,
+    subs_only: $("gv-subs").checked, followers_only: $("gv-follow").checked});
+  toast("Розыгрыш начат — объявление отправлено в чат"); renderGiveaway(g);
+}
+async function loadGiveaway() { try { renderGiveaway((await api("/pro/live")).giveaway); } catch (e) {} }
+function renderGiveaway(g) {
+  const st = {idle: ["нет розыгрыша", ""], open: ["идёт приём заявок", "ok"], closed: ["приём закрыт", "warn"]}[g.status] || [g.status, ""];
+  $("gv-status").textContent = st[0]; $("gv-status").className = "pill " + st[1];
+  $("gv-form").classList.toggle("hidden", g.status !== "idle");
+  $("gv-run").classList.toggle("hidden", g.status === "idle");
+  if (g.status === "idle") { if (!$("gv-prize").value) gvFill(); return; }
+  const how = [g.keyword && `слово ${esc(g.keyword)}`, g.reward_title && `награда «${esc(g.reward_title)}»`].filter(Boolean).join(" или ");
+  $("gv-info").innerHTML = `🎁 ${esc(g.prize)} <span class="small muted">· ${how} · участников: ${g.count}${g.tickets !== g.count ? ` (билетов ${g.tickets})` : ""}${g.ends_in ? ` · до закрытия ${fmt(g.ends_in)}` : ""}</span>`;
+  $("gv-close").classList.toggle("hidden", g.status !== "open");
+  $("gv-winners-list").innerHTML = g.winners.length ? "<b>Победители:</b> " + g.winners.map(w =>
+    `<span class="pill ok" style="font-size:13px">🏆 ${esc(w.name)}${w.sub ? " ⭐" : ""}</span> <button class="sm" onclick="api('/pro/giveaway/reroll',{login:'${esc(w.login)}'}).then(loadGiveaway)">Перевыбрать</button>`).join(" ") : "";
+  $("gv-entries").innerHTML = g.entries.map(e => `<div>${esc(e.name)}${e.sub ? ' <span class="pill">подписчик</span>' : ""}${e.tickets > 1 ? ` <span class="muted">×${e.tickets}</span>` : ""}</div>`).join("") || '<span class="muted">Пока никого</span>';
+}
+async function loadGames() { try { renderGames((await api("/pro/live")).games); } catch (e) {} }
+function renderGames(g) {
+  $("gs-state").textContent = g.guess.active ? `идёт игра (1–${g.guess.max}), попыток в чате: ${g.guess.tries}` : (g.guess.last_winner ? `последний победитель — ${g.guess.last_winner}` : "не запущена");
+}
+
+// ---------- профили и облако ----------
+function renderProfiles() {
+  $("pf-list").innerHTML = PRO.profiles.map(p => `<div class="row list-item" style="padding:6px 0">
+    <b class="grow">${p.active ? "▶ " : ""}${esc(p.name)}${p.active ? ' <span class="pill ok">открыт</span>' : ""}</b>
+    ${p.active ? "" : `<button class="sm" onclick="pfSwitch('${esc(p.id)}','${esc(p.name)}')">Открыть</button>`}
+    ${p.id && !p.active ? `<button class="sm danger" onclick="pfDelete('${esc(p.id)}')">Удалить</button>` : ""}</div>`).join("");
+}
+async function pfCreate() {
+  const name = $("pf-name").value.trim();
+  if (!name) { toast("Введите название профиля", true); return; }
+  PRO.profiles = await api("/pro/profiles", {name, copy: $("pf-copy").checked});
+  $("pf-name").value = ""; renderProfiles(); toast("Профиль создан — откройте его, когда нужно");
+}
+async function pfSwitch(id, name) {
+  if (!confirm(`Открыть профиль «${name}»? Программа перезапустится.`)) return;
+  await api("/pro/profiles/switch", {name: id});
+  document.body.innerHTML = '<div style="padding:60px;text-align:center;font-size:18px">Перезапуск Beg1nnnerOS…</div>';
+}
+async function pfDelete(id) {
+  if (!confirm(`Удалить профиль «${id}» вместе с его настройками, входами и статистикой? Это нельзя отменить.`)) return;
+  PRO.profiles = await api("/pro/profiles/" + encodeURIComponent(id), undefined, "DELETE"); renderProfiles();
+}
+function renderCloud() {
+  const c = PRO.cloud, f = c.file || {};
+  $("cl-status").textContent = c.status; $("cl-status").className = "pill " + (c.status.startsWith("ошибка") ? "err" : c.status.startsWith("сохранено") ? "ok" : "");
+  $("cl-found").innerHTML = (c.folders || []).length
+    ? '<span class="muted">Найдено на этом ПК:</span> ' + c.folders.map(x => `<button class="sm" onclick="pickCloud('${esc(x.path.replace(/\\/g, "\\\\"))}')">${esc(x.name)}</button>`).join(" ")
+    : '<span class="muted">Папки облачных дисков не найдены — укажите путь вручную</span>';
+  $("cl-file").textContent = f.exists ? `В облаке: копия от ${f.ts ? dt(f.ts) : "?"} с ПК «${f.machine || "?"}»${f.secrets ? ", с ключами" : ""}` : (f.path ? "Копии в облаке пока нет" : "");
+  const offer = f.exists && f.offer;
+  $("cloud-offer").classList.toggle("hidden", !offer);
+  if (offer) $("cloud-offer").innerHTML = `<div class="row"><b class="grow">☁️ В облаке есть копия профиля с компьютера «${esc(f.machine)}» от ${dt(f.ts)}. Восстановить её здесь?</b>
+    <button class="primary sm" onclick="cloudRestore()">Восстановить</button><button class="sm" onclick="$('cloud-offer').classList.add('hidden')">Не сейчас</button></div>`;
+}
+function pickCloud(path) { $("cl-folder").value = path; $("savebar").classList.remove("hidden"); toast("Папка выбрана — нажмите «Сохранить» внизу"); }
+async function cloudRestore() {
+  const f = (PRO && PRO.cloud.file) || {};
+  if (!f.exists) { toast("Копии в облаке нет", true); return; }
+  if (!confirm("Заменить настройки, команды, таймеры и алерты этого профиля копией из облака? Текущие сохранятся в резервной копии.")) return;
+  let password = "";
+  if (f.secrets) password = prompt("В копии есть ключи и входы. Введите пароль копии (оставьте пустым, чтобы не переносить их):") || "";
+  await api("/pro/cloud/restore", {password});
+  if (confirm("Копия восстановлена. Перезапустить программу сейчас, чтобы применить её?")) {
+    await api("/pro/restart", {});
+    document.body.innerHTML = '<div style="padding:60px;text-align:center;font-size:18px">Перезапуск Beg1nnnerOS…</div>';
+  }
+}
+
+// обновление состояния, пока открыт раздел «Дополнительно»
+setInterval(async () => {
+  if ($("p-pro").classList.contains("hidden")) return;
+  const tab = document.querySelector('#p-pro .tabs button.on')?.dataset.t;
+  if (tab !== "give" && tab !== "tts") return;
+  try {
+    const L = await api("/pro/live");
+    if (tab === "give") { renderGiveaway(L.giveaway); renderGames(L.games); }
+    else { $("tts-status").textContent = L.tts.status + (L.tts.queue ? ` · в очереди ${L.tts.queue}` : "");
+           $("tts-status").className = "pill " + (L.tts.status.startsWith("ошибка") ? "err" : L.tts.status === "говорит" ? "ok" : ""); }
+  } catch (e) {}
+}, 2000);
+// при запуске: предложение восстановить облачную копию
+setTimeout(() => loadPro().then(() => {
+  if (PRO && PRO.cloud.file && PRO.cloud.file.offer) toast("☁️ В облаке есть копия профиля с другого компьютера — см. «Дополнительно» → «Профили и облако»");
+}), 2500);
+</script>
+</body>
+</html>

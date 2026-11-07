@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/static/favicon.png">
+<title>Beg1nnnerOS — музыкальный оверлей</title>
+<style>
+  :root { --accent:#9146ff; --bg:rgba(16,16,22,.78); --fg:#fff; --fs:20px; }
+  html,body { margin:0; background:transparent; overflow:hidden; }
+  #wrap { width:700px; height:460px; position:relative; color:var(--fg); font-size:var(--fs);
+          font-family:"Segoe UI",system-ui,sans-serif; display:flex; flex-direction:column; }
+  /* Очередь над текущим треком: карточка прижата к низу источника, очередь растёт вверх */
+  #wrap.q-above { flex-direction:column-reverse; }
+  #wrap.q-above #queue { margin-top:0; margin-bottom:10px; }
+  #wrap.q-above #toast { bottom:auto; top:0; }
+  #now, #queue { flex:none; }
+  #now { display:none; position:relative; }
+  .row { display:flex; align-items:center; gap:16px; }
+  .info { flex:1; min-width:0; }
+  .label { font-size:.6em; text-transform:uppercase; letter-spacing:.12em; color:var(--accent); font-weight:700; }
+  .title { font-weight:700; line-height:1.25; margin:4px 0 2px; overflow:hidden; display:-webkit-box;
+           -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .who { font-size:.72em; opacity:.75; }
+  .nextline { display:none; }
+  .bar { height:5px; background:rgba(127,127,127,.25); border-radius:3px; margin-top:10px; overflow:hidden; }
+  .bar i { display:block; height:100%; width:0; background:var(--accent); transition:width 1s linear; }
+  .time { font-size:.6em; opacity:.6; margin-top:4px; display:flex; justify-content:space-between; }
+  .ascii { display:none; font-size:.7em; margin-top:8px; white-space:pre; }
+  .disc { display:none; flex:none; }
+  #queue { margin-top:10px; display:none; }
+  #queue ol { margin:6px 0 0; padding-left:1.4em; font-size:.75em; }
+  #queue li { margin:3px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #queue li span { opacity:.6; }
+  #toast { position:absolute; left:0; bottom:0; max-width:100%; transform:translateY(140%); opacity:0;
+           transition:all .45s cubic-bezier(.2,.9,.3,1.2); font-weight:600; }
+  #toast.show { transform:none; opacity:1; }
+
+  /* 1. Классика */
+  .t-classic .box { background:var(--bg); border-radius:16px; padding:16px 18px; border-left:5px solid var(--accent);
+                    box-shadow:0 8px 30px rgba(0,0,0,.35); backdrop-filter:blur(6px); }
+
+  /* 2. Минимал: только текст с тенью */
+  .t-minimal .box { padding:4px 2px; text-shadow:0 2px 3px rgba(0,0,0,.9), 0 0 14px rgba(0,0,0,.6); }
+  .t-minimal .title { font-size:1.35em; font-weight:800; }
+  .t-minimal .label { color:var(--fg); opacity:.8; }
+  .t-minimal .bar { height:3px; background:rgba(255,255,255,.25); box-shadow:0 1px 3px rgba(0,0,0,.6); }
+  .t-minimal .time { display:none; }
+  .t-minimal #toast { background:none; }
+
+  /* 3. Неон */
+  .t-neon .box { background:var(--bg); border:2px solid var(--accent); border-radius:14px; padding:16px 18px;
+                 box-shadow:0 0 12px var(--accent), inset 0 0 12px rgba(0,0,0,.6); }
+  .t-neon #now.box { animation:neon 2.6s ease-in-out infinite; }
+  .t-neon .title { text-shadow:0 0 6px var(--accent), 0 0 18px var(--accent); }
+  .t-neon .label { text-shadow:0 0 8px var(--accent); }
+  .t-neon .bar i { box-shadow:0 0 10px var(--accent); }
+  @keyframes neon { 50% { box-shadow:0 0 22px var(--accent), inset 0 0 12px rgba(0,0,0,.6); } }
+
+  /* 4. Винил: вращающаяся пластинка */
+  .t-vinyl .box { background:var(--bg); border-radius:120px 18px 18px 120px; padding:14px 22px 14px 14px;
+                  box-shadow:0 10px 30px rgba(0,0,0,.4); }
+  .t-vinyl #queue.box { border-radius:18px; margin-left:60px; }
+  .t-vinyl .disc { display:block; width:110px; height:110px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent) 0 17%, #111 18% 21%, transparent 22%),
+               repeating-radial-gradient(circle, #1b1b1b 0 2px, #0c0c0c 2px 4px);
+    box-shadow:0 0 0 3px rgba(255,255,255,.08), 0 4px 14px rgba(0,0,0,.6); animation:spin 3.2s linear infinite; }
+  .t-vinyl.paused .disc { animation-play-state:paused; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* 5. Полоса: одна строка */
+  .t-bar .box { background:var(--bg); padding:10px 16px; border-radius:8px; border-bottom:3px solid var(--accent); }
+  .t-bar #now .row { gap:12px; }
+  .t-bar #now { position:absolute; left:0; right:0; bottom:3px; }
+  .t-bar #toast { bottom:auto; top:0; }
+  .t-bar .label { display:none; }
+  .t-bar .title::before { content:"♪ "; color:var(--accent); }
+  .t-bar .title { -webkit-line-clamp:1; margin:0; font-size:.95em; white-space:nowrap; display:block; text-overflow:ellipsis; }
+  .t-bar .who { white-space:nowrap; }
+  .t-bar .nextline { display:block; font-size:.62em; opacity:.6; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .t-bar .bar { position:absolute; left:0; right:0; bottom:-3px; height:3px; margin:0; border-radius:0; }
+  .t-bar .time, .t-bar #queue { display:none !important; }
+  .t-bar .info { display:flex; flex-direction:column; }
+
+  /* 6. Стекло */
+  .t-glass .box { background:var(--bg); border-radius:24px; padding:18px 22px; border:1px solid rgba(255,255,255,.6);
+                  backdrop-filter:blur(14px) saturate(1.4); box-shadow:0 10px 40px rgba(0,0,0,.2); }
+  .t-glass .bar { background:rgba(0,0,0,.12); height:6px; border-radius:6px; }
+  .t-glass .bar i { border-radius:6px; }
+
+  /* 7. Ретро-терминал */
+  #wrap.t-retro { font-family:Consolas,"Cascadia Mono","Courier New",monospace; }
+  .t-retro .box { background:var(--bg); border:1px solid var(--accent); padding:14px 16px; border-radius:2px;
+                  text-shadow:0 0 6px var(--accent); }
+  .t-retro .label::before { content:"> "; }
+  .t-retro .label { letter-spacing:.05em; }
+  .t-retro .title::after { content:"█"; animation:blink 1s steps(1) infinite; margin-left:4px; }
+  .t-retro .bar, .t-retro .time { display:none !important; }
+  .t-retro .ascii { display:block; }
+  .t-retro #queue ol { list-style:none; padding-left:0; }
+  .t-retro #queue li::before { content:"- "; }
+  @keyframes blink { 50% { opacity:0; } }
+</style>
+</head>
+<body>
+<div id="wrap" class="t-classic">
+  <div id="now" class="box">
+    <div class="row">
+      <div class="disc"></div>
+      <div class="info">
+        <div class="label"><span id="lbl">Сейчас играет</span> <span id="paused"></span></div>
+        <div class="title" id="title"></div>
+        <div class="who" id="who"></div>
+        <div class="nextline" id="nextline"></div>
+        <div id="prog"><div class="bar"><i id="bar"></i></div>
+          <div class="time"><span id="pos"></span><span id="dur"></span></div>
+          <div class="ascii" id="ascii"></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="queue" class="box"><div class="label">Далее</div><ol id="list"></ol></div>
+  <div id="toast" class="box"></div>
+</div>
+<script>
+// Палитры тем: используются, если в настройках не включены «свои цвета»
+const THEMES = {
+  classic: {accent:"#9146ff", background:"rgba(16,16,22,0.78)", text_color:"#ffffff"},
+  minimal: {accent:"#ffffff", background:"transparent", text_color:"#ffffff"},
+  neon:    {accent:"#00f0ff", background:"rgba(5,5,20,0.85)", text_color:"#e8fbff"},
+  vinyl:   {accent:"#ff4d6d", background:"rgba(20,14,18,0.86)", text_color:"#ffffff"},
+  bar:     {accent:"#9146ff", background:"rgba(10,10,14,0.86)", text_color:"#ffffff"},
+  glass:   {accent:"#6c5ce7", background:"rgba(255,255,255,0.55)", text_color:"#14141c"},
+  retro:   {accent:"#33ff66", background:"rgba(0,0,0,0.88)", text_color:"#33ff66"},
+};
+const P = new URLSearchParams(location.search);
+const DEMO = P.has("demo");
+const $ = id => document.getElementById(id);
+const fmt = s => { s = Math.max(0, Math.floor(s||0)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const demoPos = {v: 47};
+function demoData(o) {
+  demoPos.v = (demoPos.v + 1) % 214;
+  return {current:{title:"Artist — Demo Track (Remix)", requester:"Зритель", duration:214, position:demoPos.v, paused:false},
+          queue:[{title:"Second Artist — Next Song", requester:"viewer2"}, {title:"Band — Another One", requester:"fan"},
+                 {title:"Singer — Ballad", requester:""}], toast:{id:0, text:""}, overlay:o};
+}
+// Своя тема (Pro): база + цвета, шрифт, скругления, рамка, тень и свой CSS
+let previewTheme = null, customKey = "";
+window.addEventListener("message", e => { if (e.data && e.data.type === "b1-theme") { previewTheme = e.data.theme; tick(); } });
+const SHADOWS = {none: "none", soft: "0 8px 30px rgba(0,0,0,.35)", strong: "0 12px 40px rgba(0,0,0,.7)", glow: "0 0 18px var(--accent), 0 0 4px var(--accent)"};
+function applyCustom(t) {
+  const key = t ? JSON.stringify(t) : "";
+  if (key === customKey) return;
+  customKey = key;
+  let el = document.getElementById("custom-theme");
+  if (!el) { el = document.createElement("style"); el.id = "custom-theme"; document.head.appendChild(el); }
+  if (!t) { el.textContent = ""; return; }
+  const css = [];
+  if (t.font) css.push(`#wrap { font-family: ${t.font}, "Segoe UI", sans-serif !important; }`);
+  css.push(`#wrap .box { border-radius:${t.radius}px !important; padding:${t.padding}px ${Math.round(t.padding * 1.2)}px !important;
+    box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important; ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  if (t.uppercase) css.push("#wrap .title, #wrap .label, #wrap #queue li { text-transform:uppercase; }");
+  el.textContent = css.join("\n") + "\n" + (t.css || "");
+}
+let lastToast = null, toastTimer = null;
+async function tick() {
+  try {
+    const r = await fetch("/api/now", {cache:"no-store"}); let {data:d} = await r.json(); const o = d.overlay;
+    if (DEMO && !d.current) d = {...demoData(o), toast:d.toast};
+    const want = P.get("theme") || o.theme || "classic";
+    const ct = previewTheme || (want.startsWith("custom:") ? (d.custom_themes || []).find(t => "custom:" + t.id === want) : null);
+    const theme = ct ? (THEMES[ct.base] ? ct.base : "classic") : (THEMES[want] ? want : "classic");
+    const pal = ct || (o.custom_colors && !P.get("theme") ? o : THEMES[theme]);
+    applyCustom(ct);
+    const c = d.current;
+    const qpos = ["above", "below"].includes(P.get("queue")) ? P.get("queue") : (o.queue_position || "below");
+    $("wrap").className = "t-" + theme + (c && c.paused ? " paused" : "") + (qpos === "above" ? " q-above" : "");
+    const root = document.documentElement.style;
+    root.setProperty("--accent", pal.accent); root.setProperty("--bg", pal.background);
+    root.setProperty("--fg", pal.text_color); root.setProperty("--fs", o.font_size + "px");
+    $("wrap").style.width = o.width + "px"; $("wrap").style.height = o.height + "px";
+    $("now").style.display = c ? "block" : "none";
+    $("lbl").textContent = theme === "retro" ? "NOW PLAYING" : (theme === "bar" ? "♪" : "Сейчас играет");
+    if (c) {
+      $("title").textContent = c.title;
+      $("who").textContent = o.show_requester && c.requester ? (theme === "retro" ? "req: " : "Заказ: ") + c.requester : "";
+      $("paused").textContent = c.paused ? (theme === "retro" ? "[PAUSED]" : "· пауза") : "";
+      $("prog").style.display = o.show_progress && c.duration ? "block" : "none";
+      const k = c.duration ? Math.min(1, c.position / c.duration) : 0;
+      $("bar").style.width = (k * 100) + "%";
+      $("pos").textContent = fmt(c.position); $("dur").textContent = fmt(c.duration);
+      const n = 24, f = Math.round(k * n);
+      $("ascii").textContent = "[" + "#".repeat(f) + "-".repeat(n - f) + "] " + fmt(c.position) + "/" + fmt(c.duration);
+      const nx = d.queue[0];
+      $("nextline").textContent = o.show_queue && nx ? "Далее: " + nx.title : "";
+    }
+    const q = d.queue.slice(0, o.queue_size);
+    $("queue").style.display = o.show_queue && q.length ? "block" : "none";
+    // Сверху: ближайший трек — внизу списка, рядом с текущим; номера идут к 1
+    const items = q.map(t => `<li>${esc(t.title)}${o.show_requester && t.requester ? ` <span>— ${esc(t.requester)}</span>` : ""}</li>`);
+    $("list").reversed = qpos === "above";
+    $("list").innerHTML = (qpos === "above" ? items.reverse() : items).join("");
+    if (lastToast === null) lastToast = d.toast.id;
+    if (d.toast.id !== lastToast) {
+      lastToast = d.toast.id;
+      if (o.toasts) {
+        $("toast").textContent = d.toast.text; $("toast").classList.add("show");
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("show"), 5000);
+      }
+    }
+  } catch (e) {}
+}
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>
