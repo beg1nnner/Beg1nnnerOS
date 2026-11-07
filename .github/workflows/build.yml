@@ -2,6 +2,7 @@ name: build
 
 on:
   push:
+    branches: ['**']
   workflow_dispatch:
 
 jobs:
@@ -20,7 +21,9 @@ jobs:
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
       - name: Build installer
         shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp /DAppVersion=2.0.0 installer\Beg1nnnerOS.iss'
+        run: |
+          $v = (Select-String -Path Core/Config.cs -Pattern 'Version = "([^"]+)"').Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$v" installer\Beg1nnnerOS.iss
       - uses: actions/upload-artifact@v4
         with:
           name: Beg1nnnerOS-Setup
