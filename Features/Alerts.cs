@@ -304,12 +304,46 @@ public sealed class Alerts
         _hub.Log.Add("alert", $"МедиаАлерты остановлены, очередь очищена ({items.Count} возвращено)");
     }
 
+    private DateTime _waitSince = DateTime.MinValue;
+    private bool _waitWarned;
+    private const int WaitWarnSec = 5, WaitRefundSec = 90;
+
+    /// <summary>Источник /alerts в OBS не открыт: предупреждаем в журнале, а через 90 с возвращаем баллы.</summary>
+    private async Task WaitForOverlay()
+    {
+        if (_waitSince == DateTime.MinValue) { _waitSince = DateTime.UtcNow; _waitWarned = false; }
+        var waited = (DateTime.UtcNow - _waitSince).TotalSeconds;
+        if (!_waitWarned && waited >= WaitWarnSec)
+        {
+            _waitWarned = true;
+            _hub.Log.Error($"МедиаАлерт ждёт показа: в OBS не открыт источник «Браузер» с адресом …/alerts (его можно скопировать в разделе «МедиаАлерты»). " +
+                           $"Добавьте его в OBS, иначе через {WaitRefundSec} с баллы вернутся зрителю.");
+        }
+        if (waited >= WaitRefundSec)
+        {
+            var items = Pending.ToList();
+            Pending.Clear();
+            _waitSince = DateTime.MinValue;
+            foreach (var it in items)
+            {
+                await _hub.Rewards.Complete(it.Str("reward_id"), it.Str("redemption_id"), false);
+                var a = Get(it.Str("alert_id"));
+                _hub.Log.Add("skip", $"Алерт «{a?.Str("name")}» от {it.Str("login")} не показан: источник /alerts в OBS не открыт. Баллы возвращены");
+                try { await _hub.Twitch.SendChat($"@{it.Str("user")}, «{a?.Str("name")}» сейчас не может быть показан. Баллы возвращены"); }
+                catch { }
+            }
+            return;
+        }
+        await Task.Delay(1000);
+    }
+
     public async Task Run()
     {
         while (true)
         {
             if (Pending.Count == 0)
             {
+                _waitSince = DateTime.MinValue;
                 _wake = new TaskCompletionSource<bool>();
                 await _wake.Task;
                 continue;
@@ -317,9 +351,11 @@ public sealed class Alerts
             if (Clients.Count == 0)
             {
                 // Для платной очереди нужен подключённый источник /alerts
-                await Task.Delay(1000);
+                await WaitForOverlay();
                 continue;
             }
+            if (_waitSince != DateTime.MinValue && _waitWarned) _hub.Log.Add("alert", "Источник /alerts подключился — показываю алерты из очереди");
+            _waitSince = DateTime.MinValue;
             var item = Pending[0];
             Pending.RemoveAt(0);
             var a = Get(item.Str("alert_id"));

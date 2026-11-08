@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.1.4";
+    public const string Version = "2.1.5";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 

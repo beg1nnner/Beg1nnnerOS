@@ -163,6 +163,12 @@ public sealed class Rewards
         var status = ev.Str("status");
         if (key == null)
         {
+            // Награда с названием как у алерта/заказа музыки, но не связанная с программой —
+            // скорее всего, её создали вручную на Twitch или связь потерялась.
+            var title = ev.Str("reward.title");
+            if (GetDesired().Values.Any(d => string.Equals(d.Title, title, StringComparison.OrdinalIgnoreCase)))
+                _hub.Log.Error($"Награда «{title}» выкуплена, но она не связана с программой (создана вручную на Twitch?). " +
+                               "Удалите её на Twitch и нажмите «Синхронизировать с Twitch» в разделе «Награды».");
             await _hub.Pro.OnRedemption(ev);   // озвучка или участие в розыгрыше
             return;
         }
