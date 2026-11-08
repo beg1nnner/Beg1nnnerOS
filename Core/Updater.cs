@@ -12,7 +12,8 @@ using Beg1nnnerOS.Twitch;
 namespace Beg1nnnerOS.Core;
 
 /// <summary>
-/// Проверка обновлений через GitHub Releases.
+/// Проверка обновлений через GitHub Releases: через 5 с после запуска, затем каждый час
+/// и при открытии панели, если с прошлой проверки прошло больше 10 минут.
 /// Новая версия = релиз с тегом вида v2.1.1 и приложенным установщиком Beg1nnnerOS-Setup-*.exe.
 /// Установка: скачать установщик → проверить SHA-256 (если GitHub его отдал) → закрыть программу →
 /// тихо обновить в ту же папку → программа запускается снова (это делает сам установщик).
@@ -22,7 +23,7 @@ public sealed class Updater
     /// <summary>Репозиторий с релизами: «владелец/имя».</summary>
     public const string Repo = "beg1nnner/Beg1nnnerOS";
 
-    private static readonly TimeSpan Period = TimeSpan.FromHours(6);
+    private static readonly TimeSpan Period = TimeSpan.FromHours(1);
     private readonly Hub _hub;
     private readonly SemaphoreSlim _gate = new(1, 1);
     // отдельный клиент без общего 30-секундного таймаута: установщик весит десятки мегабайт
@@ -65,12 +66,13 @@ public sealed class Updater
         downloading = Downloading,
         progress = Progress,
         auto = _hub.S.Bool("update.auto_check", true),
+        stale = CheckedAt == default || DateTime.UtcNow - CheckedAt > TimeSpan.FromMinutes(10),
     };
 
     /// <summary>Фоновый цикл: первая проверка через 15 с после запуска, затем раз в 6 часов.</summary>
     public async Task Run()
     {
-        await Task.Delay(TimeSpan.FromSeconds(15));
+        await Task.Delay(TimeSpan.FromSeconds(5));
         while (true)
         {
             if (_hub.S.Bool("update.auto_check", true))
@@ -124,7 +126,11 @@ public sealed class Updater
                 if (Available)
                 {
                     Status = $"доступна версия {Latest}";
-                    if (wasNew) _hub.Log.Add("system", $"Доступно обновление Beg1nnnerOS {Latest} (у вас {Config.Version}). Обновить можно в панели.");
+                    if (wasNew)
+                    {
+                        _hub.Log.Add("system", $"Доступно обновление Beg1nnnerOS {Latest} (у вас {Config.Version}). Нажмите «Обновить» в панели.");
+                        if (_hub.S.Str("update.skip") != Latest) _hub.UpdateFound(Latest);
+                    }
                 }
                 else Status = "установлена последняя версия";
             }

@@ -45,6 +45,9 @@ public sealed class Hub
     /// <summary>Закрытие программы (например, перед установкой обновления) — задаётся окном.</summary>
     public Action ExitApp = () => { };
 
+    /// <summary>Найдена новая версия (номер) — окно показывает уведомление Windows и пункт в меню трея.</summary>
+    public Action<string> UpdateFound = _ => { };
+
     /// <summary>Действия рабочего стола (горячие клавиши/трей) — задаются окном.</summary>
     public Func<Dictionary<string, string>> HotkeyStatus = () => new Dictionary<string, string>();
     public string TrayStatus = "выключен";

@@ -76,6 +76,7 @@ public partial class App : Application
 
         Hub.RestartApp = () => Dispatcher.InvokeAsync(async () => await RestartApp());
         Hub.ExitApp = () => Dispatcher.InvokeAsync(async () => await ExitApp());
+        Hub.UpdateFound = v => Dispatcher.InvokeAsync(() => ShowUpdate(v));
         Hub.Start();
         _win = new MainWindow(this);
         _hotkeys = new HotkeyManager(_win, name => Hub.Loop.Post(() => RunAction(name)));
@@ -150,6 +151,40 @@ public partial class App : Application
     }
 
     public void ShowMain() => _win?.ShowFromTray();
+
+    private WinForms.ToolStripMenuItem _trayUpdate;
+
+    /// <summary>Новая версия: уведомление Windows и пункт «Обновить» в меню значка в трее.</summary>
+    private void ShowUpdate(string version)
+    {
+        if (_tray == null) return;
+        try
+        {
+            if (_trayUpdate == null)
+            {
+                _trayUpdate = new WinForms.ToolStripMenuItem { Font = new System.Drawing.Font(_tray.ContextMenuStrip.Font, System.Drawing.FontStyle.Bold) };
+                _trayUpdate.Click += (s, e) => Hub.Loop.Post(() =>
+                {
+                    try { Hub.Updater.EnsureCanInstall(); Hub.Loop.Start(Hub.Updater.Install); }
+                    catch (Exception ex) { Hub.Log.Error("Обновление: " + ex.Message); Shell.OpenUrl(Hub.Updater.PageUrl); }
+                });
+                _tray.ContextMenuStrip.Items.Insert(0, _trayUpdate);
+                _tray.ContextMenuStrip.Items.Insert(1, new WinForms.ToolStripSeparator());
+            }
+            _trayUpdate.Text = $"⬇ Обновить до версии {version}";
+            _tray.BalloonTipClicked -= OnUpdateBalloon;
+            _tray.BalloonTipClicked += OnUpdateBalloon;
+            _tray.ShowBalloonTip(8000, $"Доступна новая версия Beg1nnnerOS {version}",
+                "Нажмите, чтобы открыть программу, затем «Обновить». Настройки сохранятся.", WinForms.ToolTipIcon.Info);
+        }
+        catch { }
+    }
+
+    private void OnUpdateBalloon(object sender, EventArgs e)
+    {
+        _tray.BalloonTipClicked -= OnUpdateBalloon;
+        ShowMain();
+    }
 
     /// <summary>Крестик: свернуть в трей, закрыть или спросить (раздел 15 руководства).</summary>
     public async void HandleCloseRequest()
