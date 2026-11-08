@@ -479,6 +479,7 @@ public sealed partial class WebServer
             {
                 case "twitch":
                     nw["client_id"] = nw.Str("client_id").Trim();
+                    TwitchClient.CheckKeys(nw.Str("client_id"), nw.Str("client_secret"));
                     nw["bot_login"] = nw.Str("bot_login").Trim().TrimStart('@').ToLowerInvariant();
                     if (nw.Str("sender") != "streamer" && nw.Str("sender") != "bot") throw new UserError("Неизвестный отправитель");
                     break;

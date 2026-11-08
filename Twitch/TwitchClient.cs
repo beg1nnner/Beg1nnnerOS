@@ -144,10 +144,26 @@ public sealed class TwitchClient
     public bool SenderReady() => Cfg.Bool("allow_send") && Streamer.Ready && Sender.Ready;
 
     // ---------- OAuth ----------
+    private static readonly System.Text.RegularExpressions.Regex KeyRx = new("^[a-z0-9]{20,40}$");
+
+    /// <summary>
+    /// Client ID и Client Secret у Twitch — строки из ~30 строчных латинских букв и цифр.
+    /// Частая ошибка — вписать название приложения: Twitch тогда отвечает «invalid client».
+    /// </summary>
+    public static void CheckKeys(string clientId, string secret)
+    {
+        if (clientId != "" && !KeyRx.IsMatch(clientId))
+            throw new UserError(clientId.Contains(' ') || clientId.Any(char.IsUpper) || clientId.Length < 20
+                ? $"«{clientId}» — похоже на название приложения, а не Client ID. Откройте dev.twitch.tv/console/apps → «Управление» и скопируйте «Идентификатор клиента» (около 30 латинских букв и цифр)."
+                : "Client ID должен состоять из ~30 строчных латинских букв и цифр — скопируйте его заново на dev.twitch.tv/console/apps", "client_id");
+        if (secret != "" && !KeyRx.IsMatch(secret))
+            throw new UserError("Client Secret должен состоять из ~30 строчных латинских букв и цифр. На dev.twitch.tv/console/apps → «Управление» нажмите «Создать» у секретного ключа и скопируйте его.", "client_secret");
+    }
     public string BuildAuthUrl(string kind)
     {
         if (ClientId == "" || ClientSecret == "")
             throw new UserError("Сначала укажите и сохраните Client ID и Client Secret");
+        CheckKeys(ClientId, ClientSecret);
         var now = ActionLog.Now;
         foreach (var k in _states.Where(p => now - p.Value.Ts > 900).Select(p => p.Key).ToList()) _states.Remove(k);
         var state = Convert.ToBase64String(RandomNumberGenerator.GetBytes(18)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
