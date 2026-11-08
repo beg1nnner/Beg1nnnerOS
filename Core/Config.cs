@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.1.1";
+    public const string Version = "2.1.2";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -106,7 +106,8 @@ public static class Config
         "per_user_limit": 2, "queue_limit": 15, "max_duration_min": 8, "min_views": 0, "banned_words": [],
         "vip_priority": false, "sub_priority": false, "skip_vote_enabled": true, "skip_votes": 3,
         "volume": 60, "audio_device": "", "announce": true, "blocked_users": [], "blocked_tracks": [],
-        "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true
+        "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true,
+        "normalize": true, "normalize_target": -14, "output": "app"
       },
       "overlay": {
         "theme": "classic", "custom_colors": false, "width": 700, "height": 460,

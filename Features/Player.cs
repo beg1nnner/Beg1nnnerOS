@@ -12,6 +12,8 @@ public sealed class Player
     private WasapiOut _out;
     private MediaFoundationReader _reader;
     private VolumeSampleProvider _vol;
+    private GainLimiter _gain;
+    private double _gainDb;
     private float _volume = 0.36f;
     private float _duck = 1f;
 
@@ -49,6 +51,17 @@ public sealed class Player
         }
     }
 
+    /// <summary>Выравнивание громкости текущего трека, дБ (меняется на лету).</summary>
+    public double GainDb
+    {
+        get => _gainDb;
+        set
+        {
+            _gainDb = value;
+            if (_gain != null) _gain.Gain = (float)Math.Pow(10, value / 20);
+        }
+    }
+
     public static List<object> Devices()
     {
         var list = new List<object>();
@@ -79,12 +92,19 @@ public sealed class Player
     }
 
     /// <summary>Запускает воспроизведение. onEnd(gen, ошибка) вызывается в контексте, где создан плеер.</summary>
-    public int Play(string path, Action<int, string> onEnd)
+    public int Play(string path, Action<int, string> onEnd, double gainDb = 0, double startAt = 0)
     {
         Stop();
         var gen = ++Gen;
         _reader = new MediaFoundationReader(path);
-        _vol = new VolumeSampleProvider(_reader.ToSampleProvider()) { Volume = _volume * _duck };
+        if (startAt > 0.5)
+        {
+            try { _reader.CurrentTime = TimeSpan.FromSeconds(Math.Min(startAt, Math.Max(0, _reader.TotalTime.TotalSeconds - 1))); }
+            catch { }
+        }
+        _gain = new GainLimiter(_reader.ToSampleProvider());
+        GainDb = gainDb;
+        _vol = new VolumeSampleProvider(_gain) { Volume = _volume * _duck };
         var device = FindDevice();
         _out = device != null
             ? new WasapiOut(device, AudioClientShareMode.Shared, true, 200)
@@ -119,6 +139,7 @@ public sealed class Player
         _out = null;
         _reader = null;
         _vol = null;
+        _gain = null;
         Paused = false;
         try { o?.Stop(); } catch { }
         try { o?.Dispose(); } catch { }

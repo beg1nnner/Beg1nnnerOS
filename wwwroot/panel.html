@@ -169,6 +169,29 @@
       <div class="muted small" style="margin-top:6px">Звук играет на устройстве вывода музыки, когда зритель заказывает трек за баллы. Ошибки YouTube (18+, видео удалено, недоступно в стране и т. п.) пишутся в чат на русском.</div>
       <label class="f" style="margin-top:12px"><span>Запрещённые слова (по одному в строке; также для запрета исполнителя)</span><textarea data-s="music.banned_words" data-list></textarea></label>
     </div>
+    <div class="card">
+      <h3>🔊 Громкость и вывод звука</h3>
+      <div class="row" style="align-items:flex-end;margin-bottom:6px">
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.normalize"> Выравнивать громкость треков</label>
+        <label class="f"><span>Уровень</span><select data-s="music.normalize_target" data-num>
+          <option value="-18">Тише (−18 LUFS)</option><option value="-14">Обычно (−14 LUFS, как Spotify и YouTube)</option><option value="-11">Громче (−11 LUFS)</option></select></label>
+      </div>
+      <div class="muted small" style="margin-bottom:14px">Программа измеряет громкость каждого трека при загрузке и подтягивает тихие и приглушает громкие к одному уровню. Громкие места не «хрипят» — их сглаживает лимитер. Общая громкость по-прежнему регулируется ползунком.</div>
+      <div class="row" style="align-items:flex-end">
+        <label class="f"><span>Где играет музыка</span><select data-s="music.output" id="mus-out" onchange="renderOut()">
+          <option value="app">В программе (устройство вывода)</option><option value="obs">В OBS (отдельный источник)</option></select></label>
+        <span class="small" id="obs-st" style="margin-bottom:9px"></span>
+      </div>
+      <div id="out-app" class="muted small" style="margin-top:8px">Музыка играет на устройстве из «Настроек → Звук и сервер». В OBS она попадает через «Десктопный звук».</div>
+      <div id="out-obs" class="hidden" style="margin-top:10px">
+        <ol class="small" style="margin:0 0 8px 18px;padding:0;line-height:1.7">
+          <li>В OBS: «Источники» → «+» → <b>«Браузер»</b>, назовите, например, «Музыка».</li>
+          <li>Вставьте адрес: <code id="mobs-url"></code> <button class="sm" onclick="copy(base()+'/music-obs')">Скопировать адрес</button></li>
+          <li>Ширину и высоту поставьте 1, включите <b>«Управлять аудио через OBS»</b> и нажмите «ОК».</li>
+        </ol>
+        <div class="muted small">Музыка появится отдельной дорожкой «Музыка» в микшере OBS — её громкость, фильтры и запись можно настраивать отдельно от игры и микрофона. Если OBS закрыт, музыка автоматически играет из программы.</div>
+      </div>
+    </div>
   </div>
   <div data-tab="blocks" class="hidden">
     <div class="card">
@@ -831,7 +854,7 @@ async function loadSettings() {
   $("hk-list").innerHTML = Object.entries(j.hotkey_actions).map(([k, t]) => `<tr><td>${t}</td>
     <td style="width:220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
   $("savebar").classList.add("hidden");
-  applyUiTheme(S.ui.theme || "twitch"); renderUiThemes(); renderChatThemes(true);
+  applyUiTheme(S.ui.theme || "twitch"); renderUiThemes(); renderChatThemes(true); renderOut();
   renderEvents(); fitOverlay();
 }
 function collect() {
@@ -840,7 +863,7 @@ function collect() {
     let v;
     if (el.tagName === "SELECT" && !el.options.length) return;   // список ещё не загружен — не трогаем значение
     if (el.type === "checkbox") v = el.checked;
-    else if (el.type === "number") v = el.value === "" ? 0 : +el.value;
+    else if (el.type === "number" || el.hasAttribute("data-num")) v = el.value === "" ? 0 : +el.value;
     else if (el.hasAttribute("data-list")) v = el.value.split("\n").map(x => x.trim()).filter(Boolean);
     else v = el.value;
     setPath(out, el.dataset.s, v);
@@ -906,6 +929,17 @@ async function updSkip(v) {
   try { ST.update = await api("/update/skip", {version: v}); renderUpdate(ST.update); } catch (e) {}
 }
 
+let MUS_OBS = false;
+function renderOut() {
+  const sel = $("mus-out"); if (!sel) return;
+  const obs = sel.value === "obs";
+  $("out-app").classList.toggle("hidden", obs);
+  $("out-obs").classList.toggle("hidden", !obs);
+  $("mobs-url").textContent = base() + "/music-obs";
+  $("obs-st").innerHTML = obs ? (MUS_OBS ? '<span style="color:var(--ok,#22c55e)">● OBS-плеер подключён</span>'
+                                         : '<span style="color:var(--warn,#f59e0b)">● OBS-плеер не открыт — музыка играет из программы</span>') : "";
+}
+
 async function poll() {
   try { ST = (await api("/state")); } catch (e) { return; }
   const r = ST.ready, m = ST.music;
@@ -933,7 +967,9 @@ async function poll() {
   $("ready").innerHTML = cards.join("");
   const c = m.current;
   $("np-title").textContent = c ? c.title : "—";
-  $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "") : "";
+  $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
+    + (c.gain_db ? ` · громкость ${c.gain_db > 0 ? "+" : "−"}${Math.abs(c.gain_db).toFixed(1)} дБ` : "") + (c.in_obs ? " · играет в OBS" : "") : "";
+  MUS_OBS = m.obs_connected; renderOut();
   $("np-bar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";
   $("np-pos").textContent = c ? fmt(c.position) + " / " + fmt(c.duration) : "";
   $("np-votes").textContent = c && m.votes ? `Голосов за пропуск: ${m.votes}/${m.votes_needed}` : "";

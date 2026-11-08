@@ -6,6 +6,8 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Beg1nnnerOS.Core;
 
@@ -60,6 +62,31 @@ public sealed class Music
     /// <summary>Замена поиска в тестах.</summary>
     public Func<string, Task<Track>> ResolveOverride;
 
+    // ---------- выравнивание громкости ----------
+    // Измерения по ID трека: громкость (LUFS) и пик. Хранятся в кэше, чтобы не мерить трек дважды.
+    private readonly ConcurrentDictionary<string, double[]> _loud = new();
+    private static string LoudFile => Path.Combine(Config.CacheDir, "loudness.json");
+    private bool _loudDirty;
+
+    // ---------- воспроизведение в OBS ----------
+    // OBS-страница /music-obs опрашивает программу дважды в секунду и сама играет текущий файл.
+    private DateTime _obsSeen = DateTime.MinValue;
+    private bool _obsActive;          // текущий трек звучит в OBS, а не в программе
+    private int _obsGen;
+    private string _obsPath = "";
+    private double _obsPos, _obsStart;
+    private bool _obsPaused;
+    private bool _obsWarned;
+    private readonly HashSet<string> _obsFailed = new();   // треки, которые OBS не смог открыть
+
+    public bool ObsMode => Cfg.Str("output", "app") == "obs";
+    public bool ObsConnected => (DateTime.UtcNow - _obsSeen).TotalSeconds < 4;
+    /// <summary>Путь к файлу, который сейчас играет в OBS (для отдачи по /api/music/audio).</summary>
+    public string ObsFile(int gen) => _obsActive && gen == _obsGen ? _obsPath : null;
+
+    private double Position => _obsActive ? _obsPos : Player.Position;
+    private bool IsPaused => _obsActive ? _obsPaused : Player.Paused;
+
     public Music(Hub hub) { _hub = hub; }
 
     private JsonObject Cfg => _hub.S.Obj("music");
@@ -69,6 +96,59 @@ public sealed class Music
         var v = Math.Max(0, Math.Min(100, Cfg.Int("volume", 60))) / 100.0;
         Player.Volume = (float)(v * v);
         Player.DeviceId = Cfg.Str("audio_device");
+        if (Current != null) Player.GainDb = GainDb(Current.Vid);
+        // режим переключили на «программа», а трек играет в OBS — продолжаем в программе с того же места
+        if (_obsActive && !ObsMode) MoveToApp("режим «музыка в программе»");
+    }
+
+    /// <summary>Поправка громкости трека в дБ: до целевого уровня, не больше +12 / −12 дБ.</summary>
+    public double GainDb(string vid)
+    {
+        if (!Cfg.Bool("normalize", true) || !_loud.TryGetValue(vid, out var m)) return 0;
+        var target = Cfg.Num("normalize_target", -14);
+        var g = Math.Clamp(target - m[0], -12, 12);
+        // не задираем трек так, что больше 6 дБ уйдёт в лимитер
+        if (m[1] > 0) g = Math.Min(g, -20 * Math.Log10(m[1]) + 6);
+        return Math.Round(g, 1);
+    }
+
+    private void LoadLoudness()
+    {
+        try
+        {
+            if (!File.Exists(LoudFile)) return;
+            var d = JsonSerializer.Deserialize<Dictionary<string, double[]>>(File.ReadAllText(LoudFile));
+            if (d != null) foreach (var (k, v) in d) if (v?.Length == 2) _loud[k] = v;
+        }
+        catch { }
+    }
+
+    private void SaveLoudness()
+    {
+        if (!_loudDirty) return;
+        _loudDirty = false;
+        try
+        {
+            // храним только последние ~2000 треков
+            var d = _loud.Take(2000).ToDictionary(p => p.Key, p => p.Value);
+            File.WriteAllText(LoudFile, JsonSerializer.Serialize(d));
+        }
+        catch { }
+    }
+
+    /// <summary>Измеряет громкость скачанного файла (в фоне, ~1 с на трек).</summary>
+    private async Task Measure(string vid, string path)
+    {
+        if (!Cfg.Bool("normalize", true) || _loud.ContainsKey(vid)) return;
+        try
+        {
+            var m = await Task.Run(() => Loudness.Measure(path));
+            if (m == null) return;
+            _loud[vid] = new[] { m.Value.Lufs, m.Value.Peak };
+            _loudDirty = true;
+            SaveLoudness();
+        }
+        catch (Exception e) { _hub.Log.Add("skip", $"Не удалось измерить громкость: {e.Message}"); }
     }
 
     public void Wake() => _wake.TrySetResult(true);
@@ -84,6 +164,8 @@ public sealed class Music
         ApplySettings();
         Directory.CreateDirectory(Config.CacheDir);
         CleanupCache();
+        LoadLoudness();
+        _ = ObsWatch();
         while (true)
         {
             await _wake.Task;
@@ -103,6 +185,13 @@ public sealed class Music
     }
 
     private async Task<string> DownloadAudio(Track t)
+    {
+        var p = await DownloadRaw(t);
+        await Measure(t.Vid, p);
+        return p;
+    }
+
+    private async Task<string> DownloadRaw(Track t)
     {
         Directory.CreateDirectory(Config.CacheDir);
         if (t.Vid.StartsWith("ym:"))
@@ -145,7 +234,7 @@ public sealed class Music
         if (Current != t) return;   // пропущен во время загрузки
         try
         {
-            Player.Play(path, OnEnd);
+            StartPlayback(t, path, 0);
         }
         catch (Exception e)
         {
@@ -211,6 +300,95 @@ public sealed class Music
         }
     }
 
+    /// <summary>Запуск трека: в OBS (если выбран этот режим и OBS-страница на связи) или в программе.</summary>
+    private void StartPlayback(Track t, string path, double startAt)
+    {
+        var gain = GainDb(t.Vid);
+        if (gain != 0) _hub.Log.Add("skip", $"Громкость «{t.Title}» выровнена на {gain:+0.0;-0.0} дБ");
+        if (ObsMode && ObsConnected && !_obsFailed.Contains(t.Vid))
+        {
+            Player.Stop();
+            _obsGen = Player.Gen;
+            _obsActive = true;
+            _obsPath = path;
+            _obsPos = _obsStart = startAt;
+            _obsPaused = false;
+            return;
+        }
+        if (ObsMode && !ObsConnected && !_obsWarned)
+        {
+            _obsWarned = true;
+            _hub.Log.Error("Музыка: выбран режим «в OBS», но источник с плеером в OBS не открыт — играю из программы. Добавьте в OBS источник «Браузер» с адресом из раздела «Музыка».");
+        }
+        _obsActive = false;
+        Player.Play(path, OnEnd, gain, startAt);
+    }
+
+    /// <summary>Переносит текущий трек из OBS в программу с того же места.</summary>
+    private void MoveToApp(string why)
+    {
+        if (!_obsActive || Current == null) { _obsActive = false; return; }
+        var t = Current;
+        var paused = _obsPaused;
+        _obsActive = false;
+        _hub.Log.Add("music", $"Продолжаю «{t.Title}» в программе ({why})");
+        try
+        {
+            Player.Play(_obsPath, OnEnd, GainDb(t.Vid), _obsPos);
+            if (paused) Player.SetPaused(true);
+        }
+        catch (Exception e)
+        {
+            _hub.Log.Error($"Плеер не смог открыть «{t.Title}»: {e.Message}");
+            Current = null;
+            Wake();
+        }
+    }
+
+    /// <summary>Если OBS закрыли посреди трека — через 4 с музыка продолжится в программе.</summary>
+    private async Task ObsWatch()
+    {
+        while (true)
+        {
+            await Task.Delay(1000);
+            if (_obsActive && !ObsConnected) MoveToApp("OBS-плеер не отвечает");
+            SaveLoudness();
+        }
+    }
+
+    /// <summary>Опрос от OBS-страницы: она сообщает позицию/окончание/ошибку и получает, что играть.</summary>
+    public object ObsPoll(int gen, double pos, int ended, string err)
+    {
+        var wasConnected = ObsConnected;
+        _obsSeen = DateTime.UtcNow;
+        if (!wasConnected) { _obsWarned = false; _hub.Log.Add("music", "OBS-плеер подключён"); }
+        if (_obsActive && gen == _obsGen)
+        {
+            if (pos > 0) _obsPos = pos;
+            if (!string.IsNullOrEmpty(err))
+            {
+                _hub.Log.Add("skip", $"OBS-плеер: {err}");
+                if (Current != null) _obsFailed.Add(Current.Vid);
+                MoveToApp("OBS не смог открыть этот файл");
+            }
+            else if (ended == gen)
+            {
+                _obsActive = false;
+                OnEnd(gen, "");
+            }
+        }
+        var active = _obsActive;
+        var gainLin = Player.Volume * Player.Duck * Math.Pow(10, (Current != null ? GainDb(Current.Vid) : 0) / 20);
+        return new
+        {
+            gen = active ? _obsGen : 0,
+            src = active ? $"/api/music/audio/{_obsGen}{Path.GetExtension(_obsPath)}" : "",
+            start = _obsStart,
+            paused = active && _obsPaused,
+            gain = Math.Round(gainLin, 4),
+        };
+    }
+
     private void OnEnd(int gen, string error)
     {
         if (gen != Player.Gen) return;
@@ -225,6 +403,7 @@ public sealed class Music
         if (Current == null) return false;
         var title = Current.Title;
         Player.Stop();
+        _obsActive = false;
         Current = null;
         _hub.Log.Add("music", $"Пропущен: {title}" + (reason != "" ? $" ({reason})" : ""));
         Wake();
@@ -233,6 +412,7 @@ public sealed class Music
 
     public bool TogglePause()
     {
+        if (_obsActive) { _obsPaused = !_obsPaused; return _obsPaused; }
         Player.SetPaused(!Player.Paused);
         return Player.Paused;
     }
@@ -432,7 +612,8 @@ public sealed class Music
             {
                 id = cur.Id, vid = cur.Vid, title = cur.Title, page_url = cur.PageUrl, duration = cur.Duration,
                 requester = cur.Requester, login = cur.Login, priority = cur.Priority, source = cur.Source,
-                paid = cur.Redemption != null, position = Math.Round(Player.Position, 1), paused = Player.Paused,
+                paid = cur.Redemption != null, position = Math.Round(Position, 1), paused = IsPaused,
+                gain_db = GainDb(cur.Vid), in_obs = _obsActive,
                 loading = Loading, views = cur.Views,
             };
         return new
@@ -443,6 +624,8 @@ public sealed class Music
             votes = Votes.Count,
             votes_needed = Cfg.Int("skip_votes", 3),
             toast = new { id = ToastId, text = ToastText },
+            output = Cfg.Str("output", "app"),
+            obs_connected = ObsConnected,
         };
     }
 }

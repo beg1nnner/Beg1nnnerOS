@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Beg1nnnerOS — музыка для OBS</title>
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  /* В OBS страница невидима (только звук). В обычном браузере — подсказка для проверки. */
+  #hint { display: none; font: 15px/1.5 system-ui, sans-serif; color: #e8e6f0; background: #17151f; padding: 18px 22px;
+          margin: 20px; border-radius: 12px; max-width: 560px; border: 1px solid #2c2838; cursor: pointer; }
+  #hint b { color: #c4b5fd; }
+  body.browser #hint { display: block; }
+</style>
+</head>
+<body>
+<div id="hint">
+  <b>Плеер музыки Beg1nnnerOS для OBS.</b><br>
+  Добавьте эту страницу в OBS как источник «Браузер» и включите «Управлять аудио через OBS» —
+  музыка появится отдельной дорожкой в микшере.<br><br>
+  <span id="st">Нажмите сюда, чтобы проверить звук в браузере.</span>
+</div>
+<audio id="a" preload="auto"></audio>
+<script>
+const a = document.getElementById("a");
+const inObs = !!window.obsstudio;
+if (!inObs) document.body.classList.add("browser");
+let ctx = null, gainNode = null, gen = 0, ended = 0, err = "", busy = false, wantGain = 1;
+
+// Громкость с выравниванием может быть больше 1, поэтому идём через WebAudio:
+// усиление → лимитер (компрессор с жёстким порогом −1 дБ) → выход.
+function graph() {
+  if (ctx) return;
+  try {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaElementSource(a);
+    gainNode = ctx.createGain();
+    const lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20;
+    lim.attack.value = 0.002; lim.release.value = 0.2;
+    src.connect(gainNode).connect(lim).connect(ctx.destination);
+  } catch (e) { ctx = null; }
+}
+function applyGain(g) {
+  wantGain = g;
+  if (gainNode) gainNode.gain.setTargetAtTime(g, ctx.currentTime, 0.05);
+  else a.volume = Math.min(1, g);
+}
+
+async function tick() {
+  if (busy) return;
+  busy = true;
+  try {
+    const q = new URLSearchParams({ gen, pos: (a.currentTime || 0).toFixed(2), ended, err });
+    err = "";
+    const r = await fetch("/api/music/obs?" + q, { cache: "no-store" });
+    const s = (await r.json()).data;
+    if (s.gen !== gen) {
+      gen = s.gen; ended = 0; err = "";   // ошибки прошлого трека больше не актуальны
+      if (s.src) { a.src = s.src + (s.start > 0.5 ? "#t=" + s.start.toFixed(1) : ""); }
+      else { a.pause(); a.removeAttribute("src"); a.load(); }
+    }
+    graph();
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+    applyGain(s.gain);
+    if (s.src) {
+      if (s.paused && !a.paused) a.pause();
+      if (!s.paused && a.paused && ended !== gen) {
+        const g = gen;
+        a.play().catch(e => {
+          if (g !== gen || !a.getAttribute("src") || e.name === "AbortError") return;   // трек уже сменился
+          if (inObs) err = "не запускается воспроизведение: " + e.message; else setSt("Нажмите сюда, чтобы разрешить звук.");
+        });
+      }
+    }
+    setSt(s.src ? (a.paused ? "Пауза." : "Играет ✓") : "Подключено к программе ✓ Ждёт трек.");
+  } catch (e) {
+    setSt("Нет связи с программой — она запущена?");
+  } finally { busy = false; }
+}
+function setSt(t) { const el = document.getElementById("st"); if (el && !inObs) el.textContent = t; }
+
+a.addEventListener("ended", () => { ended = gen; tick(); });
+a.addEventListener("error", () => {
+  if (!a.getAttribute("src")) return;
+  const codes = { 1: "загрузка прервана", 2: "ошибка сети", 3: "ошибка декодирования", 4: "формат не поддерживается" };
+  err = "файл не открылся (" + (codes[a.error && a.error.code] || "неизвестная ошибка") + ")";
+  tick();
+});
+document.getElementById("hint").addEventListener("click", () => { graph(); if (ctx) ctx.resume(); tick(); });
+setInterval(tick, 500);
+tick();
+</script>
+</body>
+</html>

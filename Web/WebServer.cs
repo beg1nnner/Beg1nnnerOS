@@ -174,6 +174,7 @@ public sealed partial class WebServer
         app.MapGet("/dock", (HttpContext c) => NoStore(c, Page("dock.html")));
         app.MapGet("/panel", (HttpContext c) => NoStore(c, Page("panel.html")));
         app.MapGet("/chat", (HttpContext c) => NoStore(c, Page("chat.html")));
+        app.MapGet("/music-obs", (HttpContext c) => NoStore(c, Page("music-obs.html")));
         app.MapGet("/ws/chat", (RequestDelegate)WsChat);
         app.MapGet("/api/chat/overlay", H((c, b) => Ok(_hub.ChatOverlay.Config())));
         app.MapGet("/callback", D(Callback));
@@ -293,6 +294,35 @@ public sealed partial class WebServer
         }));
 
         // музыка
+        // OBS-плеер: страница сообщает позицию/окончание и узнаёт, что играть
+        app.MapGet("/api/music/obs", H((c, b) =>
+        {
+            var q = c.Request.Query;
+            int.TryParse(q["gen"], out var gen);
+            int.TryParse(q["ended"], out var ended);
+            double.TryParse(q["pos"], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pos);
+            var err = (string)q["err"] ?? "";
+            return Ok(_hub.Music.ObsPoll(gen, pos, ended, err.Length > 200 ? err[..200] : err));
+        }));
+        // файл текущего трека для OBS-плеера (с поддержкой перемотки по Range)
+        app.MapGet("/api/music/audio/{name}", async (HttpContext c, string name) =>
+        {
+            var digits = new string(name.TakeWhile(char.IsDigit).ToArray());
+            if (!int.TryParse(digits, out var gen)) return Results.NotFound();
+            var path = await _hub.Loop.CallSync(() => _hub.Music.ObsFile(gen));
+            if (path == null || !File.Exists(path)) return Results.NotFound();
+            var mime = Path.GetExtension(path).ToLowerInvariant() switch
+            {
+                ".m4a" or ".mp4" => "audio/mp4",
+                ".mp3" => "audio/mpeg",
+                ".webm" => "audio/webm",
+                ".opus" or ".ogg" => "audio/ogg",
+                _ => "application/octet-stream",
+            };
+            c.Response.Headers["Cache-Control"] = "no-store";
+            return Results.File(path, mime, enableRangeProcessing: true);
+        });
+
         app.MapGet("/api/now", H((c, b) =>
         {
             var st = J.From(_hub.Music.State()).AsObject();
@@ -486,6 +516,8 @@ public sealed partial class WebServer
                 case "music":
                     ValidateMusic(nw);
                     nw["order_sound_volume"] = Math.Max(0, Math.Min(100, nw.Int("order_sound_volume", 50)));
+                    if (nw.Str("output") is not ("app" or "obs")) nw["output"] = "app";
+                    nw["normalize_target"] = Math.Max(-24, Math.Min(-8, nw.Num("normalize_target", -14)));
                     if (!Chime.Styles.ContainsKey(nw.Str("order_sound_style"))) nw["order_sound_style"] = "bell";
                     if (nw.Str("search_first") != "youtube" && nw.Str("search_first") != "yandex") throw new UserError("Неизвестный источник поиска");
                     break;
