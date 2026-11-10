@@ -216,7 +216,10 @@
       <div class="row" style="margin-top:12px;align-items:flex-end">
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.order_sound"> 🔔 Звук при новом заказе</label>
         <label class="f"><span>Звук</span><select data-s="music.order_sound_style" id="chime-style">
-          <option value="bell">Колокольчик</option><option value="marimba">Маримба</option><option value="soft">Мягкий аккорд</option><option value="drop">Капля</option></select></label>
+          <option value="bell">Колокольчик</option><option value="marimba">Маримба</option><option value="soft">Мягкий аккорд</option><option value="drop">Капля</option>
+          <option value="chimes">Колокольчики</option><option value="harp">Арфа</option><option value="kalimba">Калимба</option><option value="glass">Хрусталь</option>
+          <option value="pluck">Гитара</option><option value="notify">Уведомление</option><option value="coin">Монетка</option><option value="bubble">Пузырёк</option>
+          <option value="magic">Волшебство</option><option value="doorbell">Дверной звонок</option></select></label>
         <label class="f"><span>Громкость звука, %</span><input type="number" min="0" max="100" step="5" data-s="music.order_sound_volume" id="chime-vol"></label>
         <button class="sm" onclick="api('/music/chime',{style:$('chime-style').value,volume:+$('chime-vol').value})">▶ Прослушать</button>
       </div>
