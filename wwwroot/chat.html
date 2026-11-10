@@ -188,7 +188,53 @@ function trim() {
   const extra = items.length - max;
   if (extra > 0) (cfg.direction === "top" ? items.slice(-extra) : items.slice(0, extra)).forEach(e => e.remove());
 }
-// Своя тема (Pro): база + цвета, шрифт, скругления, рамка, тень и свой CSS
+// ---------- общие функции конструктора тем ----------
+const TEXT_SHADOWS = {
+  none: "", soft: "0 2px 4px rgba(0,0,0,.8)",
+  outline: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 3px #000",
+  glow: "0 0 8px var(--accent), 0 0 18px var(--accent)",
+};
+function rgbaParts(c) {
+  const m = /rgba?\(([^)]+)\)/.exec(c || "");
+  if (m) { const p = m[1].split(",").map(s => parseFloat(s)); return {r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1}; }
+  const h = (c || "#000").replace("#", ""), f = h.length === 3 ? h.split("").map(x => x + x).join("") : h.slice(0, 6);
+  return {r: parseInt(f.slice(0, 2), 16) || 0, g: parseInt(f.slice(2, 4), 16) || 0, b: parseInt(f.slice(4, 6), 16) || 0, a: 1};
+}
+function withAlpha(c, a) { const p = rgbaParts(c); return `rgba(${p.r},${p.g},${p.b},${a})`; }
+/** CSS-свойства «коробки» (фон, рамка, тени) по полям темы. */
+function boxCss(t, shadows) {
+  const a = rgbaParts(t.background).a, type = t.bg_type || "solid", angle = t.grad_angle ?? 135;
+  const fill = type === "none" ? "transparent" : type === "gradient"
+    ? `linear-gradient(${angle}deg, ${t.background}, ${withAlpha(t.bg2 || "#2a1655", a)})` : t.background;
+  const bw = +t.border_width || 0, gradBorder = bw > 0 && t.border_style === "gradient" && type !== "none";
+  const out = [];
+  if (gradBorder) {
+    const layer = type === "gradient" ? fill : `linear-gradient(${fill}, ${fill})`;
+    out.push(`border:${bw}px solid transparent !important`,
+      `background:${layer} padding-box, linear-gradient(${angle}deg, ${t.accent}, ${t.accent2 || t.accent}) border-box !important`);
+  } else {
+    out.push(`background:${fill} !important`);
+    if (bw > 0) out.push(`border:${bw}px ${t.border_style === "gradient" ? "solid" : (t.border_style || "solid")} ${t.border_color} !important`);
+    else if (t.stripe !== undefined) out.push("border:none !important");
+  }
+  out.push(type === "glass" ? `backdrop-filter:blur(${t.blur ?? 12}px) saturate(1.3) !important` : (t.stripe !== undefined ? "backdrop-filter:none !important" : ""));
+  const sc = t.shadow_color || "#000000";
+  const sh = {none: [], soft: [`0 8px 30px ${withAlpha(sc, .35)}`], strong: [`0 12px 40px ${withAlpha(sc, .7)}`],
+              glow: ["0 0 18px var(--accent)", "0 0 4px var(--accent)"]}[t.shadow] || [];
+  if (type === "none" && t.shadow !== "glow") sh.length = 0;
+  if (+t.stripe > 0) sh.push(`inset ${t.stripe}px 0 0 var(--accent)`);
+  out.push(`box-shadow:${sh.length ? sh.join(", ") : "none"} !important`);
+  return out.filter(Boolean).join("; ");
+}
+const ANIMS_CSS = `
+@keyframes b1-fade { from { opacity:0; } }
+@keyframes b1-slide-up { from { opacity:0; transform:translateY(16px); } }
+@keyframes b1-slide-left { from { opacity:0; transform:translateX(-36px); } }
+@keyframes b1-slide-right { from { opacity:0; transform:translateX(36px); } }
+@keyframes b1-pop { from { opacity:0; transform:scale(.7); } }
+@keyframes b1-bounce { 0% { opacity:0; transform:translateY(-26px); } 60% { opacity:1; transform:translateY(6px); } 80% { transform:translateY(-3px); } 100% { transform:none; } }`;
+
+// Своя тема: база + цвета, фон, рамка, текст, ники, эмоуты, анимации и свой CSS
 const CHAT_BASES = ["classic", "cards", "bubbles", "neon", "retro", "compact", "light"];
 const SHADOWS = {none: "none", soft: "0 4px 14px rgba(0,0,0,.3)", strong: "0 8px 24px rgba(0,0,0,.6)", glow: "0 0 14px var(--accent)"};
 let customThemes = [], previewTheme = null, customKey = "";
@@ -203,9 +249,27 @@ function applyCustom(t) {
   const box = t.base === "bubbles" ? ".body" : ".msg";
   const css = [`:root { --accent:${t.accent}; }`, `body { color:${t.text_color}; }`];
   if (t.font) css.push(`body { font-family: ${t.font}, "Segoe UI", sans-serif !important; }`);
-  css.push(`${box} { background:${t.background} !important; color:${t.text_color} !important; border-radius:${t.radius}px !important;
-    padding:${Math.round(t.padding / 2)}px ${t.padding}px !important; box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important;
-    ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  if (t.stripe === undefined) {   // тема из версии до 2.3 — старое поведение
+    css.push(`${box} { background:${t.background} !important; color:${t.text_color} !important; border-radius:${t.radius}px !important;
+      padding:${Math.round(t.padding / 2)}px ${t.padding}px !important; box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important;
+      ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  } else {
+    const k = (t.font_scale || 100) / 100;
+    css.push(ANIMS_CSS);
+    css.push(`${box} { color:${t.text_color} !important; border-radius:${t.radius}px !important;
+      padding:${Math.round(t.padding / 2)}px ${t.padding}px !important; ${boxCss(t)} }`);
+    css.push(`body { font-size:calc(var(--fs) * ${k}) !important; letter-spacing:${t.letter_spacing || 0}px; line-height:${(t.line_height || 135) / 100} !important;
+      ${TEXT_SHADOWS[t.text_shadow] ? `text-shadow:${TEXT_SHADOWS[t.text_shadow]};` : ""} }`);
+    css.push(`.text { font-weight:${Math.min(+t.weight || 500, 900)} !important; } #chat { gap:${t.gap ?? 6}px !important; }`);
+    css.push(`.sep { color:${t.muted_color}; } .mention { color:${t.mention_color} !important; }`);
+    css.push(`:root { --emote:calc(1.6em * ${(t.emote_scale || 100) / 100}); }`);
+    if (t.name_color === "accent") css.push(".name { color:var(--accent) !important; }");
+    if (t.name_color === "text") css.push(`.name { color:${t.text_color} !important; }`);
+    if (t.name_layout === "above") css.push(".head { display:block !important; margin-bottom:.15em; } .sep { display:none !important; } .msg > .head + * { }");
+    if (!t.show_colon) css.push(".sep { display:none !important; } .name { margin-right:.35em; }");
+    css.push(t.anim === "none" ? ".msg:not(.out) { animation:none !important; }"
+      : `.msg:not(.out) { animation:b1-${t.anim || "slide-up"} ${t.anim_ms || 400}ms ease-out both !important; }`);
+  }
   css.push(`.t-cards .msg, .t-neon .msg { border-left-color:var(--uc, ${t.accent}) !important; }`);
   if (t.uppercase) css.push(".name { text-transform:uppercase; }");
   el.textContent = css.join("\n") + "\n" + (t.css || "");

@@ -12,7 +12,7 @@
     <RootNamespace>Beg1nnnerOS</RootNamespace>
     <AssemblyName>Beg1nnnerOS</AssemblyName>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <Product>Beg1nnnerOS</Product>
     <SatelliteResourceLanguages>ru;en</SatelliteResourceLanguages>
     <!-- Не превращать предупреждения анализаторов в ошибки -->

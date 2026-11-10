@@ -35,6 +35,25 @@
   nav .upd-nav:not(.hidden) ~ .thanks-btn { margin-top:0 !important; }
   @keyframes updPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.7); } }
   .err { color:#ef4444; }
+  .th-layout { display:flex; gap:20px; align-items:flex-start; margin-top:10px; flex-wrap:wrap; }
+  .th-form { flex:1; min-width:340px; }
+  .th-prev { flex:none; width:440px; position:sticky; top:12px; }
+  .th-prevbox { width:440px; height:330px; overflow:hidden; border-radius:12px; border:1px solid var(--line); }
+  .th-prevbox iframe { border:0; width:733px; height:550px; transform:scale(.6); transform-origin:0 0; }
+  .th-prevbox.check { background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px; }
+  .th-prevbox.game { background:linear-gradient(160deg,#1d3b2a,#3a2a18 45%,#20324a); }
+  .th-prevbox.dark { background:#0b0b10; } .th-prevbox.light { background:#eef0f5; }
+  .th-pal-wrap { margin:4px 0 10px; }
+  .th-pal { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .th-pal button { padding:4px 9px 4px 4px; display:flex; align-items:center; gap:6px; font-size:12.5px; border-radius:10px; }
+  .th-pal i { display:inline-block; width:34px; height:18px; border-radius:6px; }
+  .th-sec { border:1px solid var(--line); border-radius:12px; padding:0 14px; margin:8px 0; background:color-mix(in srgb, var(--panel) 60%, transparent); }
+  .th-sec > summary { cursor:pointer; padding:11px 0; font-weight:700; list-style:none; }
+  .th-sec > summary::before { content:"▸ "; color:var(--muted); } .th-sec[open] > summary::before { content:"▾ "; }
+  .th-sec[open] { padding-bottom:12px; }
+  .th-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px 14px; }
+  .th-grid .f { margin:0; } .th-grid .switch { margin-top:18px; }
+  .th-grid input[type=color] { width:100%; height:34px; padding:2px; }
   .devcode { font:800 34px/1.1 ui-monospace,Consolas,monospace; letter-spacing:.12em; padding:14px 18px; border-radius:12px;
              background:var(--panel); border:1px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); display:inline-block; margin:8px 0 10px; }
   .chk { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); }
@@ -602,45 +621,34 @@
   <div data-tab="themes">
     <div class="card">
       <div class="row"><h3 class="grow" style="margin:0">Свои темы</h3>
-        <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button></div>
+        <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button>
+        <button class="sm" onclick="themeImport()">📥 Импорт по коду</button></div>
       <table style="margin-top:10px"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list"></tbody></table>
       <div class="small muted" style="margin-top:8px">«Применить» выбирает тему для источника в OBS. Для отдельной сцены адрес с темой: <code>/?theme=custom:ID</code> или <code>/chat?theme=custom:ID</code>.</div>
     </div>
     <div class="card hidden" id="th-editor">
-      <div class="row"><h3 class="grow" style="margin:0" id="th-title">Новая тема</h3><button class="sm" onclick="closeTheme()">Закрыть</button></div>
-      <div class="row" style="align-items:flex-start;gap:20px;margin-top:10px">
-        <div style="flex:1;min-width:300px">
+      <div class="row"><h3 class="grow" style="margin:0" id="th-title">Новая тема</h3>
+        <button class="sm" onclick="themeExport()">📤 Код темы</button>
+        <button class="sm" onclick="themeReset()">↺ Сбросить</button>
+        <button class="sm" onclick="closeTheme()">Закрыть</button></div>
+      <div class="th-layout">
+        <div class="th-form">
           <div class="row">
-            <label class="f grow"><span>Название</span><input id="th-name" data-th maxlength="40"></label>
+            <label class="f grow"><span>Название</span><input id="th-name" maxlength="40"></label>
             <label class="f"><span>Основа (готовая тема)</span><select id="th-base" data-th></select></label>
           </div>
-          <div class="row">
-            <label class="f"><span>Акцент</span><input type="color" id="th-accent" data-th></label>
-            <label class="f"><span>Фон</span><input type="color" id="th-bgc" data-th></label>
-            <label class="f grow"><span>Прозрачность фона: <b id="th-bgav"></b>%</span><input type="range" min="0" max="100" id="th-bga" data-th></label>
-            <label class="f"><span>Текст</span><input type="color" id="th-text" data-th></label>
-          </div>
-          <div class="row">
-            <label class="f grow"><span>Скругление: <b id="th-radiusv"></b> px</span><input type="range" min="0" max="60" id="th-radius" data-th></label>
-            <label class="f grow"><span>Отступы: <b id="th-paddingv"></b> px</span><input type="range" min="0" max="40" id="th-padding" data-th></label>
-          </div>
-          <div class="row">
-            <label class="f grow"><span>Рамка: <b id="th-bwv"></b> px</span><input type="range" min="0" max="12" id="th-bw" data-th></label>
-            <label class="f"><span>Цвет рамки</span><input type="color" id="th-bc" data-th></label>
-            <label class="f"><span>Тень</span><select id="th-shadow" data-th><option value="none">Без тени</option><option value="soft">Мягкая</option><option value="strong">Сильная</option><option value="glow">Свечение акцентом</option></select></label>
-          </div>
-          <div class="row">
-            <label class="f grow"><span>Шрифт</span><input id="th-font" data-th list="th-fonts" placeholder="как в основе"></label>
-            <datalist id="th-fonts"><option>Segoe UI</option><option>Arial</option><option>Verdana</option><option>Tahoma</option><option>Trebuchet MS</option><option>Georgia</option><option>Times New Roman</option><option>Consolas</option><option>Courier New</option><option>Impact</option><option>Comic Sans MS</option></datalist>
-            <label class="switch" style="margin-top:18px"><input type="checkbox" id="th-upper" data-th> ЗАГЛАВНЫЕ буквы</label>
-          </div>
-          <label class="f"><span>Свой CSS (для опытных, необязательно)</span><textarea id="th-css" data-th rows="4" style="font-family:Consolas,monospace;font-size:12.5px" placeholder="#wrap .title { letter-spacing: .05em; }"></textarea></label>
-          <div class="row" style="margin-top:10px"><button class="primary" onclick="saveTheme()">Сохранить тему</button><span class="grow"></span><span class="small muted">Предпросмотр меняется сразу</span></div>
+          <div class="th-pal-wrap"><span class="small muted">Готовые палитры:</span><div id="th-pal" class="th-pal"></div></div>
+          <div id="th-fields"></div>
+          <details class="th-sec"><summary>🧩 Свой CSS (для опытных)</summary>
+            <textarea id="th-css" data-th rows="5" style="font-family:Consolas,monospace;font-size:12.5px;width:100%" placeholder="#wrap .title { letter-spacing: .05em; }"></textarea></details>
+          <div class="row" style="margin-top:12px"><button class="primary" onclick="saveTheme()">💾 Сохранить тему</button>
+            <button onclick="saveTheme(true)">Сохранить и применить</button><span class="grow"></span><span class="small muted">Предпросмотр меняется сразу</span></div>
         </div>
-        <div style="flex:none">
-          <div class="small muted" style="margin-bottom:6px">Предпросмотр</div>
-          <div style="width:420px;height:300px;overflow:hidden;border-radius:10px;border:1px solid var(--line);background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px">
-            <iframe id="th-frame" style="border:0;width:700px;height:500px;transform:scale(.6);transform-origin:0 0"></iframe></div>
+        <div class="th-prev">
+          <div class="row" style="margin-bottom:6px"><span class="small muted grow">Предпросмотр</span>
+            <select id="th-prevbg" class="sm" onchange="themePrevBg()" style="width:auto"><option value="check">Шахматка</option><option value="game">Как на игре</option><option value="dark">Тёмный</option><option value="light">Светлый</option></select></div>
+          <div id="th-prevbox" class="th-prevbox"><iframe id="th-frame"></iframe></div>
+          <div class="small muted" style="margin-top:8px" id="th-prevnote"></div>
         </div>
       </div>
     </div>
@@ -1650,6 +1658,7 @@ function renderThemes() {
     return `<tr><td><b>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
       <td>${esc(baseName)}</td><td>${used ? '<span class="ok">✓ выбрана</span>' : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
       <td style="text-align:right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
+      <button class="sm" title="Копия" onclick="themeDuplicate('${t.id}')">⧉</button>
       <button class="sm danger" onclick="if(confirm('Удалить тему?')) api('/pro/themes/${t.id}',undefined,'DELETE').then(async()=>{await loadSettings();renderThemes();})">✕</button></td></tr>`;
   }).join("") || '<tr><td colspan="5" class="muted">Своих тем пока нет — создайте тему плеера или чата</td></tr>';
 }
@@ -1669,48 +1678,195 @@ function parseColor(c, defHex) {
   if (c === "transparent") return {hex: defHex, a: 0};
   return {hex: defHex, a: 1};
 }
-function editTheme(id, kind) {
+// Схема конструктора тем: раздел → поля. kinds — для каких тем поле показывается.
+const TH_SECTIONS = [
+  ["🎨 Цвета и фон", [
+    {k: "accent", l: "Акцент", t: "color", d: "#9146ff"},
+    {k: "accent2", l: "Второй акцент (градиенты)", t: "color", d: "#f472b6"},
+    {k: "bg_type", l: "Тип фона", t: "sel", d: "solid", o: {solid: "Сплошной", gradient: "Градиент", glass: "Стекло (размытие)", none: "Без фона"}},
+    {k: "bgc", l: "Цвет фона", t: "color", d: "#101016"},
+    {k: "bga", l: "Непрозрачность фона", t: "range", min: 0, max: 100, u: "%", d: 78},
+    {k: "bg2", l: "Второй цвет градиента", t: "color", d: "#2a1655", when: t => t.bg_type === "gradient"},
+    {k: "grad_angle", l: "Угол градиента", t: "range", min: 0, max: 360, u: "°", d: 135},
+    {k: "blur", l: "Размытие стекла", t: "range", min: 0, max: 30, u: " px", d: 12, when: t => t.bg_type === "glass"},
+    {k: "text_color", l: "Текст", t: "color", d: "#ffffff"},
+    {k: "muted_color", l: "Второстепенный текст", t: "color", d: "#c9c3dc"},
+    {k: "mention_color", l: "Упоминания (@ник)", t: "color", d: "#ffd166", kinds: ["chat"]},
+  ]],
+  ["🔲 Форма и рамка", [
+    {k: "radius", l: "Скругление", t: "range", min: 0, max: 60, u: " px", d: 14},
+    {k: "padding", l: "Внутренние отступы", t: "range", min: 0, max: 40, u: " px", d: 14},
+    {k: "gap", l: "Расстояние между блоками", t: "range", min: 0, max: 40, u: " px", d: 8},
+    {k: "stripe", l: "Полоска акцента слева", t: "range", min: 0, max: 12, u: " px", d: 4},
+    {k: "border_width", l: "Рамка", t: "range", min: 0, max: 12, u: " px", d: 0},
+    {k: "border_style", l: "Вид рамки", t: "sel", d: "solid", o: {solid: "Сплошная", dashed: "Штрих", dotted: "Точки", double: "Двойная", gradient: "Градиент акцентов"}},
+    {k: "border_color", l: "Цвет рамки", t: "color", d: "#ffffff"},
+  ]],
+  ["🔤 Текст", [
+    {k: "font", l: "Шрифт", t: "font", d: ""},
+    {k: "font_scale", l: "Размер текста", t: "range", min: 60, max: 180, u: "%", d: 100},
+    {k: "weight", l: "Жирность", t: "sel", d: "700", o: {400: "Обычный", 500: "Средний", 600: "Полужирный", 700: "Жирный", 800: "Очень жирный", 900: "Чёрный"}},
+    {k: "letter_spacing", l: "Межбуквенный интервал", t: "range", min: -2, max: 8, step: .5, u: " px", d: 0},
+    {k: "line_height", l: "Межстрочный интервал", t: "range", min: 100, max: 190, u: "%", d: 130},
+    {k: "text_shadow", l: "Тень текста", t: "sel", d: "none", o: {none: "Без тени", soft: "Мягкая", outline: "Обводка", glow: "Свечение акцентом"}},
+    {k: "uppercase", l: "ЗАГЛАВНЫЕ буквы", t: "check", d: false},
+  ]],
+  ["✨ Тени и анимация", [
+    {k: "shadow", l: "Тень блока", t: "sel", d: "soft", o: {none: "Без тени", soft: "Мягкая", strong: "Сильная", glow: "Свечение акцентом"}},
+    {k: "shadow_color", l: "Цвет тени", t: "color", d: "#000000"},
+    {k: "anim", l: "Появление", t: "sel", d: "slide-up", o: {none: "Без анимации", fade: "Проявление", "slide-up": "Снизу", "slide-left": "Слева", "slide-right": "Справа", pop: "Увеличение", bounce: "Прыжок"}},
+    {k: "anim_ms", l: "Скорость появления", t: "range", min: 100, max: 2000, step: 50, u: " мс", d: 400},
+  ]],
+  ["🎵 Плеер", [
+    {k: "show_label", l: "Надпись над названием", t: "check", d: true},
+    {k: "label_text", l: "Текст надписи", t: "text", d: "", ph: "Сейчас играет"},
+    {k: "eq", l: "Анимированный эквалайзер", t: "check", d: false},
+    {k: "title_lines", l: "Строк в названии", t: "range", min: 1, max: 3, d: 2},
+    {k: "marquee", l: "Бегущая строка для длинных названий", t: "check", d: false},
+    {k: "bar_height", l: "Полоса прогресса (0 — скрыть)", t: "range", min: 0, max: 16, u: " px", d: 5},
+    {k: "bar_style", l: "Цвет полосы", t: "sel", d: "accent", o: {accent: "Акцент", gradient: "Градиент акцентов", rainbow: "Радуга", striped: "Бегущие полоски"}},
+    {k: "show_time", l: "Время трека", t: "check", d: true},
+    {k: "queue_label", l: "Заголовок очереди", t: "text", d: "", ph: "Далее"},
+    {k: "queue_scale", l: "Размер очереди", t: "range", min: 60, max: 130, u: "%", d: 100},
+  ], ["player"]],
+  ["💬 Сообщения чата", [
+    {k: "name_color", l: "Цвет ника", t: "sel", d: "user", o: {user: "Цвет зрителя из Twitch", accent: "Акцент", text: "Как текст"}},
+    {k: "name_layout", l: "Ник", t: "sel", d: "inline", o: {inline: "В строку с сообщением", above: "Над сообщением"}},
+    {k: "show_colon", l: "Двоеточие после ника", t: "check", d: true},
+    {k: "emote_scale", l: "Размер смайлов", t: "range", min: 60, max: 250, u: "%", d: 100},
+  ], ["chat"]],
+];
+// Готовые палитры: акцент, второй акцент, фон, второй цвет фона, текст, второстепенный текст
+const TH_PALETTES = {
+  "Twitch": ["#9146ff", "#f472b6", "#101016", "#2a1655", "#ffffff", "#c9c3dc"],
+  "Неон": ["#ff2bd6", "#22d3ee", "#0b0614", "#1b0b33", "#ffffff", "#e9d5ff"],
+  "Закат": ["#fb7185", "#f59e0b", "#1c0f14", "#3b1530", "#fff7ed", "#fecdd3"],
+  "Океан": ["#38bdf8", "#22d3ee", "#06131f", "#0b2e4a", "#f0f9ff", "#bae6fd"],
+  "Мята": ["#34d399", "#a3e635", "#07160f", "#0f2a1f", "#ecfdf5", "#a7f3d0"],
+  "Лава": ["#ef4444", "#f97316", "#140707", "#2b0d0d", "#fff1f2", "#fecaca"],
+  "Лёд": ["#93c5fd", "#e0f2fe", "#0f172a", "#1e293b", "#f8fafc", "#cbd5e1"],
+  "Золото": ["#fbbf24", "#fde68a", "#14110a", "#2a2010", "#fffbeb", "#fde68a"],
+  "Пастель": ["#a78bfa", "#f9a8d4", "#fdf4ff", "#ede9fe", "#3b0764", "#6b21a8"],
+  "Монохром": ["#ffffff", "#a1a1aa", "#0a0a0a", "#27272a", "#fafafa", "#a1a1aa"],
+  "Кибер": ["#facc15", "#22d3ee", "#0a0a0a", "#111827", "#fef9c3", "#67e8f9"],
+  "Сакура": ["#f472b6", "#fda4af", "#1a0b14", "#3a1027", "#fff1f2", "#fbcfe8"],
+};
+let thDraft = null;
+const thFields = kind => TH_SECTIONS.filter(s => !s[2] || s[2].includes(kind)).flatMap(s => s[1].filter(f => !f.kinds || f.kinds.includes(kind)));
+function thDefaults(kind) {
+  const d = {name: "", base: "classic", css: ""};
+  for (const f of thFields(kind)) d[f.k] = f.d;
+  return d;
+}
+/** Тема из сохранённой (или импортированной) записи → черновик редактора. */
+function thFromTheme(t, kind) {
+  const d = thDefaults(kind);
+  for (const k of Object.keys(d)) if (t[k] !== undefined && t[k] !== null) d[k] = t[k];
+  const bg = parseColor(t.background || "rgba(16,16,22,0.78)", "#101016");
+  d.bgc = bg.hex; d.bga = Math.round(bg.a * 100);
+  for (const f of thFields(kind)) if (f.t === "color") d[f.k] = parseColor(d[f.k], f.d).hex;
+  if (t.stripe === undefined && t.id) d.stripe = t.base === "classic" ? 5 : 0;   // тема из старой версии
+  d.weight = String(d.weight);
+  return d;
+}
+function thRenderFields() {
+  const kind = editingTheme.kind, t = thDraft;
+  $("th-fields").innerHTML = TH_SECTIONS.filter(s => !s[2] || s[2].includes(kind)).map(([title, fields], si) => {
+    const items = fields.filter(f => (!f.kinds || f.kinds.includes(kind)) && (!f.when || f.when(t))).map(f => {
+      const id = "thf-" + f.k, v = t[f.k];
+      if (f.t === "color") return `<label class="f"><span>${f.l}</span><input type="color" id="${id}" value="${esc(v)}" oninput="thSet('${f.k}',this.value)"></label>`;
+      if (f.t === "range") return `<label class="f"><span>${f.l}: <b id="${id}-v">${v}${f.u || ""}</b></span><input type="range" id="${id}" min="${f.min}" max="${f.max}" step="${f.step || 1}" value="${v}"
+        oninput="$('${id}-v').textContent=this.value+'${f.u || ""}';thSet('${f.k}',+this.value)"></label>`;
+      if (f.t === "sel") return `<label class="f"><span>${f.l}</span><select id="${id}" onchange="thSet('${f.k}',this.value,true)">${Object.entries(f.o).map(([k, n]) => `<option value="${k}"${String(v) === String(k) ? " selected" : ""}>${n}</option>`).join("")}</select></label>`;
+      if (f.t === "check") return `<label class="switch"><input type="checkbox" id="${id}"${v ? " checked" : ""} onchange="thSet('${f.k}',this.checked)"> ${f.l}</label>`;
+      if (f.t === "font") return `<label class="f"><span>${f.l}</span><input id="${id}" value="${esc(v)}" list="th-fonts" placeholder="как в основе" oninput="thSet('${f.k}',this.value)"></label>`;
+      return `<label class="f"><span>${f.l}</span><input id="${id}" value="${esc(v)}" maxlength="30" placeholder="${esc(f.ph || "")}" oninput="thSet('${f.k}',this.value)"></label>`;
+    }).join("");
+    const open = THF_OPEN.has(si) ? " open" : "";
+    return `<details class="th-sec" data-si="${si}"${open} ontoggle="this.open?THF_OPEN.add(${si}):THF_OPEN.delete(${si})"><summary>${title}</summary><div class="th-grid">${items}</div></details>`;
+  }).join("") + `<datalist id="th-fonts">${["Segoe UI", "Arial", "Verdana", "Tahoma", "Trebuchet MS", "Georgia", "Times New Roman", "Consolas", "Courier New", "Impact", "Comic Sans MS", "Bahnschrift", "Segoe Print", "Segoe Script", "Franklin Gothic Medium", "Candara", "Corbel", "Lucida Console"].map(f => `<option>${f}</option>`).join("")}</datalist>`;
+}
+const THF_OPEN = new Set([0]);
+function thSet(k, v, rerender) {
+  thDraft[k] = v;
+  if (rerender || k === "bg_type") thRenderFields();
+  themePreview();
+}
+function thPalette(name) {
+  const [a, a2, bg, bg2, tx, mu] = TH_PALETTES[name];
+  Object.assign(thDraft, {accent: a, accent2: a2, bgc: bg, bg2, text_color: tx, muted_color: mu, border_color: a2});
+  thRenderFields(); themePreview();
+}
+function editTheme(id, kind, imported) {
   const t = id ? S.pro.themes.find(x => x.id === id) : null;
   kind = t ? t.kind : kind;
   editingTheme = {id: t ? t.id : "", kind};
   const bases = kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES;
   $("th-base").innerHTML = Object.entries(bases).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
-  const d = t || {name: "", base: "classic", accent: "#9146ff", background: "rgba(16,16,22,0.78)", text_color: "#ffffff",
-    border_color: "#ffffff", border_width: 0, radius: 14, padding: 14, shadow: "soft", font: "", uppercase: false, css: ""};
-  $("th-title").textContent = (t ? "Тема: " + t.name : "Новая тема") + (kind === "player" ? " · плеер" : " · чат в OBS");
-  $("th-name").value = d.name; $("th-base").value = d.base;
-  $("th-accent").value = parseColor(d.accent, "#9146ff").hex;
-  const bg = parseColor(d.background, "#101016"); $("th-bgc").value = bg.hex; $("th-bga").value = Math.round(bg.a * 100);
-  $("th-text").value = parseColor(d.text_color, "#ffffff").hex;
-  $("th-bc").value = parseColor(d.border_color, "#ffffff").hex; $("th-bw").value = d.border_width;
-  $("th-radius").value = d.radius; $("th-padding").value = d.padding; $("th-shadow").value = d.shadow;
-  $("th-font").value = d.font; $("th-upper").checked = !!d.uppercase; $("th-css").value = d.css || "";
+  thDraft = t ? thFromTheme(t, kind) : imported ? thFromTheme(imported, kind) : thDefaults(kind);
+  if (!t && !imported) { thDraft.name = ""; }
+  $("th-title").textContent = (t ? "Тема: " + t.name : imported ? "Импорт темы" : "Новая тема") + (kind === "player" ? " · плеер" : " · чат в OBS");
+  $("th-name").value = thDraft.name || ""; $("th-base").value = thDraft.base || "classic"; $("th-css").value = thDraft.css || "";
+  $("th-pal").innerHTML = Object.entries(TH_PALETTES).map(([n, c]) =>
+    `<button class="sm" onclick="thPalette('${n}')"><i style="background:linear-gradient(90deg,${c[2]} 0 34%,${c[0]} 34% 67%,${c[1]} 67%)"></i>${n}</button>`).join("");
+  thRenderFields();
+  $("th-prevnote").textContent = kind === "player" ? "Демо-трек с прогрессом и очередью." : "Демо-сообщения появляются каждые пару секунд — видно анимацию.";
   $("th-editor").classList.remove("hidden");
   const src = kind === "player" ? "/?demo&preview=1" : "/chat?demo&size=22";
   $("th-frame").onload = () => setTimeout(themePreview, 300);
   $("th-frame").src = src;
+  themePrevBg();
   themePreview();
   $("th-editor").scrollIntoView({behavior: "smooth", block: "start"});
 }
 function themeData() {
-  const [r, g, b] = hexToRgb($("th-bgc").value), a = (+$("th-bga").value / 100).toFixed(2);
-  return {id: editingTheme.id, kind: editingTheme.kind, name: $("th-name").value.trim(), base: $("th-base").value,
-    accent: $("th-accent").value, background: `rgba(${r},${g},${b},${a})`, text_color: $("th-text").value,
-    border_color: $("th-bc").value, border_width: +$("th-bw").value, radius: +$("th-radius").value, padding: +$("th-padding").value,
-    shadow: $("th-shadow").value, font: $("th-font").value.trim(), uppercase: $("th-upper").checked, css: $("th-css").value};
+  const d = Object.assign({}, thDraft);
+  const [r, g, b] = hexToRgb(d.bgc);
+  d.background = `rgba(${r},${g},${b},${(d.bga / 100).toFixed(2)})`;
+  delete d.bgc; delete d.bga;
+  return Object.assign(d, {id: editingTheme.id, kind: editingTheme.kind, name: $("th-name").value.trim(), base: $("th-base").value, css: $("th-css").value});
 }
 function themePreview() {
   if (!editingTheme) return;
-  for (const [k, v] of [["th-bgav", "th-bga"], ["th-radiusv", "th-radius"], ["th-paddingv", "th-padding"], ["th-bwv", "th-bw"]]) $(k).textContent = $(v).value;
+  thDraft.base = $("th-base").value; thDraft.css = $("th-css").value;
   try { $("th-frame").contentWindow.postMessage({type: "b1-theme", theme: themeData()}, "*"); } catch (e) {}
 }
+function themePrevBg() { $("th-prevbox").className = "th-prevbox " + $("th-prevbg").value; }
 document.querySelectorAll("[data-th]").forEach(el => el.addEventListener("input", themePreview));
 function closeTheme() { editingTheme = null; $("th-editor").classList.add("hidden"); $("th-frame").src = "about:blank"; }
-async function saveTheme() {
+function themeReset() {
+  if (!confirm("Сбросить все настройки темы к стандартным? Название останется.")) return;
+  const name = $("th-name").value; thDraft = thDefaults(editingTheme.kind); thDraft.name = name;
+  $("th-css").value = ""; thRenderFields(); themePreview();
+}
+// Код темы: можно отправить другу или выложить в Telegram, а потом импортировать
+function themeExport() {
+  const d = themeData(); delete d.id;
+  const code = "B1THEME:" + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  copy(code); toast("Код темы скопирован — его можно отправить другу");
+}
+function themeImport() {
+  const code = prompt("Вставьте код темы (начинается с B1THEME:)") || "";
+  if (!code.trim()) return;
+  try {
+    const t = JSON.parse(decodeURIComponent(escape(atob(code.trim().replace(/^B1THEME:/, "")))));
+    if (t.kind !== "player" && t.kind !== "chat") throw new Error();
+    editTheme(null, t.kind, t);
+    $("th-name").value = (t.name || "Импорт") + " (импорт)";
+    toast("Тема загружена — проверьте и нажмите «Сохранить»");
+  } catch (e) { toast("Не удалось прочитать код темы"); }
+}
+function themeDuplicate(id) {
+  const t = S.pro.themes.find(x => x.id === id); if (!t) return;
+  editTheme(null, t.kind, t); $("th-name").value = t.name + " (копия)";
+}
+async function saveTheme(apply) {
   const t = await api("/pro/themes", themeData());
   editingTheme.id = t.id;
-  toast("Тема сохранена");
-  await loadSettings(); renderThemes();
+  await loadSettings();
+  if (apply) await applyTheme(t.id, t.kind);
+  else toast("Тема сохранена");
+  renderThemes();
 }
 
 // ---------- статистика стримов ----------

@@ -28,6 +28,15 @@
   .ascii { display:none; font-size:.7em; margin-top:8px; white-space:pre; }
   .disc { display:none; flex:none; }
   #queue { margin-top:10px; display:none; }
+  .eqv { display:none; gap:2px; align-items:flex-end; height:.9em; margin-right:6px; vertical-align:-.05em; }
+  .eqv i { width:3px; background:var(--accent); border-radius:1px; animation:eqv .9s ease-in-out infinite; }
+  .eqv i:nth-child(2) { animation-delay:-.3s; } .eqv i:nth-child(3) { animation-delay:-.6s; } .eqv i:nth-child(4) { animation-delay:-.15s; }
+  #wrap.paused .eqv i { animation-play-state:paused; }
+  @keyframes eqv { 0%,100% { height:25%; } 50% { height:100%; } }
+  .title.mq { display:block !important; white-space:nowrap; overflow:hidden; -webkit-line-clamp:unset !important; }
+  .title.mq > span { display:inline-block; animation:b1mq var(--mqd, 10s) ease-in-out infinite alternate; }
+  @keyframes b1mq { 0%, 12% { transform:none; } 88%, 100% { transform:translateX(var(--mq, 0)); } }
+  @keyframes b1stripe { to { background-position:32px 0; } }
   #queue ol { margin:6px 0 0; padding-left:1.4em; font-size:.75em; }
   #queue li { margin:3px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #queue li span { opacity:.6; }
@@ -107,7 +116,7 @@
     <div class="row">
       <div class="disc"></div>
       <div class="info">
-        <div class="label"><span id="lbl">Сейчас играет</span> <span id="paused"></span></div>
+        <div class="label"><span class="eqv"><i></i><i></i><i></i><i></i></span><span id="lbl">Сейчас играет</span> <span id="paused"></span></div>
         <div class="title" id="title"></div>
         <div class="who" id="who"></div>
         <div class="nextline" id="nextline"></div>
@@ -143,8 +152,54 @@ function demoData(o) {
           queue:[{title:"Second Artist — Next Song", requester:"viewer2"}, {title:"Band — Another One", requester:"fan"},
                  {title:"Singer — Ballad", requester:""}], toast:{id:0, text:""}, overlay:o};
 }
-// Своя тема (Pro): база + цвета, шрифт, скругления, рамка, тень и свой CSS
-let previewTheme = null, customKey = "";
+// ---------- общие функции конструктора тем ----------
+const TEXT_SHADOWS = {
+  none: "", soft: "0 2px 4px rgba(0,0,0,.8)",
+  outline: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 3px #000",
+  glow: "0 0 8px var(--accent), 0 0 18px var(--accent)",
+};
+function rgbaParts(c) {
+  const m = /rgba?\(([^)]+)\)/.exec(c || "");
+  if (m) { const p = m[1].split(",").map(s => parseFloat(s)); return {r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1}; }
+  const h = (c || "#000").replace("#", ""), f = h.length === 3 ? h.split("").map(x => x + x).join("") : h.slice(0, 6);
+  return {r: parseInt(f.slice(0, 2), 16) || 0, g: parseInt(f.slice(2, 4), 16) || 0, b: parseInt(f.slice(4, 6), 16) || 0, a: 1};
+}
+function withAlpha(c, a) { const p = rgbaParts(c); return `rgba(${p.r},${p.g},${p.b},${a})`; }
+/** CSS-свойства «коробки» (фон, рамка, тени) по полям темы. */
+function boxCss(t, shadows) {
+  const a = rgbaParts(t.background).a, type = t.bg_type || "solid", angle = t.grad_angle ?? 135;
+  const fill = type === "none" ? "transparent" : type === "gradient"
+    ? `linear-gradient(${angle}deg, ${t.background}, ${withAlpha(t.bg2 || "#2a1655", a)})` : t.background;
+  const bw = +t.border_width || 0, gradBorder = bw > 0 && t.border_style === "gradient" && type !== "none";
+  const out = [];
+  if (gradBorder) {
+    const layer = type === "gradient" ? fill : `linear-gradient(${fill}, ${fill})`;
+    out.push(`border:${bw}px solid transparent !important`,
+      `background:${layer} padding-box, linear-gradient(${angle}deg, ${t.accent}, ${t.accent2 || t.accent}) border-box !important`);
+  } else {
+    out.push(`background:${fill} !important`);
+    if (bw > 0) out.push(`border:${bw}px ${t.border_style === "gradient" ? "solid" : (t.border_style || "solid")} ${t.border_color} !important`);
+    else if (t.stripe !== undefined) out.push("border:none !important");
+  }
+  out.push(type === "glass" ? `backdrop-filter:blur(${t.blur ?? 12}px) saturate(1.3) !important` : (t.stripe !== undefined ? "backdrop-filter:none !important" : ""));
+  const sc = t.shadow_color || "#000000";
+  const sh = {none: [], soft: [`0 8px 30px ${withAlpha(sc, .35)}`], strong: [`0 12px 40px ${withAlpha(sc, .7)}`],
+              glow: ["0 0 18px var(--accent)", "0 0 4px var(--accent)"]}[t.shadow] || [];
+  if (type === "none" && t.shadow !== "glow") sh.length = 0;
+  if (+t.stripe > 0) sh.push(`inset ${t.stripe}px 0 0 var(--accent)`);
+  out.push(`box-shadow:${sh.length ? sh.join(", ") : "none"} !important`);
+  return out.filter(Boolean).join("; ");
+}
+const ANIMS_CSS = `
+@keyframes b1-fade { from { opacity:0; } }
+@keyframes b1-slide-up { from { opacity:0; transform:translateY(16px); } }
+@keyframes b1-slide-left { from { opacity:0; transform:translateX(-36px); } }
+@keyframes b1-slide-right { from { opacity:0; transform:translateX(36px); } }
+@keyframes b1-pop { from { opacity:0; transform:scale(.7); } }
+@keyframes b1-bounce { 0% { opacity:0; transform:translateY(-26px); } 60% { opacity:1; transform:translateY(6px); } 80% { transform:translateY(-3px); } 100% { transform:none; } }`;
+
+// Своя тема: база + цвета, фон, рамка, текст, анимации, полоса прогресса, эквалайзер и свой CSS
+let previewTheme = null, customKey = "", curTheme = null;
 window.addEventListener("message", e => { if (e.data && e.data.type === "b1-theme") { previewTheme = e.data.theme; tick(); } });
 const SHADOWS = {none: "none", soft: "0 8px 30px rgba(0,0,0,.35)", strong: "0 12px 40px rgba(0,0,0,.7)", glow: "0 0 18px var(--accent), 0 0 4px var(--accent)"};
 function applyCustom(t) {
@@ -154,12 +209,52 @@ function applyCustom(t) {
   let el = document.getElementById("custom-theme");
   if (!el) { el = document.createElement("style"); el.id = "custom-theme"; document.head.appendChild(el); }
   if (!t) { el.textContent = ""; return; }
-  const css = [];
+  const css = [ANIMS_CSS];
   if (t.font) css.push(`#wrap { font-family: ${t.font}, "Segoe UI", sans-serif !important; }`);
-  css.push(`#wrap .box { border-radius:${t.radius}px !important; padding:${t.padding}px ${Math.round(t.padding * 1.2)}px !important;
-    box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important; ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  if (t.stripe === undefined) {   // тема из версии до 2.3 — старое поведение
+    css.push(`#wrap .box { border-radius:${t.radius}px !important; padding:${t.padding}px ${Math.round(t.padding * 1.2)}px !important;
+      box-shadow:${SHADOWS[t.shadow] || SHADOWS.soft} !important; ${t.border_width > 0 ? `border:${t.border_width}px solid ${t.border_color} !important;` : ""} }`);
+  } else {
+    const k = (t.font_scale || 100) / 100;
+    css.push(`#wrap .box { border-radius:${t.radius}px !important; padding:${t.padding}px ${Math.round(t.padding * 1.2)}px !important; ${boxCss(t)} }`);
+    css.push(`#wrap { font-size:calc(var(--fs) * ${k}) !important; letter-spacing:${t.letter_spacing || 0}px; line-height:${(t.line_height || 130) / 100};
+      ${TEXT_SHADOWS[t.text_shadow] ? `text-shadow:${TEXT_SHADOWS[t.text_shadow]} !important;` : ""} }`);
+    css.push(`#wrap .title { font-weight:${t.weight || 700} !important; -webkit-line-clamp:${t.title_lines || 2} !important; }`);
+    css.push(`#wrap .who, #wrap .time, #wrap #queue li span, #wrap .nextline { color:${t.muted_color} !important; opacity:1 !important; }`);
+    css.push(`#wrap #queue { margin-top:${t.gap ?? 8}px !important; } #wrap.q-above #queue { margin-bottom:${t.gap ?? 8}px !important; margin-top:0 !important; }`);
+    css.push(`#wrap #queue ol { font-size:${0.75 * (t.queue_scale || 100) / 100}em !important; }`);
+    if (!t.show_label) css.push("#wrap #now .label { display:none !important; }");
+    if (t.eq) css.push("#wrap .eqv { display:inline-flex !important; }");
+    if (!t.show_time) css.push("#wrap .time { display:none !important; }");
+    const bh = +(t.bar_height ?? 5);
+    if (bh <= 0) css.push("#wrap .bar { display:none !important; }");
+    else css.push(`#wrap .bar { height:${bh}px !important; border-radius:${bh}px !important; } #wrap .bar i { border-radius:${bh}px; }`);
+    const a2 = t.accent2 || t.accent;
+    if (t.bar_style === "gradient") css.push(`#wrap .bar i { background:linear-gradient(90deg, var(--accent), ${a2}) !important; }`);
+    if (t.bar_style === "rainbow") css.push("#wrap .bar i { background:linear-gradient(90deg,#f43f5e,#f59e0b,#22c55e,#3b82f6,#a855f7) !important; }");
+    if (t.bar_style === "striped") css.push(`#wrap .bar i { background:repeating-linear-gradient(45deg, var(--accent) 0 8px, ${a2} 8px 16px) !important; background-size:32px 100% !important; animation:b1stripe .8s linear infinite; }`);
+    if (t.anim && t.anim !== "none") css.push(`#now.b1a { animation:b1-${t.anim} ${t.anim_ms || 400}ms ease-out both; }`);
+  }
   if (t.uppercase) css.push("#wrap .title, #wrap .label, #wrap #queue li { text-transform:uppercase; }");
   el.textContent = css.join("\n") + "\n" + (t.css || "");
+}
+// Название трека: бегущая строка, если не влезает (включается в теме)
+let lastTitle = null;
+function setTitle(text, t) {
+  const el = $("title");
+  const mq = !!(t && t.marquee && t.stripe !== undefined);
+  if (text !== lastTitle || el.dataset.mq !== String(mq)) {
+    const changed = text !== lastTitle && lastTitle !== null;
+    lastTitle = text; el.dataset.mq = String(mq);
+    el.innerHTML = ""; const s = document.createElement("span"); s.textContent = text; el.appendChild(s);
+    el.classList.toggle("mq", mq);
+    if (mq) requestAnimationFrame(() => {
+      const over = s.scrollWidth - el.clientWidth;
+      s.style.animation = over > 4 ? "" : "none";
+      el.style.setProperty("--mq", -over + "px"); el.style.setProperty("--mqd", Math.max(6, over / 25) + "s");
+    });
+    if (changed) { const n = $("now"); n.classList.remove("b1a"); void n.offsetWidth; n.classList.add("b1a"); }
+  }
 }
 let lastToast = null, toastTimer = null;
 async function tick() {
@@ -170,7 +265,7 @@ async function tick() {
     const ct = previewTheme || (want.startsWith("custom:") ? (d.custom_themes || []).find(t => "custom:" + t.id === want) : null);
     const theme = ct ? (THEMES[ct.base] ? ct.base : "classic") : (THEMES[want] ? want : "classic");
     const pal = ct || (o.custom_colors && !P.get("theme") ? o : THEMES[theme]);
-    applyCustom(ct);
+    applyCustom(ct); curTheme = ct;
     const c = d.current;
     const qpos = ["above", "below"].includes(P.get("queue")) ? P.get("queue") : (o.queue_position || "below");
     $("wrap").className = "t-" + theme + (c && c.paused ? " paused" : "") + (qpos === "above" ? " q-above" : "");
@@ -179,9 +274,10 @@ async function tick() {
     root.setProperty("--fg", pal.text_color); root.setProperty("--fs", o.font_size + "px");
     $("wrap").style.width = o.width + "px"; $("wrap").style.height = o.height + "px";
     $("now").style.display = c ? "block" : "none";
-    $("lbl").textContent = theme === "retro" ? "NOW PLAYING" : (theme === "bar" ? "♪" : "Сейчас играет");
+    $("lbl").textContent = ct && ct.label_text ? ct.label_text : (theme === "retro" ? "NOW PLAYING" : (theme === "bar" ? "♪" : "Сейчас играет"));
+    document.querySelector("#queue .label").textContent = ct && ct.queue_label ? ct.queue_label : "Далее";
     if (c) {
-      $("title").textContent = c.title;
+      setTitle(c.title, ct);
       $("who").textContent = o.show_requester && c.requester ? (theme === "retro" ? "req: " : "Заказ: ") + c.requester : "";
       $("paused").textContent = c.paused ? (theme === "retro" ? "[PAUSED]" : "· пауза") : "";
       $("prog").style.display = o.show_progress && c.duration ? "block" : "none";
