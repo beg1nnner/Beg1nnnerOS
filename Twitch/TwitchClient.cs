@@ -38,6 +38,10 @@ public sealed class TwitchAccount
     public string UserId => D.Str("user_id");
     public string Login => D.Str("login");
     public List<string> Scopes => D.StrList("scopes");
+    /// <summary>Вход через встроенное приложение (по коду, без своих ключей).</summary>
+    public bool IsPublic => D.Bool("public");
+    /// <summary>Client ID, которым выдан токен: запросы к Twitch обязаны идти с ним же.</summary>
+    public string ClientId => D.Str("client_id") != "" ? D.Str("client_id") : _tw.ClientId;
 
     public List<string> MissingScopes()
     {
@@ -52,7 +56,7 @@ public sealed class TwitchAccount
         Store.Save();
     }
 
-    public void SetTokens(JsonNode tok, JsonNode info)
+    public void SetTokens(JsonNode tok, JsonNode info, bool isPublic = false)
     {
         var scopes = new JsonArray();
         if (info?["scopes"] is JsonArray sc) foreach (var s in sc) scopes.Add(J.AsStr(s));
@@ -64,6 +68,8 @@ public sealed class TwitchAccount
             ["user_id"] = info.Str("user_id"),
             ["login"] = info.Str("login"),
             ["scopes"] = scopes,
+            ["client_id"] = info.Str("client_id"),
+            ["public"] = isPublic,
         };
         Store.Save();
         Problem = "";
@@ -82,7 +88,7 @@ public sealed class TwitchAccount
                 JsonNode tok;
                 try
                 {
-                    tok = await _tw.OAuthToken(new Dictionary<string, string> { ["grant_type"] = "refresh_token", ["refresh_token"] = rt });
+                    tok = await _tw.OAuthToken(new Dictionary<string, string> { ["grant_type"] = "refresh_token", ["refresh_token"] = rt }, this);
                 }
                 catch (TwitchException e)
                 {
@@ -118,6 +124,14 @@ public sealed class TwitchClient
     };
     public static readonly string[] BotScopes = { "user:read:chat", "user:write:chat", "user:bot" };
 
+    /// <summary>
+    /// Client ID встроенного приложения Beg1nnnerOS (тип клиента «Public» на dev.twitch.tv).
+    /// С ним вход идёт по коду (Device Code Flow): пользователю не нужны свои Client ID и Secret.
+    /// Пусто — быстрый вход скрыт, остаётся вход со своими ключами.
+    /// </summary>
+    public const string BuiltInClientId = "";
+    public const string DeviceUrl = "https://id.twitch.tv/oauth2/device";
+
     private readonly Hub _hub;
     public readonly HttpClient Http;
     public readonly TwitchAccount Streamer;
@@ -138,6 +152,10 @@ public sealed class TwitchClient
 
     private JsonObject Cfg => _hub.S.Obj("twitch");
     public string ClientId => Cfg.Str("client_id").Trim();
+    /// <summary>ID для входа по коду: встроенный или из настройки twitch.public_client_id (для проверки).</summary>
+    public string PublicClientId => BuiltInClientId != "" ? BuiltInClientId : Cfg.Str("public_client_id").Trim();
+    public bool QuickLoginAvailable => PublicClientId != "";
+    public bool OwnKeys => ClientId != "" && ClientSecret != "";
     private string ClientSecret => Cfg.Str("client_secret").Trim();
     public string BroadcasterId => Streamer.UserId;
     public TwitchAccount Sender => Cfg.Str("sender") == "bot" ? Bot : Streamer;
@@ -205,15 +223,140 @@ public sealed class TwitchClient
         return (true, $"Вход выполнен: {info.Str("login")}");
     }
 
-    public async Task<JsonNode> OAuthToken(Dictionary<string, string> data)
+    public async Task<JsonNode> OAuthToken(Dictionary<string, string> data, TwitchAccount acc = null)
     {
-        data["client_id"] = ClientId;
-        data["client_secret"] = ClientSecret;
+        if (acc != null && acc.IsPublic)
+        {
+            data["client_id"] = acc.ClientId;   // публичное приложение: без секрета
+        }
+        else
+        {
+            data["client_id"] = ClientId;
+            data["client_secret"] = ClientSecret;
+        }
         using var resp = await Http.PostAsync(TokenUrl, new FormUrlEncodedContent(data));
         var js = SafeParse(await resp.Content.ReadAsStringAsync());
         if (!resp.IsSuccessStatusCode)
             throw new TwitchException((int)resp.StatusCode, js.Str("message", "ошибка OAuth"));
         return js;
+    }
+
+    // ---------- вход по коду (Device Code Flow) ----------
+    public sealed class DeviceLogin
+    {
+        public string Kind = "", UserCode = "", Uri = "", DeviceCode = "";
+        public string Status = "waiting";    // waiting | ok | error | expired | cancelled
+        public string Message = "";
+        public double Expires;
+        public int Interval = 5;
+    }
+
+    public DeviceLogin Device { get; private set; }
+
+    public object DeviceState() => Device == null ? new { status = "none" } : new
+    {
+        kind = Device.Kind, code = Device.UserCode, uri = Device.Uri, status = Device.Status, message = Device.Message,
+        left = Math.Max(0, (int)(Device.Expires - ActionLog.Now)),
+    };
+
+    /// <summary>Начинает вход по коду: Twitch выдаёт код, пользователь подтверждает его на twitch.tv/activate.</summary>
+    public async Task<DeviceLogin> StartDevice(string kind)
+    {
+        var cid = PublicClientId;
+        if (cid == "") throw new UserError("Быстрый вход недоступен в этой сборке — используйте свои ключи");
+        if (Device != null && Device.Status == "waiting") Device.Status = "cancelled";
+        var scopes = string.Join(" ", kind == "streamer" ? StreamerScopes : BotScopes);
+        using var resp = await Http.PostAsync(DeviceUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["client_id"] = cid, ["scopes"] = scopes,
+        }));
+        var js = SafeParse(await resp.Content.ReadAsStringAsync());
+        if (!resp.IsSuccessStatusCode)
+            throw new UserError("Twitch не выдал код входа: " + js.Str("message", resp.ReasonPhrase ?? "ошибка"));
+        var d = new DeviceLogin
+        {
+            Kind = kind, UserCode = js.Str("user_code"), Uri = js.Str("verification_uri"), DeviceCode = js.Str("device_code"),
+            Expires = ActionLog.Now + js.Num("expires_in", 1800), Interval = Math.Max(2, js.Int("interval", 5)),
+        };
+        Device = d;
+        _hub.Loop.Start(() => PollDevice(d, cid, scopes));
+        return d;
+    }
+
+    public void CancelDevice()
+    {
+        if (Device != null && Device.Status == "waiting") Device.Status = "cancelled";
+    }
+
+    private async Task PollDevice(DeviceLogin d, string cid, string scopes)
+    {
+        while (d.Status == "waiting")
+        {
+            await Task.Delay(d.Interval * 1000);
+            if (d.Status != "waiting") return;
+            if (ActionLog.Now > d.Expires) { d.Status = "expired"; d.Message = "Код устарел — начните вход заново"; return; }
+            JsonNode js;
+            HttpResponseMessage resp;
+            try
+            {
+                resp = await Http.PostAsync(TokenUrl, new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["client_id"] = cid, ["scopes"] = scopes, ["device_code"] = d.DeviceCode,
+                    ["grant_type"] = "urn:ietf:params:oauth:grant-type:device_code",
+                }));
+                js = SafeParse(await resp.Content.ReadAsStringAsync());
+            }
+            catch (Exception) { continue; }   // временный сбой сети — пробуем ещё
+            using (resp)
+            {
+                if (!resp.IsSuccessStatusCode)
+                {
+                    var msg = js.Str("message").ToLowerInvariant();
+                    if (msg.Contains("authorization_pending")) continue;
+                    if (msg.Contains("slow_down")) { d.Interval += 5; continue; }
+                    d.Status = msg.Contains("expired") || msg.Contains("invalid device") ? "expired" : "error";
+                    d.Message = msg.Contains("denied") ? "Доступ отклонён на Twitch" :
+                                d.Status == "expired" ? "Код устарел — начните вход заново" : "Twitch: " + js.Str("message");
+                    return;
+                }
+            }
+            try
+            {
+                var info = await Validate(js.Str("access_token"));
+                if (d.Kind == "bot")
+                {
+                    var login = info.Str("login").ToLowerInvariant();
+                    var expected = Cfg.Str("bot_login").Trim().TrimStart('@').ToLowerInvariant();
+                    if (expected != "" && login != expected)
+                    {
+                        d.Status = "error";
+                        d.Message = $"Подтверждено аккаунтом {info.Str("login")}, а бот — {expected}. Откройте ссылку в браузере, где вы вошли как бот (или в режиме инкогнито).";
+                        return;
+                    }
+                    if (expected == "" && Streamer.Ready && login == Streamer.Login.ToLowerInvariant())
+                    {
+                        d.Status = "error";
+                        d.Message = "Это аккаунт стримера. Для бота откройте ссылку в браузере, где вы вошли аккаунтом бота (или в режиме инкогнито).";
+                        return;
+                    }
+                    if (expected == "") _hub.S.Set("twitch.bot_login", info.Str("login"));
+                    _hub.S.Set("twitch.sender", "bot");
+                    _hub.Settings.Save();
+                }
+                var acc = d.Kind == "streamer" ? Streamer : Bot;
+                acc.SetTokens(js, info, isPublic: true);
+                d.Status = "ok";
+                d.Message = $"Вход выполнен: {info.Str("login")}";
+                _hub.Log.Add("system", $"Вход Twitch ({(d.Kind == "streamer" ? "стример" : "бот")}): {info.Str("login")}");
+                _hub.OnAccountChanged(d.Kind);
+            }
+            catch (Exception e)
+            {
+                d.Status = "error";
+                d.Message = "Не удалось завершить вход: " + e.Message;
+            }
+            return;
+        }
     }
 
     public async Task<JsonNode> Validate(string token)
@@ -246,7 +389,7 @@ public sealed class TwitchClient
         {
             var token = await acc.Token(attempt == 1);
             using var req = new HttpRequestMessage(method, url);
-            req.Headers.TryAddWithoutValidation("Client-Id", ClientId);
+            req.Headers.TryAddWithoutValidation("Client-Id", acc.ClientId);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             if (body != null)
                 req.Content = new StringContent(J.Serialize(body), Encoding.UTF8, "application/json");

@@ -11,4 +11,11 @@ public static class Shell
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
         catch { }
     }
+
+    /// <summary>Открывает Проводник с выделенным файлом.</summary>
+    public static void ShowFile(string path)
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); }
+        catch { }
+    }
 }

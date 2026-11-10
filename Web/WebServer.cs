@@ -240,6 +240,18 @@ public sealed partial class WebServer
             Desktop.Shell.OpenUrl(url);   // вход — в системном браузере, где уже открыт Twitch
             return Ok(null, new() { ["url"] = url, ["opened"] = true });
         }));
+        // вход по коду (без своих ключей)
+        app.MapPost("/api/twitch/device/{kind}", H(async (c, b) =>
+        {
+            var kind = Route(c, "kind");
+            if (kind != "streamer" && kind != "bot") throw new UserError("Неизвестный вход");
+            var d = await _hub.Twitch.StartDevice(kind);
+            if (b.Bool("open", true)) Desktop.Shell.OpenUrl(d.Uri);
+            return Ok(_hub.Twitch.DeviceState());
+        }));
+        app.MapGet("/api/twitch/device", H((c, b) => Ok(_hub.Twitch.DeviceState())));
+        app.MapPost("/api/twitch/device-cancel", H((c, b) => { _hub.Twitch.CancelDevice(); return Ok(_hub.Twitch.DeviceState()); }));
+
         app.MapPost("/api/logout/{kind}", H((c, b) =>
         {
             if (Route(c, "kind") == "da") { _hub.Donations.Logout(); return Ok(); }
@@ -325,6 +337,7 @@ public sealed partial class WebServer
 
         app.MapGet("/api/now", H((c, b) =>
         {
+            if (c.Request.Query["obs"] == "1") _hub.PlayerOverlaySeen = DateTime.UtcNow;
             var st = J.From(_hub.Music.State()).AsObject();
             st["overlay"] = _hub.S["overlay"].DeepClone();
             st["custom_themes"] = _hub.Pro.ThemesFor("player");
@@ -383,6 +396,21 @@ public sealed partial class WebServer
             catch (Exception e) when (e is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException)
             { throw new UserError($"Сервер перевода недоступен: {e.Message}"); }
         }));
+        // мастер первого запуска: отправитель сообщений и отметка «пройден»
+        app.MapPost("/api/wizard", H((c, b) =>
+        {
+            if (b.Str("sender") is "streamer" or "bot") _hub.S.Set("twitch.sender", b.Str("sender"));
+            if (b["done"] != null) _hub.S.Set("ui.wizard_done", b.Bool("done"));
+            _hub.Settings.Save();
+            return Ok();
+        }));
+        app.MapPost("/api/report", H((c, b) =>
+        {
+            var path = Report.Create(_hub);
+            Desktop.Shell.ShowFile(path);
+            return Ok(new { path, name = Path.GetFileName(path) });
+        }));
+        app.MapPost("/api/tools/youtube-check", H(async (c, b) => Ok(await YouTubeCheck.Run(_hub))));
         app.MapPost("/api/tools/layout", H((c, b) => Ok(Layout.Fix(b.Str("text")) ?? "")));
         app.MapPost("/api/tools/yandex", H(async (c, b) =>
         {
@@ -703,7 +731,7 @@ public sealed partial class WebServer
             return;
         }
         using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
-        var client = new AlertClient(ws);
+        var client = new AlertClient(ws) { Obs = ctx.Request.Query["obs"] == "1" };
         // история и подписка — в одном шаге цикла, чтобы не потерять сообщение между ними
         var history = await _hub.Loop.CallSync(() =>
         {
@@ -736,7 +764,7 @@ public sealed partial class WebServer
             return;
         }
         using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
-        var client = new AlertClient(ws);
+        var client = new AlertClient(ws) { Obs = ctx.Request.Query["obs"] == "1" };
         await _hub.Loop.CallSync(() =>
         {
             _hub.Alerts.Clients.Add(client);

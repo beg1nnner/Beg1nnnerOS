@@ -254,6 +254,32 @@ public sealed class YtDlp
         return ToTrack(info, source, url);
     }
 
+    /// <summary>Список видео плейлиста (без загрузки страниц каждого видео), до 500 штук.</summary>
+    public async Task<List<Track>> Playlist(string url)
+    {
+        if (!url.Contains("list=") && !url.Contains("/playlist"))
+            throw new ResolveException("это не ссылка на плейлист YouTube (в ней должно быть «list=»)");
+        var json = await Run(new[] { "--flat-playlist", "-J", "--playlist-end", "500", url }, TimeSpan.FromSeconds(90));
+        var start = json.IndexOf('{');
+        if (start < 0) throw new ResolveException("плейлист не найден");
+        var info = J.ParseLoose(json[start..]);
+        var list = new List<Track>();
+        foreach (var e in info.Arr("entries").OfType<JsonNode>())
+        {
+            var id = e.Str("id");
+            var title = e.Str("title");
+            if (id == "" || title is "" or "[Private video]" or "[Deleted video]") continue;
+            if (IsLive(e)) continue;
+            list.Add(new Track
+            {
+                Vid = id, Title = title, PageUrl = $"https://www.youtube.com/watch?v={id}",
+                Duration = (int)e.Num("duration"), Source = "youtube",
+            });
+        }
+        if (list.Count == 0) throw new ResolveException("в плейлисте нет доступных видео (или он приватный)");
+        return list;
+    }
+
     /// <summary>
     /// Поиск без полной загрузки страниц: берём первый результат, который не эфир
     /// и набрал не меньше minViews просмотров (0 — без фильтра).

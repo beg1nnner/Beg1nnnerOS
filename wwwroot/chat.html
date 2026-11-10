@@ -231,7 +231,7 @@ async function loadConfig() {
   } catch (e) {}
 }
 function connect() {
-  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/chat");
+  const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/chat" + (window.obsstudio ? "?obs=1" : ""));
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
     if (m.type === "history") { chat.innerHTML = ""; (m.items || []).forEach(render); }

@@ -17,6 +17,8 @@ namespace Beg1nnnerOS.Features;
 public sealed class AlertClient
 {
     public readonly WebSocket Socket;
+    /// <summary>Подключён из OBS (а не из предпросмотра в панели) — для индикаторов мастера настройки.</summary>
+    public bool Obs;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public AlertClient(WebSocket socket) { Socket = socket; }

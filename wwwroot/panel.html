@@ -34,6 +34,28 @@
   nav .upd-nav:disabled::after { display:none; }
   nav .upd-nav:not(.hidden) ~ .thanks-btn { margin-top:0 !important; }
   @keyframes updPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.7); } }
+  .err { color:#ef4444; }
+  .devcode { font:800 34px/1.1 ui-monospace,Consolas,monospace; letter-spacing:.12em; padding:14px 18px; border-radius:12px;
+             background:var(--panel); border:1px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); display:inline-block; margin:8px 0 10px; }
+  .chk { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); }
+  .chk:last-child { border-bottom:0; }
+  .chk .ic { width:22px; text-align:center; font-weight:800; }
+  .chk .ok { color:#22c55e; } .chk .bad { color:#ef4444; } .chk .wait { color:var(--muted); }
+  #wizard { position:fixed; inset:0; background:rgba(5,4,10,.72); backdrop-filter:blur(4px); z-index:60; display:flex; align-items:center; justify-content:center; padding:24px; }
+  #wizard.hidden { display:none; }
+  .wz { width:min(760px,100%); max-height:calc(100vh - 48px); overflow:auto; background:var(--bg2, var(--panel)); border:1px solid var(--line); border-radius:18px; padding:26px 28px; box-shadow:0 30px 80px rgba(0,0,0,.5); }
+  .wz-steps { display:flex; gap:6px; margin:0 0 18px; }
+  .wz-steps i { flex:1; height:5px; border-radius:3px; background:var(--line); }
+  .wz-steps i.on { background:var(--accent); }
+  .wz h2 { margin:0 0 6px; }
+  .wz-foot { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; align-items:center; }
+  .wz-foot .grow { flex:1; }
+  .src-row { display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .src-row:last-child { border-bottom:0; }
+  .dot { font-weight:700; white-space:nowrap; } .dot.on { color:#22c55e; } .dot.off { color:var(--muted); }
+  .opt { display:block; padding:12px 14px; border:1px solid var(--line); border-radius:12px; margin:8px 0; cursor:pointer; }
+  .opt input { width:auto !important; display:inline-block; margin:0 8px 0 0; vertical-align:middle; }
+  .opt:has(input:checked) { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent); }
   .upd-notes { white-space:pre-wrap; margin:-8px 0 18px; padding:12px 16px; border-radius:10px; background:var(--panel); border:1px solid var(--line); font-size:13.5px; max-height:260px; overflow:auto; }
   .bar { height:6px; background:var(--panel2); border-radius:4px; overflow:hidden; margin:10px 0 4px; }
   .bar i { display:block; height:100%; background:var(--accent); width:0; }
@@ -155,7 +177,9 @@
         <label class="f"><span>Где искать сначала (название и Spotify)</span>
           <select data-s="music.search_first"><option value="youtube">YouTube</option><option value="yandex">Яндекс Музыка</option></select></label>
         <span class="small muted" style="margin-top:16px">Для Яндекс Музыки сохраните токен в «Настройках».</span>
+        <button class="sm" style="margin-top:16px" onclick="ytCheck('yt-check')">🩺 Проверить связь с YouTube</button>
       </div>
+      <div id="yt-check" class="hidden" style="margin:-4px 0 14px"></div>
       <div class="row">
         <label class="f"><span>Лимит заказов от зрителя</span><input type="number" min="1" data-s="music.per_user_limit"></label>
         <label class="f"><span>Длина очереди</span><input type="number" min="1" data-s="music.queue_limit"></label>
@@ -200,7 +224,20 @@
           <li>Вставьте адрес: <code id="mobs-url"></code> <button class="sm" onclick="copy(base()+'/music-obs')">Скопировать адрес</button></li>
           <li>Ширину и высоту поставьте 1, включите <b>«Управлять аудио через OBS»</b> и нажмите «ОК».</li>
         </ol>
-        <div class="muted small">Музыка появится отдельной дорожкой «Музыка» в микшере OBS — её громкость, фильтры и запись можно настраивать отдельно от игры и микрофона. Если OBS закрыт, музыка автоматически играет из программы.</div>
+        <div class="muted small" data-x="1">Музыка появится отдельной дорожкой «Музыка» в микшере OBS — её громкость, фильтры и запись можно настраивать отдельно от игры и микрофона. Если OBS закрыт, музыка автоматически играет из программы.</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📻 Резервный плейлист</h3>
+      <div class="muted small" style="margin:-4px 0 12px">Когда заказов нет, вместо тишины играет ваш плейлист YouTube. Заказ зрителя всегда важнее.</div>
+      <div class="row" style="align-items:flex-end">
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.fallback_enabled"> Включён</label>
+        <label class="f grow"><span>Ссылка на плейлист YouTube (или YouTube Music)</span><input data-s="music.fallback_url" placeholder="https://www.youtube.com/playlist?list=…"></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="switch"><input type="checkbox" data-s="music.fallback_shuffle"> Случайный порядок</label>
+        <label class="switch"><input type="checkbox" data-s="music.fallback_interrupt"> Прерывать резервный трек, когда приходит заказ</label>
+        <span class="small muted" id="fb-status" style="margin-left:auto"></span>
       </div>
     </div>
   </div>
@@ -448,8 +485,11 @@
 <!-- ================= НАСТРОЙКИ ================= -->
 <section id="p-settings" class="hidden">
   <h2>Настройки</h2>
-  <div class="card hl">
+  <div class="card hl" id="keys-card">
     <h3>Ключи и дополнительные параметры</h3>
+    <div class="muted small hidden" id="keys-quick" style="margin:-4px 0 10px">Ключи больше не обязательны: нажмите «Войти через Twitch» ниже — вход по коду, без создания своего приложения.
+      Свои ключи нужны только опытным пользователям. <a href="#" onclick="$('keys-body').classList.toggle('hidden');return false">Показать поля ключей</a></div>
+    <div id="keys-body">
     <div class="row">
       <label class="f grow"><span>Client ID</span><input data-s="twitch.client_id" autocomplete="off"></label>
       <label class="f grow"><span>Client Secret</span><input type="password" data-s="twitch.client_secret" id="secret" autocomplete="new-password"></label>
@@ -461,11 +501,12 @@
         <li>Категория — любая, тип клиента — <b>Confidential</b>.</li>
         <li>Скопируйте Client ID, создайте Client Secret («New Secret»), вставьте сюда и сохраните. Не передавайте секрет другим людям.</li>
       </ol></details>
+    </div>
   </div>
   <div class="card">
     <h3>Аккаунт Twitch</h3>
     <div class="row"><div class="grow" id="acc-streamer"></div>
-      <button class="primary" onclick="login('streamer')">Войти в Twitch заново</button>
+      <button class="primary" onclick="twLogin('streamer')" id="tw-login-btn">Войти через Twitch</button>
       <button class="sm danger" onclick="if(confirm('Выйти из аккаунта стримера?')) api('/logout/streamer',{}).then(poll)">Выйти</button></div>
   </div>
   <div class="card">
@@ -477,7 +518,7 @@
       <label class="switch" style="margin-top:16px"><input type="checkbox" data-s="twitch.allow_send"> Разрешить отправку сообщений в чат Twitch</label>
     </div>
     <div class="row" style="margin-top:12px"><div class="grow" id="acc-bot"></div>
-      <button onclick="login('bot')">Войти в аккаунт бота</button>
+      <button onclick="twLogin('bot')">Войти в аккаунт бота</button>
       <button class="sm danger" onclick="api('/logout/bot',{}).then(poll)">Выйти</button></div>
     <div class="muted small" style="margin-top:6px">Перед входом бота переключитесь в браузере на его аккаунт. Приложение проверяет соответствие ника.</div>
   </div>
@@ -529,6 +570,8 @@
         <div class="small" id="upd-status" style="margin:4px 0 6px"></div>
         <div class="row" style="gap:10px;align-items:center;margin-bottom:6px">
           <button class="sm" onclick="updCheck()">🔄 Проверить обновления</button>
+          <button class="sm" onclick="openWizard(0)">🧭 Мастер настройки</button>
+          <button class="sm" onclick="saveReport()">📄 Сохранить отчёт об ошибке</button>
           <label class="switch"><input type="checkbox" id="upd-auto" onchange="api('/update/auto',{on:this.checked})"> Проверять автоматически</label>
         </div>
         <div class="muted small">Если программа помогает вашему стриму — можно поблагодарить разработчика.</div>
@@ -768,6 +811,7 @@
 </div>
 </main>
 
+<div id="wizard" class="hidden"><div class="wz" id="wz-body"></div></div>
 <div id="modal" class="modal-bg hidden" onclick="if(event.target===this) closeModal()"><div class="modal" id="modal-body"></div></div>
 
 <script src="/static/alert-render.js"></script>
@@ -955,7 +999,142 @@ async function updSkip(v) {
   try { ST.update = await api("/update/skip", {version: v}); renderUpdate(ST.update); } catch (e) {}
 }
 
-let MUS_OBS = false;
+let MUS_OBS = false, KEYS_SHOWN = false, WZ_AUTO = false;
+
+// ---------- вход через Twitch по коду ----------
+async function twLogin(kind) {
+  if (!ST || !ST.ready.quick_login) return login(kind);   // быстрый вход недоступен — старый способ со своими ключами
+  $("modal-body").innerHTML = `<h3 style="margin-top:0">${kind === "bot" ? "Вход аккаунтом бота" : "Вход через Twitch"}</h3><div id="dev-modal"></div>
+    <div style="text-align:right;margin-top:14px"><button onclick="api('/twitch/device-cancel',{});closeModal()">Закрыть</button></div>`;
+  $("modal").classList.remove("hidden");
+  deviceLogin(kind, "dev-modal", () => { closeModal(); });
+}
+let DEV_T = null;
+async function deviceLogin(kind, box, onOk) {
+  clearInterval(DEV_T);
+  const el = $(box);
+  el.innerHTML = '<div class="muted">Получаю код входа…</div>';
+  let d;
+  try { d = await api("/twitch/device/" + kind, {open: true}); }
+  catch (e) { el.innerHTML = `<div class="err">Не удалось начать вход: ${esc(e.message || "")}</div>`; return; }
+  const botNote = kind === "bot" ? `<div class="small" style="margin:6px 0;color:var(--warn,#f59e0b)">Важно: подтвердите вход <b>аккаунтом бота</b>. Если в браузере открыт аккаунт стримера — скопируйте ссылку и откройте её в режиме инкогнито (Ctrl+Shift+N).</div>` : "";
+  el.innerHTML = `<div class="small">1. В браузере открылась страница Twitch. Если нет — <a href="${esc(d.uri)}" target="_blank" rel="noopener">откройте её</a>
+      или <a href="#" onclick="copy('${esc(d.uri)}');return false">скопируйте ссылку</a>.</div>
+    <div class="small" style="margin-top:4px">2. Проверьте, что на странице этот код, и нажмите «Активировать» и «Разрешить»:</div>
+    <div class="devcode">${esc(d.code)}</div>${botNote}
+    <div class="small" id="${box}-st"><span class="muted">⏳ Жду подтверждения на Twitch…</span></div>`;
+  DEV_T = setInterval(async () => {
+    let s; try { s = await api("/twitch/device"); } catch (e) { return; }
+    const st = $(box + "-st"); if (!st) { clearInterval(DEV_T); return; }
+    if (s.status === "ok") { clearInterval(DEV_T); delete el.dataset.busy; st.innerHTML = `<b style="color:#22c55e">✓ ${esc(s.message)}</b>`; toast(s.message); await loadSettings(); poll(); setTimeout(() => onOk && onOk(), 900); }
+    else if (s.status === "error" || s.status === "expired") {
+      clearInterval(DEV_T);
+      st.innerHTML = `<span style="color:#ef4444">${esc(s.message)}</span> <button class="sm" onclick="deviceLogin('${kind}','${box}',null)">Попробовать снова</button>`;
+    } else if (s.status === "waiting") st.innerHTML = `<span class="muted">⏳ Жду подтверждения на Twitch… (код действует ещё ${Math.ceil(s.left / 60)} мин)</span>`;
+  }, 2000);
+}
+
+// ---------- проверка связи с YouTube ----------
+async function ytCheck(box) {
+  const el = $(box); el.classList.remove("hidden");
+  el.innerHTML = '<div class="chk"><span class="ic wait">⏳</span><div>Проверяю DNS, соединение и загрузчик… (до 30 секунд)</div></div>';
+  let r;
+  try { r = await api("/tools/youtube-check", {}); } catch (e) { el.innerHTML = '<div class="err">Проверка не удалась</div>'; return; }
+  el.innerHTML = r.steps.map(s => `<div class="chk"><span class="ic ${s.ok ? "ok" : "bad"}">${s.ok ? "✓" : "✗"}</span>
+      <div><b>${esc(s.name)}</b> — ${esc(s.detail)}${s.advice ? `<div class="small muted" style="margin-top:4px">${esc(s.advice)}</div>` : ""}</div></div>`).join("")
+    + `<div class="small" style="margin-top:8px;font-weight:600;color:${r.ok ? "#22c55e" : "var(--warn,#f59e0b)"}">${esc(r.summary)}</div>`;
+}
+
+// ---------- отчёт об ошибке ----------
+async function saveReport() {
+  try { const r = await api("/report", {}); toast("Отчёт сохранён на рабочий стол: " + r.name + ". Отправьте его в Telegram @Beg1nnner"); } catch (e) {}
+}
+
+// ---------- мастер первого запуска ----------
+const WZ = { open: false, step: 0, sender: null };
+const WZ_STEPS = ["twitch", "bot", "music", "obs"];
+function openWizard(step) { WZ.open = true; WZ.step = step || 0; $("wizard").classList.remove("hidden"); wzRender(); }
+async function closeWizard(done) {
+  WZ.open = false; clearInterval(DEV_T); $("wizard").classList.add("hidden");
+  if (done) { try { await api("/wizard", {done: true}); } catch (e) {} toast("Настройка завершена — удачного стрима!"); }
+}
+function wzGo(d) { WZ.step = Math.max(0, Math.min(WZ_STEPS.length - 1, WZ.step + d)); wzRender(); }
+function wzRender() {
+  const r = ST ? ST.ready : null, k = WZ_STEPS[WZ.step];
+  const bars = WZ_STEPS.map((_, i) => `<i class="${i <= WZ.step ? "on" : ""}"></i>`).join("");
+  let body = "";
+  if (k === "twitch") {
+    body = `<h2>👋 Добро пожаловать в Beg1nnnerOS</h2>
+      <div class="muted">Четыре коротких шага — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
+      <div id="wz-tw" style="margin-top:16px"></div>`;
+  } else if (k === "bot") {
+    body = `<h2>💬 От чьего имени писать в чат</h2>
+      <div class="muted">Бот отвечает на команды, благодарит за фолловы и донаты.</div>
+      <label class="opt"><input type="radio" name="wz-s" value="streamer" onchange="wzSender(this.value)"> <b>От моего аккаунта</b> — проще всего, ничего настраивать не нужно</label>
+      <label class="opt"><input type="radio" name="wz-s" value="bot" onchange="wzSender(this.value)"> <b>Отдельный аккаунт-бот</b> — сообщения идут от бота (нужен второй аккаунт Twitch)</label>
+      <div id="wz-bot" style="margin-top:8px"></div>`;
+  } else if (k === "music") {
+    body = `<h2>🎵 Музыка за баллы</h2>
+      <div class="muted">Зрители заказывают треки с YouTube и Яндекс Музыки. Проверим, что YouTube доступен с вашего компьютера.</div>
+      <div style="margin-top:14px"><button class="primary" onclick="ytCheck('wz-yt')">🩺 Проверить связь с YouTube</button></div>
+      <div id="wz-yt" class="hidden" style="margin-top:10px"></div>
+      <div class="small muted" style="margin-top:12px">Награды для заказа музыки создаются сами в разделе «Музыка». Там же можно включить резервный плейлист — он играет, когда заказов нет.</div>`;
+  } else {
+    body = `<h2>🎬 Источники в OBS</h2>
+      <div class="muted">В OBS: «Источники» → «+» → <b>«Браузер»</b> → вставьте адрес. Индикатор загорится зелёным, когда источник откроется в OBS.</div>
+      <div id="wz-obs" style="margin-top:12px"></div>`;
+  }
+  const last = WZ.step === WZ_STEPS.length - 1;
+  $("wz-body").innerHTML = `<div class="wz-steps">${bars}</div>${body}
+    <div class="wz-foot"><span class="small muted grow">Шаг ${WZ.step + 1} из ${WZ_STEPS.length}</span>
+      <button class="sm" onclick="closeWizard(false)">Позже</button>
+      ${WZ.step ? '<button onclick="wzGo(-1)">← Назад</button>' : ""}
+      ${last ? '<button class="primary" onclick="closeWizard(true)">Готово ✓</button>' : '<button class="primary" onclick="wzGo(1)">Далее →</button>'}</div>`;
+  if (k === "bot") {
+    const cur = WZ.sender || (S && S.twitch ? S.twitch.sender : "streamer") || "streamer";
+    const inp = document.querySelector(`input[name=wz-s][value=${cur}]`); if (inp) inp.checked = true;
+  }
+  wzRefresh(true);
+}
+function wzRefresh(force) {
+  const r = ST ? ST.ready : null; if (!r || !WZ.open) return;
+  const k = WZ_STEPS[WZ.step];
+  if (k === "twitch") {
+    const el = $("wz-tw"); if (!el) return;
+    if (r.streamer.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">✓</span><div>Вход выполнен: <b>${esc(r.streamer.login)}</b>. Нажмите «Далее».</div></div>`; return; }
+    if (el.dataset.busy) return;
+    if (r.quick_login) {
+      el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('streamer','wz-tw',()=>{delete $('wz-tw').dataset.busy;wzRefresh(true)})">🔑 Войти через Twitch</button>
+        <div class="small muted" style="margin-top:8px">Откроется страница Twitch с кодом — нужно только нажать «Разрешить». Ключи и регистрация приложения не нужны.</div>`;
+    } else {
+      el.innerHTML = `<div class="small">Для входа нужны ключи приложения Twitch. Откройте «Настройки → Ключи», вставьте Client ID и Client Secret (там есть инструкция), затем нажмите «Войти».</div>
+        <div style="margin-top:10px"><button class="primary" onclick="closeWizard(false);go('settings')">Открыть настройки</button></div>`;
+    }
+  } else if (k === "bot") {
+    const el = $("wz-bot"); if (!el) return;
+    const sel = (document.querySelector("input[name=wz-s]:checked") || {}).value;
+    if (sel !== "bot") { el.innerHTML = ""; return; }
+    if (r.bot.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">✓</span><div>Бот подключён: <b>${esc(r.bot.login)}</b></div></div>`; return; }
+    if (el.dataset.busy) return;
+    el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('bot','wz-bot',()=>{delete $('wz-bot').dataset.busy;wzRefresh(true)})">🔑 Войти аккаунтом бота</button>`;
+  } else if (k === "obs") {
+    const el = $("wz-obs"); if (!el) return;
+    const o = r.obs || {}, ov = (S && S.overlay) || {};
+    const rows = [
+      ["🎵 Плеер «Сейчас играет»", "/", `${ov.width || 800}×${ov.height || 200}`, o.player],
+      ["💬 Чат на экране", "/chat", "400×600", o.chat > 0],
+      ["✨ МедиаАлерты", "/alerts", "1920×1080, поверх всех", o.alerts > 0],
+    ];
+    if (S && S.music && S.music.output === "obs") rows.push(["🔊 Музыка в OBS", "/music-obs", "1×1, «Управлять аудио через OBS»", o.music]);
+    el.innerHTML = rows.map(([n, path, size, on]) => `<div class="src-row"><div><b>${n}</b><div class="small muted"><code>${esc(base() + path)}</code> · размер ${size}</div></div>
+      <button class="sm" onclick="copy(base()+'${path}')">Скопировать</button><span class="dot ${on ? "on" : "off"}">${on ? "● подключён" : "○ не найден"}</span></div>`).join("");
+  }
+}
+async function wzSender(v) {
+  WZ.sender = v;
+  try { await api("/wizard", {sender: v}); if (S && S.twitch) S.twitch.sender = v; } catch (e) {}
+  delete $("wz-bot").dataset.busy; wzRefresh(true);
+}
 function renderOut() {
   const sel = $("mus-out"); if (!sel) return;
   const obs = sel.value === "obs";
@@ -973,7 +1152,12 @@ async function poll() {
   $("about-ver").textContent = "версия " + ST.version;
   renderUpdate(ST.update);
   const cards = [];
-  cards.push(card("Ключи Twitch", r.keys ? "Указаны" : "Не указаны", r.keys ? "ok" : "err", r.keys ? null : ["settings"]));
+  if (!r.keys) cards.push(card("Ключи Twitch", "Не указаны", "err", ["settings"]));
+  $("keys-quick").classList.toggle("hidden", !r.quick_login);
+  if (r.quick_login && !KEYS_SHOWN) { KEYS_SHOWN = true; if (!(S && S.twitch && S.twitch.client_id)) $("keys-body").classList.add("hidden"); }
+  $("tw-login-btn").textContent = r.streamer.ok ? "Войти в Twitch заново" : "Войти через Twitch";
+  if (!WZ_AUTO && !r.wizard_done && !r.streamer.ok) { WZ_AUTO = true; openWizard(0); }
+  if (WZ.open) wzRefresh();
   cards.push(card("Стример", r.streamer.ok ? r.streamer.login : "Нет входа", r.streamer.ok ? (r.streamer.problem ? "warn" : "ok") : "err",
     r.streamer.ok && !r.streamer.problem && !r.streamer.missing_scopes.length ? null : ["settings"],
     r.streamer.problem || (r.streamer.missing_scopes.length ? "Не хватает прав — войдите заново" : "")));
@@ -996,6 +1180,7 @@ async function poll() {
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
     + (c.gain_db ? ` · громкость ${c.gain_db > 0 ? "+" : "−"}${Math.abs(c.gain_db).toFixed(1)} дБ` : "") + (c.in_obs ? " · играет в OBS" : "") : "";
   MUS_OBS = m.obs_connected; renderOut();
+  $("fb-status").textContent = m.fallback_status ? "Сейчас: " + m.fallback_status : "";
   $("np-bar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";
   $("np-pos").textContent = c ? fmt(c.position) + " / " + fmt(c.duration) : "";
   $("np-votes").textContent = c && m.votes ? `Голосов за пропуск: ${m.votes}/${m.votes_needed}` : "";

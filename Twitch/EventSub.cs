@@ -76,7 +76,7 @@ public sealed class EventSub
         var backoff = 2.0;
         while (true)
         {
-            if (!tw.Streamer.Ready || tw.ClientId == "")
+            if (!tw.Streamer.Ready || tw.Streamer.ClientId == "")
             {
                 Connected = false;
                 await WaitRestart(5);

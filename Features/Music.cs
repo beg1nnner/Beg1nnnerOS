@@ -26,11 +26,12 @@ public sealed class Track
     public string Source = "youtube";
     public long Views = -1;   // просмотры на YouTube (-1 — неизвестно)
     public (string RewardId, string RedemptionId, int Cost)? Redemption;
+    public bool Fallback;   // трек из резервного плейлиста (играет, когда заказов нет)
 
     public object Public() => new
     {
         id = Id, vid = Vid, title = Title, page_url = PageUrl, duration = Duration, requester = Requester,
-        login = Login, priority = Priority, source = Source, paid = Redemption != null, views = Views,
+        login = Login, priority = Priority, source = Source, paid = Redemption != null, views = Views, fallback = Fallback,
     };
 }
 
@@ -99,6 +100,7 @@ public sealed class Music
         if (Current != null) Player.GainDb = GainDb(Current.Vid);
         // режим переключили на «программа», а трек играет в OBS — продолжаем в программе с того же места
         if (_obsActive && !ObsMode) MoveToApp("режим «музыка в программе»");
+        FallbackChanged();
     }
 
     /// <summary>Поправка громкости трека в дБ: до целевого уровня, не больше +12 / −12 дБ.</summary>
@@ -171,7 +173,159 @@ public sealed class Music
             await _wake.Task;
             _wake = new TaskCompletionSource<bool>();
             if (Current == null && Queue.Count > 0) await PlayNext();
+            else if (Current == null && Queue.Count == 0 && FallbackOn) await PlayFallback();
         }
+    }
+
+    // ---------- резервный плейлист ----------
+    private List<Track> _fbList = new();
+    private string _fbUrl = "";
+    private DateTime _fbLoaded = DateTime.MinValue, _fbPauseUntil = DateTime.MinValue;
+    private readonly List<string> _fbOrder = new();
+    private readonly HashSet<string> _fbBad = new();
+    private int _fbFails;
+    public string FallbackStatus { get; private set; } = "выключен";
+
+    private bool FallbackOn => Cfg.Bool("fallback_enabled") && Cfg.Str("fallback_url").Trim() != "";
+
+    /// <summary>Загружает список треков плейлиста (YouTube) — раз в 6 часов или при смене ссылки.</summary>
+    public async Task<int> LoadFallback(bool force = false)
+    {
+        var url = Cfg.Str("fallback_url").Trim();
+        if (url == "") { FallbackStatus = "ссылка не указана"; return 0; }
+        if (!force && url == _fbUrl && _fbList.Count > 0 && DateTime.UtcNow - _fbLoaded < TimeSpan.FromHours(6)) return _fbList.Count;
+        FallbackStatus = "загружаю плейлист…";
+        try
+        {
+            var list = await _hub.YtDlp.Playlist(url);
+            var maxSec = Cfg.Int("max_duration_min", 8) * 60;
+            _fbList = list.Where(t => t.Duration <= 0 || t.Duration <= Math.Max(maxSec, 900)).ToList();
+            _fbUrl = url;
+            _fbLoaded = DateTime.UtcNow;
+            _fbOrder.Clear();
+            FallbackStatus = _fbList.Count > 0 ? $"{_fbList.Count} треков" : "в плейлисте нет треков";
+            _hub.Log.Add("music", $"Резервный плейлист: {FallbackStatus}");
+            return _fbList.Count;
+        }
+        catch (Exception e)
+        {
+            FallbackStatus = "не удалось загрузить: " + Reason(e);
+            _hub.Log.Error("Резервный плейлист: " + FallbackStatus);
+            throw;
+        }
+    }
+
+    private Track NextFallback()
+    {
+        if (_fbOrder.Count == 0)
+        {
+            var ids = _fbList.Where(t => !_fbBad.Contains(t.Vid)).Select(t => t.Vid).ToList();
+            if (Cfg.Bool("fallback_shuffle", true)) ids = ids.OrderBy(_ => Random.Shared.Next()).ToList();
+            _fbOrder.AddRange(ids);
+        }
+        if (_fbOrder.Count == 0) return null;
+        var vid = _fbOrder[0];
+        _fbOrder.RemoveAt(0);
+        var src = _fbList.First(t => t.Vid == vid);
+        return new Track
+        {
+            Vid = src.Vid, Title = src.Title, PageUrl = src.PageUrl, Duration = src.Duration, Source = "youtube",
+            Requester = "", Login = "", Fallback = true,
+        };
+    }
+
+    private async Task PlayFallback()
+    {
+        if (DateTime.UtcNow < _fbPauseUntil) { _ = WakeLater(_fbPauseUntil - DateTime.UtcNow); return; }
+        try { await LoadFallback(); }
+        catch { _fbPauseUntil = DateTime.UtcNow.AddMinutes(2); _ = WakeLater(TimeSpan.FromMinutes(2)); return; }
+        if (Queue.Count > 0 || Current != null) { Wake(); return; }   // пока грузили — пришёл заказ
+        var t = NextFallback();
+        if (t == null) return;
+        Queue.Insert(0, t);
+        await PlayNext();
+        if (Current == null && !Queue.Any())   // не скачался
+        {
+            _fbBad.Add(t.Vid);
+            if (++_fbFails >= 3)
+            {
+                _fbFails = 0;
+                _fbPauseUntil = DateTime.UtcNow.AddMinutes(2);
+                _hub.Log.Error("Резервный плейлист: три трека подряд не загрузились — пауза 2 минуты (проверьте связь с YouTube)");
+            }
+        }
+        else _fbFails = 0;
+    }
+
+    private async Task WakeLater(TimeSpan delay)
+    {
+        await Task.Delay(delay < TimeSpan.Zero ? TimeSpan.Zero : delay);
+        Wake();
+    }
+
+    /// <summary>Включили/выключили резервный плейлист или сменили ссылку.</summary>
+    public void FallbackChanged()
+    {
+        if (!FallbackOn)
+        {
+            FallbackStatus = Cfg.Bool("fallback_enabled") ? "ссылка не указана" : "выключен";
+            if (Current?.Fallback == true) Skip("резервный плейлист выключен");
+            return;
+        }
+        if (Cfg.Str("fallback_url").Trim() != _fbUrl) { _fbList = new(); _fbOrder.Clear(); _fbBad.Clear(); }
+        _fbPauseUntil = DateTime.MinValue;
+        Wake();
+    }
+
+    // ---------- команды зрителей ----------
+    private int SecondsUntil(int queueIndex)
+    {
+        var s = 0;
+        if (Current != null && !Current.Fallback) s += Math.Max(0, Current.Duration - (int)Position);
+        for (var i = 0; i < queueIndex && i < Queue.Count; i++) s += Math.Max(0, Queue[i].Duration);
+        return s;
+    }
+
+    private static string Mins(int sec) => sec < 60 ? "меньше минуты" : $"~{(sec + 30) / 60} мин";
+
+    public string TrackText()
+    {
+        var cur = Current;
+        if (cur == null) return "Сейчас ничего не играет";
+        var who = cur.Fallback ? " (резервный плейлист)" : cur.Requester != "" ? $" (заказ: {cur.Requester})" : "";
+        var link = cur.PageUrl != "" && !cur.Vid.StartsWith("ym:") ? " " + cur.PageUrl : "";
+        return $"Сейчас играет: {cur.Title}{who}{link}";
+    }
+
+    public string QueueText()
+    {
+        var q = Queue.Where(t => !t.Fallback).ToList();
+        if (q.Count == 0) return "Очередь пуста — закажите трек за баллы канала";
+        var parts = q.Take(5).Select((t, i) => $"{i + 1}. {Short(t.Title, 40)}" + (t.Requester != "" ? $" ({t.Requester})" : ""));
+        var more = q.Count > 5 ? $" и ещё {q.Count - 5}" : "";
+        return $"В очереди {q.Count}: " + string.Join(" · ", parts) + more + $". Вся очередь ≈ {Mins(SecondsUntil(Queue.Count))}";
+    }
+
+    public string MyTrack(string login, string name)
+    {
+        var idx = Queue.FindIndex(t => t.Login == login);
+        if (Current != null && Current.Login == login && idx < 0) return $"{name}, ваш трек «{Short(Current.Title, 50)}» играет сейчас";
+        if (idx < 0) return $"{name}, ваших треков в очереди нет";
+        var t = Queue[idx];
+        var n = Queue.Count(x => x.Login == login);
+        var extra = n > 1 ? $" (всего ваших: {n})" : "";
+        return $"{name}, «{Short(t.Title, 50)}» — {idx + 1}-й в очереди, заиграет через {Mins(SecondsUntil(idx))}{extra}";
+    }
+
+    public string CancelOwn(string login, string name)
+    {
+        var idx = Queue.FindLastIndex(t => t.Login == login);
+        if (idx < 0) return $"{name}, в очереди нет ваших треков (играющий трек отменить нельзя)";
+        var t = Queue[idx];
+        Queue.RemoveAt(idx);
+        _hub.Log.Add("music", $"{login} отменил свой заказ «{t.Title}»");
+        var paid = t.Redemption != null ? " Баллы за заказ не возвращаются." : "";
+        return $"{name}, «{Short(t.Title, 50)}» убран из очереди.{paid}";
     }
 
     private static void CleanupCache()
@@ -497,6 +651,7 @@ public sealed class Music
     private Task<Track> YtSearch(string q, string source, long minViews) => _hub.YtDlp.Search(q, source, minViews);
 
     private static string Short(string s) => s.Length > 120 ? s[..120] : s;
+    private static string Short(string s, int n) => s.Length > n ? s[..(n - 1)] + "…" : s;
 
     private async Task<Track> SearchAny(string q, string source, long minViews)
     {
@@ -597,6 +752,8 @@ public sealed class Music
         var idx = Queue.FindIndex(x => x.Priority < priority);
         if (idx < 0) idx = Queue.Count;
         Queue.Insert(idx, track);
+        // заказ важнее резервного плейлиста: прерываем фоновый трек
+        if (Current?.Fallback == true && Cfg.Bool("fallback_interrupt", true)) Skip("пришёл заказ");
         Wake();
         Prefetch();
         if (!manual) PlayChime();
@@ -625,6 +782,7 @@ public sealed class Music
             votes_needed = Cfg.Int("skip_votes", 3),
             toast = new { id = ToastId, text = ToastText },
             output = Cfg.Str("output", "app"),
+            fallback_status = FallbackStatus,
             obs_connected = ObsConnected,
         };
     }

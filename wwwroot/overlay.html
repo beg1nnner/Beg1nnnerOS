@@ -164,7 +164,7 @@ function applyCustom(t) {
 let lastToast = null, toastTimer = null;
 async function tick() {
   try {
-    const r = await fetch("/api/now", {cache:"no-store"}); let {data:d} = await r.json(); const o = d.overlay;
+    const r = await fetch("/api/now" + (window.obsstudio ? "?obs=1" : ""), {cache:"no-store"}); let {data:d} = await r.json(); const o = d.overlay;
     if (DEMO && !d.current) d = {...demoData(o), toast:d.toast};
     const want = P.get("theme") || o.theme || "classic";
     const ct = previewTheme || (want.startsWith("custom:") ? (d.custom_themes || []).find(t => "custom:" + t.id === want) : null);

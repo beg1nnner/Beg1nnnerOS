@@ -48,6 +48,9 @@ public sealed class Hub
     /// <summary>Найдена новая версия (номер) — окно показывает уведомление Windows и пункт в меню трея.</summary>
     public Action<string> UpdateFound = _ => { };
 
+    /// <summary>Когда оверлей плеера в OBS последний раз запрашивал данные.</summary>
+    public DateTime PlayerOverlaySeen = DateTime.MinValue;
+
     /// <summary>Действия рабочего стола (горячие клавиши/трей) — задаются окном.</summary>
     public Func<Dictionary<string, string>> HotkeyStatus = () => new Dictionary<string, string>();
     public string TrayStatus = "выключен";
@@ -198,7 +201,8 @@ public sealed class Hub
         var sender = tw.Sender;
         return new
         {
-            keys = S.Str("twitch.client_id") != "" && S.Str("twitch.client_secret") != "",
+            keys = Twitch.OwnKeys || Twitch.QuickLoginAvailable || Twitch.Streamer.IsPublic,
+            quick_login = Twitch.QuickLoginAvailable,
             streamer = new
             {
                 ok = tw.Streamer.Ready, login = tw.Streamer.Login, problem = tw.Streamer.Problem,
@@ -212,6 +216,14 @@ public sealed class Hub
             },
             eventsub = new { ok = EventSub.Connected, failed = EventSub.Failed },
             alerts_source = Alerts.Clients.Count,
+            obs = new
+            {
+                player = (DateTime.UtcNow - PlayerOverlaySeen).TotalSeconds < 6,
+                chat = ChatOverlay.Clients.Count(c => c.Obs),
+                alerts = Alerts.Clients.Count(c => c.Obs),
+                music = Music.ObsConnected,
+            },
+            wizard_done = S.Bool("ui.wizard_done"),
             donationalerts = new { ok = Donations.Connected, status = Donations.Status, configured = Donations.Token != "" },
             rewards = Rewards.Status,
             stream = new { live = Stream.Live, title = Stream.Title, category = Stream.Category, uptime = Stream.UptimeText() },

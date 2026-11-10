@@ -58,7 +58,10 @@ public sealed class Commands
         ("top", "!top", Array.Empty<string>(), "Топ активности чата за стрим", 30),
         ("topweek", "!topweek", Array.Empty<string>(), "Топ активности чата за неделю", 30),
         ("topall", "!topall", Array.Empty<string>(), "Топ активности чата за всё время", 30),
-        ("track", "!track", new[] { "!трек" }, "Текущая композиция плеера", 5),
+        ("track", "!track", new[] { "!трек" }, "Текущая композиция плеера (со ссылкой)", 5),
+        ("queue", "!queue", new[] { "!очередь" }, "Очередь заказанных треков и сколько она займёт", 10),
+        ("mytrack", "!mytrack", new[] { "!мойтрек" }, "Через сколько заиграет ваш трек", 5),
+        ("cancel", "!cancel", new[] { "!отмена" }, "Убрать свой последний заказ из очереди", 5),
         ("shazam", "!shazam", Array.Empty<string>(), "Распознавание звука выбранного устройства", 15),
         ("translate", "!translate", new[] { "!перевод" }, "Перевод текста", 5),
         ("timer", "!timer", new[] { "!таймер" }, "Разовый таймер-напоминание", 3),
@@ -101,6 +104,9 @@ public sealed class Commands
             ["top"] = HTop("stream"), ["topweek"] = HTop("week"), ["topall"] = HTop("all"), ["track"] = HTrack,
             ["timer"] = HTimer, ["timers"] = HTimers, ["canceltimer"] = HCancelTimer,
             ["shazam"] = HShazam, ["translate"] = HTranslate,
+            ["queue"] = (m, a) => Task.FromResult(_hub.Music.QueueText()),
+            ["mytrack"] = (m, a) => Task.FromResult(_hub.Music.MyTrack(m.Login, m.Name)),
+            ["cancel"] = (m, a) => Task.FromResult(_hub.Music.CancelOwn(m.Login, m.Name)),
         };
     }
 
@@ -381,13 +387,7 @@ public sealed class Commands
         };
     }
 
-    private Task<string> HTrack(ChatMsg msg, string args)
-    {
-        var cur = _hub.Music.Current;
-        if (cur == null) return Task.FromResult("Сейчас ничего не играет");
-        var who = cur.Requester != "" ? $" (заказ: {cur.Requester})" : "";
-        return Task.FromResult($"Сейчас играет: {cur.Title}{who}");
-    }
+    private Task<string> HTrack(ChatMsg msg, string args) => Task.FromResult(_hub.Music.TrackText());
 
     private Task<string> HTimer(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.CreateViewer(msg, args));
     private Task<string> HTimers(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.ListViewer(msg));

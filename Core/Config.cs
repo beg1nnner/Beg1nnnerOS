@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.1.5";
+    public const string Version = "2.2.0";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -107,7 +107,8 @@ public static class Config
         "vip_priority": false, "sub_priority": false, "skip_vote_enabled": true, "skip_votes": 3,
         "volume": 60, "audio_device": "", "announce": true, "blocked_users": [], "blocked_tracks": [],
         "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true,
-        "normalize": true, "normalize_target": -14, "output": "app"
+        "normalize": true, "normalize_target": -14, "output": "app",
+        "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true
       },
       "overlay": {
         "theme": "classic", "custom_colors": false, "width": 700, "height": 460,
@@ -133,7 +134,7 @@ public static class Config
       },
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n"},
-      "ui": {"tray": true, "theme": "twitch", "close_action": "ask"},
+      "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false},
       "pro": {
         "themes": [],
         "tts": {"enabled": false, "engine": "windows", "voice": "", "rate": 0, "volume": 80, "device": "",
