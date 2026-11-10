@@ -129,7 +129,7 @@ public sealed class TwitchClient
     /// С ним вход идёт по коду (Device Code Flow): пользователю не нужны свои Client ID и Secret.
     /// Пусто — быстрый вход скрыт, остаётся вход со своими ключами.
     /// </summary>
-    public const string BuiltInClientId = "";
+    public const string BuiltInClientId = "s4piip3isjize5gng742yngmiag62j";
     public const string DeviceUrl = "https://id.twitch.tv/oauth2/device";
 
     private readonly Hub _hub;
