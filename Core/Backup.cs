@@ -14,7 +14,7 @@ public static class Backup
     private static readonly string[] ConfigFiles = { "settings.json", "commands.json", "timers.json", "alerts.json" };
     private static readonly (string Sec, string Key)[] Secrets =
         { ("twitch", "client_secret"), ("yandex", "token"), ("donationalerts", "token"), ("donationalerts", "client_secret"),
-          ("donationalerts", "refresh_token"), ("tools", "translate.api_key"), ("pro", "tts.yandex_key"), ("pro", "cloud.password") };
+          ("donationalerts", "refresh_token"), ("announce", "tg_token"), ("announce", "dc_webhook"), ("tools", "translate.api_key"), ("pro", "tts.yandex_key"), ("pro", "cloud.password") };
 
     private static void ClearSecrets(JsonNode settings)
     {

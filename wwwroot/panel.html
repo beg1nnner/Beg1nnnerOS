@@ -159,6 +159,7 @@
   <div class="tabs" data-group="music">
     <button data-t="player" class="on">Плеер</button><button data-t="orders">Заказы</button>
     <button data-t="blocks">Блокировки</button><button data-t="overlay">Оверлей OBS</button><button data-t="mstats">Статистика музыки</button>
+    <button data-t="mhist">История треков</button>
   </div>
   <div data-tab="player">
     <div class="card">
@@ -309,6 +310,21 @@
       <div class="card grow"><h3>Предпросмотр</h3><div id="ov-wrap" style="overflow:hidden"><iframe class="ov" id="ov-frame" src="/?demo"></iframe></div></div>
     </div>
   </div>
+  <div data-tab="mhist" class="hidden">
+    <div class="card">
+      <div class="row" style="align-items:flex-end">
+        <label class="f"><span>Период</span><select id="mh-scope" onchange="loadHistory()">
+          <option value="stream">Этот стрим</option><option value="today">Сегодня</option><option value="week">7 дней</option><option value="all">Всё время</option></select></label>
+        <label class="f grow"><span>Поиск по названию или нику</span><input id="mh-q" placeholder="например, Imagine Dragons" oninput="clearTimeout(MH_T);MH_T=setTimeout(loadHistory,350)"></label>
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" id="mh-fb" onchange="loadHistory()"> Резервный плейлист</label>
+        <button class="sm" style="margin-bottom:6px" onclick="copyHistory()">📋 Скопировать список</button>
+      </div>
+      <div class="small muted" id="mh-total" style="margin:10px 0 6px"></div>
+      <table><thead><tr><th style="width:110px">Когда</th><th>Трек</th><th>Заказал</th><th style="width:70px">Длина</th></tr></thead><tbody id="mh-list"></tbody></table>
+      <div style="text-align:center;margin-top:10px"><button class="sm hidden" id="mh-more" onclick="loadHistory(true)">Показать ещё</button></div>
+    </div>
+  </div>
+
   <div data-tab="mstats" class="hidden">
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Статистика музыки</h3>
       <select id="ms-period" style="width:auto" onchange="loadStats()"><option value="stream">Стрим / сеанс</option><option value="week">7 дней</option><option value="all">Всё время</option></select></div>
@@ -469,6 +485,46 @@
 <!-- ================= СОБЫТИЯ ================= -->
 <section id="p-events" class="hidden">
   <h2>События</h2>
+  <div class="card hl">
+    <h3>📣 Анонсы в Telegram и Discord</h3>
+    <div class="muted small" style="margin:-4px 0 12px">Когда начинается стрим, программа сама публикует пост с превью и ссылкой. Ещё можно отправлять итоги стрима и клипы из чата.</div>
+    <div class="row" style="align-items:flex-start;gap:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:300px">
+        <label class="switch"><input type="checkbox" data-s="announce.tg_enabled"> <b>Telegram</b></label>
+        <div class="row" style="margin-top:8px">
+          <label class="f grow"><span>Токен бота</span><input type="password" data-s="announce.tg_token" data-secret="announce.has_tg_token" autocomplete="new-password" placeholder="123456789:AA…"></label>
+        </div>
+        <div class="row">
+          <label class="f grow"><span>Канал или чат</span><input data-s="announce.tg_chat" placeholder="@beg1nnner_channel"></label>
+          <button class="sm" style="margin-top:16px" onclick="announceTest('telegram')">Проверить</button>
+        </div>
+        <details class="small muted" style="margin-top:6px"><summary>Как получить токен бота</summary><ol style="margin:6px 0 0 18px;padding:0;line-height:1.6">
+          <li>Откройте в Telegram <b>@BotFather</b> → <code>/newbot</code>, придумайте имя и адрес бота.</li>
+          <li>Скопируйте токен из ответа (вида <code>123456789:AA…</code>) и вставьте сюда.</li>
+          <li>Добавьте бота в свой канал администратором с правом «Публикация сообщений».</li>
+          <li>Впишите адрес канала (<code>@имя_канала</code>), сохраните и нажмите «Проверить».</li></ol></details>
+      </div>
+      <div style="flex:1;min-width:300px">
+        <label class="switch"><input type="checkbox" data-s="announce.dc_enabled"> <b>Discord</b></label>
+        <div class="row" style="margin-top:8px">
+          <label class="f grow"><span>Адрес вебхука</span><input type="password" data-s="announce.dc_webhook" data-secret="announce.has_dc_webhook" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…"></label>
+          <button class="sm" style="margin-top:16px" onclick="announceTest('discord')">Проверить</button>
+        </div>
+        <details class="small muted" style="margin-top:6px"><summary>Как получить вебхук</summary><ol style="margin:6px 0 0 18px;padding:0;line-height:1.6">
+          <li>На сервере Discord: настройки канала → «Интеграция» → «Вебхуки» → «Новый вебхук».</li>
+          <li>Нажмите «Копировать URL вебхука», вставьте сюда, сохраните и нажмите «Проверить».</li></ol></details>
+      </div>
+    </div>
+    <label class="f" style="margin-top:12px"><span>Текст анонса. Можно использовать {channel}, {title}, {category}, {link}</span>
+      <textarea data-s="announce.text" rows="5" placeholder="🔴 {channel} в эфире!&#10;&#10;{title}&#10;🎮 {category}&#10;&#10;👉 {link}"></textarea></label>
+    <div class="row" style="margin-top:8px;flex-wrap:wrap">
+      <label class="switch"><input type="checkbox" data-s="announce.photo"> Прикладывать превью стрима</label>
+      <label class="f" style="width:170px"><span>Задержка после старта, сек</span><input type="number" min="0" max="600" data-s="announce.delay"></label>
+      <label class="switch"><input type="checkbox" data-s="announce.summary_auto"> Публиковать итоги после стрима</label>
+      <label class="switch"><input type="checkbox" data-s="announce.clips_post"> Публиковать клипы из чата (!клип)</label>
+    </div>
+    <div class="small muted" style="margin-top:8px">Анонс публикуется один раз за стрим. Telegram и Discord могут быть недоступны у провайдера — тогда нужен VPN или zapret.</div>
+  </div>
   <div class="card">
     <div class="row">
       <label class="f"><span>Интервал сообщений о событиях, сек (1–60)</span><input type="number" min="1" max="60" data-s="events.interval_sec"></label>
@@ -898,6 +954,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   if (b.dataset.t === "tools") loadTools();
   if (b.dataset.t === "obschat") renderChatThemes(true);
   if (b.dataset.t === "sstats") loadStreams();
+  if (b.dataset.t === "mhist") loadHistory();
   if (["themes", "tts", "give", "prof"].includes(b.dataset.t)) loadPro();
 }));
 
@@ -1008,6 +1065,32 @@ async function updInstall() {
 }
 async function updSkip(v) {
   try { ST.update = await api("/update/skip", {version: v}); renderUpdate(ST.update); } catch (e) {}
+}
+
+// ---------- история треков ----------
+let MH_T = null, MH_ITEMS = [];
+const SRC_ICON = {youtube: "▶️", yandex: "🟡", spotify: "🟢", manual: "✋"};
+function fmtLen(s) { s = Math.round(s || 0); return s ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : ""; }
+function fmtWhen(ts) {
+  const d = new Date(ts * 1000), today = new Date().toDateString() === d.toDateString();
+  return (today ? "" : d.toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit"}) + " ") + d.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"});
+}
+async function loadHistory(more) {
+  const off = more ? MH_ITEMS.length : 0;
+  const q = new URLSearchParams({scope: $("mh-scope").value, q: $("mh-q").value, fallback: $("mh-fb").checked ? "1" : "0", offset: off, limit: 50});
+  let r; try { r = await api("/music/history?" + q); } catch (e) { return; }
+  MH_ITEMS = more ? MH_ITEMS.concat(r.items) : r.items;
+  $("mh-total").textContent = r.total ? `Треков: ${r.total}` : "";
+  $("mh-list").innerHTML = MH_ITEMS.map(t => `<tr><td class="small muted">${fmtWhen(t.ts)}</td>
+      <td>${t.fallback ? "📻 " : (SRC_ICON[t.source] || "") + " "}${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a>` : esc(t.title)}</td>
+      <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td></tr>`).join("")
+    || '<tr><td colspan="4" class="muted">За этот период треков нет</td></tr>';
+  $("mh-more").classList.toggle("hidden", MH_ITEMS.length >= r.total);
+}
+function copyHistory() {
+  if (!MH_ITEMS.length) return toast("Список пуст");
+  copy(MH_ITEMS.slice().reverse().map(t => `${fmtWhen(t.ts)} — ${t.title}${t.requester ? " (" + t.requester + ")" : ""}${t.url ? " " + t.url : ""}`).join("\n"));
+  toast("Список треков скопирован");
 }
 
 let MUS_OBS = false, KEYS_SHOWN = false, WZ_AUTO = false;
@@ -1904,11 +1987,30 @@ function viewersChart(points) {
     <path d="${area}" fill="var(--accent)" fill-opacity=".15"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2"/>
     <text x="${L}" y="${H - 6}" font-size="11" fill="var(--muted)">${hh(t0)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end" font-size="11" fill="var(--muted)">${hh(t1)}</text></svg>`;
 }
+async function announceTest(target) {
+  try { const r = await api("/announce/test", {target}); toast(r.message); } catch (e) {}
+}
+async function streamSummary(id) {
+  let r; try { r = await api("/stream-summary/" + encodeURIComponent(id)); } catch (e) { return; }
+  SUMMARY_ID = id;
+  $("modal-body").innerHTML = `<h3 style="margin-top:0">📋 Итоги стрима</h3>
+    <textarea id="sum-text" rows="16" style="width:100%;font-size:13.5px">${esc(r.text)}</textarea>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="primary" onclick="copy($('sum-text').value);toast('Итоги скопированы')">Скопировать</button>
+      <button onclick="sendSummary('telegram')">Отправить в Telegram</button><button onclick="sendSummary('discord')">Отправить в Discord</button>
+      <span class="grow"></span><button onclick="closeModal()">Закрыть</button></div>
+    <div class="small muted" style="margin-top:6px">Текст можно поправить перед копированием. В Telegram и Discord уходит исходный вариант.</div>`;
+  $("modal").classList.remove("hidden");
+}
+let SUMMARY_ID = "";
+async function sendSummary(target) {
+  try { const r = await api("/stream-summary/" + encodeURIComponent(SUMMARY_ID) + "/send", {target}); toast(r.message); } catch (e) {}
+}
 async function showStream(id) {
   const d = await api("/pro/streams/" + encodeURIComponent(id));
   const s = d.summary;
-  const evName = {donation: "💸 Донат", follow: "💜 Фоллов", sub: "⭐ Подписка", cheer: "💎 Биты", raid: "🚀 Рейд"};
+  const evName = {donation: "💸 Донат", follow: "💜 Фоллов", sub: "⭐ Подписка", cheer: "💎 Биты", raid: "🚀 Рейд", clip: "🎬 Клип"};
   $("ss-detail").innerHTML = `<div class="row"><h3 class="grow" style="margin:0">${esc(s.title || "Стрим")} · ${dt(s.started)}</h3>
+      <button class="sm" onclick="streamSummary('${id}')">📋 Итоги стрима</button>
       <button class="sm" onclick="$('ss-detail').classList.add('hidden')">Закрыть</button></div>
     <div class="small muted">${esc(s.category)} · ${fmt(s.duration)} · пик ${s.peak}, в среднем ${s.avg} зрителей</div>
     <h3 style="margin-top:14px">Зрители</h3>${viewersChart(d.viewers)}

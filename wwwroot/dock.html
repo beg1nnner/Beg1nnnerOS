@@ -12,12 +12,16 @@
   .now-title { font-weight:700; font-size:1.05em; }
   .q li { margin:4px 0; }
   .q { padding-left:1.2em; margin:6px 0 0; }
+  .h { display:flex; gap:8px; padding:5px 0; border-bottom:1px solid var(--line); align-items:baseline; }
+  .h:last-child { border-bottom:0; }
+  .h .t { flex:none; width:42px; font-size:.85em; opacity:.6; }
+  .h .n { flex:1; min-width:0; } .h .w { font-size:.82em; opacity:.65; }
 </style>
 </head>
 <body>
 <div class="row" style="justify-content:space-between">
   <div class="tabs" style="margin-bottom:8px;border:none">
-    <button data-t="music" class="on">Музыка</button><button data-t="media">Медиа</button>
+    <button data-t="music" class="on">Музыка</button><button data-t="hist">История</button><button data-t="media">Медиа</button>
   </div>
   <button class="sm" id="dense">Плотно</button>
 </div>
@@ -39,6 +43,14 @@
   </div>
 </div>
 
+<div id="t-hist" class="hidden">
+  <div class="card">
+    <div class="row"><select id="hscope" class="grow"><option value="stream">Этот стрим</option><option value="today">Сегодня</option><option value="week">7 дней</option></select>
+      <button class="sm" id="hcopy" title="Скопировать список">📋</button></div>
+    <div id="hlist" style="margin-top:8px"></div>
+  </div>
+</div>
+
 <div id="t-media" class="hidden">
   <div class="card">
     <div class="row"><span class="grow">Общая громкость алертов</span><span id="mv" class="small muted"></span></div>
@@ -55,7 +67,9 @@ const post = (u, b) => fetch(u, {method:"POST", headers:{"Content-Type":"applica
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
   $("t-music").classList.toggle("hidden", b.dataset.t !== "music");
+  $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
   $("t-media").classList.toggle("hidden", b.dataset.t !== "media");
+  if (b.dataset.t === "hist") hist();
 });
 try { if (localStorage.getItem("dock-dense") === "1") document.body.classList.add("dense"); } catch (e) {}
 $("dense").onclick = () => { const on = document.body.classList.toggle("dense");
@@ -92,7 +106,26 @@ async function alerts() {
     $("alist").querySelectorAll("input").forEach(i => i.oninput = () => post("/api/alerts/volume", {id:i.dataset.id, volume:+i.value}));
   } catch (e) {}
 }
-tick(); alerts(); setInterval(tick, 1500); setInterval(alerts, 30000);
+// История треков: последние 40, обновляется раз в 10 секунд, пока вкладка открыта
+let HITEMS = [];
+async function hist() {
+  if ($("t-hist").classList.contains("hidden")) return;
+  try {
+    const {data} = await (await fetch("/api/music/history?limit=40&fallback=0&scope=" + $("hscope").value, {cache: "no-store"})).json();
+    HITEMS = data.items;
+    $("hlist").innerHTML = HITEMS.map(t => { const d = new Date(t.ts * 1000);
+      return `<div class="h"><span class="t">${d.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</span>
+        <span class="n">${esc(t.title)}${t.requester ? `<div class="w">${esc(t.requester)}</div>` : ""}</span></div>`; }).join("")
+      || '<span class="muted small">Треков пока нет</span>';
+  } catch (e) {}
+}
+$("hscope").onchange = hist;
+$("hcopy").onclick = async () => {
+  const text = HITEMS.slice().reverse().map(t => `${t.title}${t.requester ? " (" + t.requester + ")" : ""}${t.url ? " " + t.url : ""}`).join("\n");
+  try { await navigator.clipboard.writeText(text); $("hcopy").textContent = "✓"; } catch (e) { $("hcopy").textContent = "✗"; }
+  setTimeout(() => $("hcopy").textContent = "📋", 1500);
+};
+tick(); alerts(); setInterval(tick, 1500); setInterval(alerts, 30000); setInterval(hist, 10000);
 </script>
 </body>
 </html>

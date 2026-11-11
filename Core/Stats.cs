@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Nodes;
 using Microsoft.Data.Sqlite;
 
 namespace Beg1nnnerOS.Core;
@@ -26,7 +28,11 @@ public sealed class Stats
                CREATE TABLE IF NOT EXISTS viewers(ts REAL, stream TEXT, n INTEGER);
                CREATE INDEX IF NOT EXISTS viewers_stream ON viewers(stream);
                CREATE TABLE IF NOT EXISTS events(ts REAL, stream TEXT, type TEXT, name TEXT, amount REAL, currency TEXT);
-               CREATE INDEX IF NOT EXISTS events_stream ON events(stream);");
+               CREATE INDEX IF NOT EXISTS events_stream ON events(stream);
+               CREATE TABLE IF NOT EXISTS played(ts REAL, stream TEXT, vid TEXT, title TEXT, url TEXT, source TEXT,
+                                                 requester TEXT, login TEXT, duration INTEGER, fallback INTEGER);
+               CREATE INDEX IF NOT EXISTS played_ts ON played(ts);
+               CREATE INDEX IF NOT EXISTS played_stream ON played(stream);");
     }
 
     private void Exec(string sql, params (string, object)[] args)
@@ -121,6 +127,62 @@ public sealed class Stats
         };
     }
 
+    // ---------- история сыгранных треков ----------
+    public void Played(string stream, string vid, string title, string url, string source, string requester, string login,
+                       int duration, bool fallback) =>
+        Exec("INSERT INTO played VALUES($ts,$s,$v,$t,$u,$src,$r,$l,$d,$f)",
+            ("$ts", ActionLog.Now), ("$s", stream), ("$v", vid), ("$t", title), ("$u", url), ("$src", source),
+            ("$r", requester ?? ""), ("$l", login ?? ""), ("$d", duration), ("$f", fallback ? 1 : 0));
+
+    /// <summary>История: scope = stream (текущий/указанный стрим) | today | week | all; поиск по названию и нику.</summary>
+    public object History(string scope, string stream, string search, bool withFallback, int limit, int offset)
+    {
+        var where = new List<string>();
+        var args = new List<(string, object)>();
+        if (scope == "stream") { where.Add("stream=$s"); args.Add(("$s", stream)); }
+        else if (scope == "today") { where.Add("ts >= $since"); args.Add(("$since", (double)new DateTimeOffset(DateTime.Today).ToUnixTimeSeconds())); }
+        else if (scope == "week") { where.Add("ts >= $since"); args.Add(("$since", ActionLog.Now - 7 * 86400.0)); }
+        if (!withFallback) where.Add("fallback=0");
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            where.Add("(title LIKE $q OR requester LIKE $q OR login LIKE $q)");
+            args.Add(("$q", "%" + search.Trim().Replace("%", "").Replace("_", "") + "%"));
+        }
+        var w = where.Count > 0 ? " WHERE " + string.Join(" AND ", where) : "";
+        var total = Scalar("SELECT COUNT(*) FROM played" + w, args.ToArray());
+        var a2 = args.ToList();
+        a2.Add(("$lim", Math.Clamp(limit, 1, 500)));
+        a2.Add(("$off", Math.Max(0, offset)));
+        var items = new List<object>();
+        foreach (var r in Query("SELECT ts, title, url, source, requester, login, duration, fallback FROM played" + w +
+                                " ORDER BY ts DESC LIMIT $lim OFFSET $off", a2.ToArray()))
+            items.Add(new
+            {
+                ts = Convert.ToDouble(r[0]), title = r[1]?.ToString(), url = r[2]?.ToString(), source = r[3]?.ToString(),
+                requester = r[4]?.ToString(), login = r[5]?.ToString(), duration = Convert.ToInt64(r[6]), fallback = Convert.ToInt64(r[7]) == 1,
+            });
+        return new { total, items };
+    }
+
+    /// <summary>Последние треки (для команды !история).</summary>
+    public List<string> RecentTitles(int n)
+    {
+        var list = new List<string>();
+        foreach (var r in Query("SELECT title FROM played WHERE fallback=0 ORDER BY ts DESC LIMIT $n", ("$n", n)))
+            list.Add(r[0]?.ToString() ?? "");
+        return list;
+    }
+
+    /// <summary>Самые частые треки стрима (для итогов).</summary>
+    public List<(string Title, long Count)> TopPlayed(string stream, int n)
+    {
+        var list = new List<(string, long)>();
+        foreach (var r in Query(@"SELECT title, COUNT(*) c FROM played WHERE stream=$s AND fallback=0
+                                  GROUP BY title ORDER BY c DESC, MIN(ts) LIMIT $n", ("$s", stream), ("$n", n)))
+            list.Add((r[0]?.ToString() ?? "", Convert.ToInt64(r[1])));
+        return list;
+    }
+
     // ---------- расширенная статистика стримов ----------
     /// <summary>Замер зрителей раз в минуту во время эфира; заодно создаёт запись о стриме.</summary>
     public void StreamSample(string id, double started, string title, string category, int viewers)
@@ -213,6 +275,21 @@ public sealed class Stats
                 messages, follows, subs, bits, orders, donations,
             },
         };
+    }
+
+    /// <summary>Данные для итогов стрима: сводка + топ чата + треки стрима.</summary>
+    public JsonObject SummaryData(string id)
+    {
+        var rows = Query("SELECT id, started, ended, title, category, peak, vsum, vcount FROM streams WHERE id=$id", ("$id", id));
+        if (rows.Count == 0) return null;
+        var d = (JsonObject)System.Text.Json.JsonSerializer.SerializeToNode(Summary(rows[0]));
+        var chat = new JsonArray();
+        foreach (var r in TopChat("stream", id, 3)) chat.Add(new JsonArray(r[0]?.ToString(), Convert.ToInt64(r[1])));
+        d["top_chat"] = chat;
+        var tracks = new JsonArray();
+        foreach (var (t, _) in TopPlayed(id, 5)) tracks.Add(t);
+        d["top_tracks"] = tracks;
+        return d;
     }
 
     /// <summary>Подробности стрима: график зрителей, топ чата и заказов, лента событий.</summary>

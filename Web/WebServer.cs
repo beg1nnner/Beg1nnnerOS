@@ -32,9 +32,10 @@ public sealed partial class WebServer
 
     private static readonly (string Sec, string Key)[] Secrets =
         { ("twitch", "client_secret"), ("yandex", "token"), ("donationalerts", "token"),
-          ("donationalerts", "client_secret"), ("donationalerts", "refresh_token") };
+          ("donationalerts", "client_secret"), ("donationalerts", "refresh_token"),
+          ("announce", "tg_token"), ("announce", "dc_webhook") };
     private static readonly string[] Sections =
-        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro" };
+        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce" };
 
     public WebServer(Hub hub) { _hub = hub; }
 
@@ -306,6 +307,26 @@ public sealed partial class WebServer
         }));
 
         // музыка
+        // анонсы и итоги стрима в Telegram / Discord
+        app.MapPost("/api/announce/test", H(async (c, b) =>
+            Ok(new { message = await _hub.Announce.Test(b.Str("target") == "discord" ? "discord" : "telegram") })));
+        app.MapGet("/api/stream-summary/{id}", H((c, b) =>
+            Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных") })));
+        app.MapPost("/api/stream-summary/{id}/send", H(async (c, b) =>
+            Ok(new { message = await _hub.Announce.SendSummary(Route(c, "id"), b.Str("target") == "discord" ? "discord" : "telegram") })));
+
+        // история сыгранных треков
+        app.MapGet("/api/music/history", H((c, b) =>
+        {
+            var q = c.Request.Query;
+            var scope = (string)q["scope"] ?? "stream";
+            if (scope is not ("stream" or "today" or "week" or "all")) scope = "stream";
+            int.TryParse(q["offset"], out var offset);
+            int.TryParse(q["limit"], out var limit);
+            return Ok(_hub.Stats.History(scope, _hub.Stream.Key, (string)q["q"] ?? "", q["fallback"] != "0",
+                limit <= 0 ? 50 : limit, offset));
+        }));
+
         // OBS-плеер: страница сообщает позицию/окончание и узнаёт, что играть
         app.MapGet("/api/music/obs", H((c, b) =>
         {

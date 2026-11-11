@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.3.0";
+    public const string Version = "2.4.0";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -94,6 +94,8 @@ public static class Config
       "twitch": {"client_id": "", "client_secret": "", "sender": "streamer", "bot_login": "", "allow_send": true},
       "chat": {"user_rate_limit_sec": 2},
       "autopost": {"enabled": false, "text": ""},
+      "announce": {"tg_enabled": false, "tg_token": "", "tg_chat": "", "dc_enabled": false, "dc_webhook": "",
+                   "text": "", "photo": true, "delay": 60, "summary_auto": false, "clips_post": false},
       "music": {
         "rewards_enabled": true,
         "rewards": {

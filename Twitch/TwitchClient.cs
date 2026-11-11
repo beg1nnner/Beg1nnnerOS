@@ -47,7 +47,8 @@ public sealed class TwitchAccount
     {
         var need = Kind == "streamer" ? TwitchClient.StreamerScopes : TwitchClient.BotScopes;
         var have = Scopes;
-        return need.Where(s => !have.Contains(s)).ToList();
+        // clips:edit нужен только для команды !клип — без него программа работает, поэтому не требуем перезахода
+        return need.Where(s => !have.Contains(s) && !TwitchClient.OptionalScopes.Contains(s)).ToList();
     }
 
     public void Logout()
@@ -120,9 +121,11 @@ public sealed class TwitchClient
         "moderator:read:followers", "channel:read:subscriptions", "bits:read",
         "channel:read:redemptions", "channel:manage:redemptions",
         "channel:read:hype_train", "channel:read:polls", "channel:read:ads",
-        "channel:read:vips", "moderator:read:chatters",
+        "channel:read:vips", "moderator:read:chatters", "clips:edit",
     };
     public static readonly string[] BotScopes = { "user:read:chat", "user:write:chat", "user:bot" };
+    /// <summary>Запрашиваются при входе, но их отсутствие не считается проблемой (нужны для отдельных функций).</summary>
+    public static readonly string[] OptionalScopes = { "clips:edit" };
 
     /// <summary>
     /// Client ID встроенного приложения Beg1nnnerOS (тип клиента «Public» на dev.twitch.tv).
@@ -466,6 +469,13 @@ public sealed class TwitchClient
 
     // ---------- запросы данных ----------
     private static JsonNode First(JsonNode js) => (js["data"] as JsonArray)?.FirstOrDefault();
+
+    /// <summary>Создаёт клип последних ~30 секунд эфира. Возвращает ID клипа (сам клип готов через 10–20 с).</summary>
+    public async Task<string> CreateClip() =>
+        First(await Api(HttpMethod.Post, "/clips", new() { ["broadcaster_id"] = BroadcasterId }))?.Str("id") ?? "";
+
+    public async Task<JsonNode> GetClip(string id) =>
+        First(await Api(HttpMethod.Get, "/clips", new() { ["id"] = id }));
 
     public async Task<JsonNode> GetStream() =>
         First(await Api(HttpMethod.Get, "/streams", new() { ["user_id"] = BroadcasterId }));

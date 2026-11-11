@@ -38,6 +38,7 @@ public sealed class Hub
     public readonly ChatOverlay ChatOverlay;
     public readonly ProHub Pro;
     public readonly Updater Updater;
+    public readonly Features.Announce Announce;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -85,6 +86,7 @@ public sealed class Hub
         ChatOverlay = new ChatOverlay(this);
         Pro = new ProHub(this);
         Updater = new Updater(this);
+        Announce = new Features.Announce(this);
     }
 
     public void Start()

@@ -221,7 +221,11 @@ public sealed class StreamState
         }
         else
         {
-            if (wasLive && oldId != "") _hub.Stats.StreamEnded(oldId);
+            if (wasLive && oldId != "")
+            {
+                _hub.Stats.StreamEnded(oldId);
+                _hub.Loop.Start(() => _hub.Announce.OnOffline(oldId));
+            }
             Live = false;
             var ch = await tw.GetChannel();
             Title = ch.Str("title");
@@ -241,6 +245,7 @@ public sealed class StreamState
             st.Save();
             // Запуск приложения посреди эфира не создаёт повторного уведомления о старте
             if (announce) _hub.Events.Notify("online", new() { ["title"] = Title, ["category"] = Category });
+            if (announce) { var sid = StreamId; _hub.Loop.Start(() => _hub.Announce.OnLive(sid)); }
         }
         var ap = _hub.S.Obj("autopost");
         if (ap.Bool("enabled") && ap.Str("text") != "" && st.Data.Str("autopost_stream") != StreamId)
@@ -272,7 +277,12 @@ public sealed class StreamState
         }
         else if (stype == "stream.offline")
         {
-            if (StreamId != "") _hub.Stats.StreamEnded(StreamId);
+            if (StreamId != "")
+            {
+                _hub.Stats.StreamEnded(StreamId);
+                var sid = StreamId;
+                if (Live) _hub.Loop.Start(() => _hub.Announce.OnOffline(sid));
+            }
             Live = false;
             _hub.Log.Add("system", "Трансляция завершена");
         }

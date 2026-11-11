@@ -389,6 +389,12 @@ public sealed class Music
         try
         {
             StartPlayback(t, path, 0);
+            try
+            {
+                var url = t.PageUrl != "" ? t.PageUrl : t.Vid.StartsWith("ym:") ? "" : $"https://www.youtube.com/watch?v={t.Vid}";
+                _hub.Stats.Played(_hub.Stream.Key, t.Vid, t.Title, url, t.Source, t.Requester, t.Login, t.Duration, t.Fallback);
+            }
+            catch (Exception e) { _hub.Log.Add("skip", "История треков: " + e.Message); }
         }
         catch (Exception e)
         {

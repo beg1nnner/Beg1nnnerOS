@@ -62,7 +62,9 @@ public sealed class Commands
         ("queue", "!queue", new[] { "!очередь" }, "Очередь заказанных треков и сколько она займёт", 10),
         ("mytrack", "!mytrack", new[] { "!мойтрек" }, "Через сколько заиграет ваш трек", 5),
         ("cancel", "!cancel", new[] { "!отмена" }, "Убрать свой последний заказ из очереди", 5),
+        ("history", "!history", new[] { "!история" }, "Последние сыгранные треки", 15),
         ("shazam", "!shazam", Array.Empty<string>(), "Распознавание звука выбранного устройства", 15),
+        ("clip", "!clip", new[] { "!клип" }, "Клип последних 30 секунд эфира — ссылка в чат", 30),
         ("translate", "!translate", new[] { "!перевод" }, "Перевод текста", 5),
         ("timer", "!timer", new[] { "!таймер" }, "Разовый таймер-напоминание", 3),
         ("timers", "!timers", Array.Empty<string>(), "Ваши разовые таймеры", 5),
@@ -107,6 +109,13 @@ public sealed class Commands
             ["queue"] = (m, a) => Task.FromResult(_hub.Music.QueueText()),
             ["mytrack"] = (m, a) => Task.FromResult(_hub.Music.MyTrack(m.Login, m.Name)),
             ["cancel"] = (m, a) => Task.FromResult(_hub.Music.CancelOwn(m.Login, m.Name)),
+            ["clip"] = HClip,
+            ["history"] = (m, a) =>
+            {
+                var list = _hub.Stats.RecentTitles(5);
+                return Task.FromResult(list.Count == 0 ? "Пока ничего не играло"
+                    : "Недавно играли: " + string.Join(" · ", list.Select((t, i) => $"{i + 1}. {(t.Length > 45 ? t[..44] + "…" : t)}")));
+            },
         };
     }
 
@@ -392,6 +401,36 @@ public sealed class Commands
     private Task<string> HTimer(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.CreateViewer(msg, args));
     private Task<string> HTimers(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.ListViewer(msg));
     private Task<string> HCancelTimer(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.CancelViewer(msg, args));
+
+    private async Task<string> HClip(ChatMsg msg, string args)
+    {
+        if (!_hub.Stream.Live) return $"@{msg.Name}, клип можно сделать только во время эфира";
+        if (!_hub.Twitch.Streamer.Scopes.Contains("clips:edit"))
+            return $"@{msg.Name}, клипы пока не включены: стримеру нужно перезайти в Twitch в программе Beg1nnnerOS";
+        string id;
+        try { id = await _hub.Twitch.CreateClip(); }
+        catch (TwitchException e)
+        {
+            _hub.Log.Add("skip", "Клип: " + e.Message);
+            return $"@{msg.Name}, " + (e.Status == 404 ? "Twitch не дал создать клип (канал не в эфире?)"
+                : e.Status == 403 ? "на канале запрещено создавать клипы" : "не удалось создать клип, попробуйте позже");
+        }
+        if (id == "") return $"@{msg.Name}, не удалось создать клип";
+        // Twitch обрабатывает клип 10–20 секунд
+        for (var i = 0; i < 7; i++)
+        {
+            await Task.Delay(5000);
+            JsonNode c;
+            try { c = await _hub.Twitch.GetClip(id); } catch { continue; }
+            if (c == null) continue;
+            var url = c.Str("url");
+            _hub.Log.Add("system", $"Клип от {msg.Name}: {url}");
+            _hub.Stats.Event(_hub.Stream.Key, "clip", msg.Name, 0, "");
+            _hub.Loop.Start(() => _hub.Announce.OnClip(url, c.Str("title"), msg.Name));
+            return $"🎬 @{msg.Name}, клип готов: {url}";
+        }
+        return $"@{msg.Name}, клип ещё обрабатывается — он появится в разделе «Клипы» канала: https://clips.twitch.tv/{id}";
+    }
 
     private async Task<string> HShazam(ChatMsg msg, string args)
     {
