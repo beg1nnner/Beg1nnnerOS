@@ -16,6 +16,7 @@
   .h:last-child { border-bottom:0; }
   .h .t { flex:none; width:42px; font-size:.85em; opacity:.6; }
   .h .n { flex:1; min-width:0; } .h .w { font-size:.82em; opacity:.65; }
+  .h button { flex:none; padding:2px 9px; }
 </style>
 </head>
 <body>
@@ -115,8 +116,15 @@ async function hist() {
     HITEMS = data.items;
     $("hlist").innerHTML = HITEMS.map(t => { const d = new Date(t.ts * 1000);
       return `<div class="h"><span class="t">${d.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</span>
-        <span class="n">${esc(t.title)}${t.requester ? `<div class="w">${esc(t.requester)}</div>` : ""}</span></div>`; }).join("")
+        <span class="n">${esc(t.title)}${t.requester ? `<div class="w">${esc(t.requester)}</div>` : ""}</span>
+        <button class="sm" title="В очередь заново" data-i="${HITEMS.indexOf(t)}">＋</button></div>`; }).join("")
       || '<span class="muted small">Треков пока нет</span>';
+    $("hlist").querySelectorAll("button[data-i]").forEach(b => b.onclick = async () => {
+      const t = HITEMS[+b.dataset.i]; if (!t) return;
+      b.disabled = true; b.textContent = "…";
+      const r = await post("/api/music/add", {query: t.url || t.title});
+      b.textContent = r.ok ? "✓" : "✗"; if (!r.ok) { b.disabled = false; alert(r.error); }
+    });
   } catch (e) {}
 }
 $("hscope").onchange = hist;

@@ -320,7 +320,7 @@
         <button class="sm" style="margin-bottom:6px" onclick="copyHistory()">📋 Скопировать список</button>
       </div>
       <div class="small muted" id="mh-total" style="margin:10px 0 6px"></div>
-      <table><thead><tr><th style="width:110px">Когда</th><th>Трек</th><th>Заказал</th><th style="width:70px">Длина</th></tr></thead><tbody id="mh-list"></tbody></table>
+      <table><thead><tr><th style="width:110px">Когда</th><th>Трек</th><th>Заказал</th><th style="width:70px">Длина</th><th style="width:110px"></th></tr></thead><tbody id="mh-list"></tbody></table>
       <div style="text-align:center;margin-top:10px"><button class="sm hidden" id="mh-more" onclick="loadHistory(true)">Показать ещё</button></div>
     </div>
   </div>
@@ -1081,11 +1081,19 @@ async function loadHistory(more) {
   let r; try { r = await api("/music/history?" + q); } catch (e) { return; }
   MH_ITEMS = more ? MH_ITEMS.concat(r.items) : r.items;
   $("mh-total").textContent = r.total ? `Треков: ${r.total}` : "";
-  $("mh-list").innerHTML = MH_ITEMS.map(t => `<tr><td class="small muted">${fmtWhen(t.ts)}</td>
+  $("mh-list").innerHTML = MH_ITEMS.map((t, i) => `<tr><td class="small muted">${fmtWhen(t.ts)}</td>
       <td>${t.fallback ? "📻 " : (SRC_ICON[t.source] || "") + " "}${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a>` : esc(t.title)}</td>
-      <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td></tr>`).join("")
-    || '<tr><td colspan="4" class="muted">За этот период треков нет</td></tr>';
+      <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td>
+      <td style="text-align:right"><button class="sm" title="Добавить в очередь заново" onclick="requeue(${i}, this)">＋ В очередь</button></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">За этот период треков нет</td></tr>';
   $("mh-more").classList.toggle("hidden", MH_ITEMS.length >= r.total);
+}
+/** Заказать трек из истории заново (как ручной заказ стримера). */
+async function requeue(i, btn) {
+  const t = MH_ITEMS[i]; if (!t) return;
+  btn.disabled = true; btn.textContent = "…";
+  try { const r = await api("/music/add", {query: t.url || t.title}); toast(r.message || "Трек добавлен в очередь"); btn.textContent = "✓ В очереди"; }
+  catch (e) { btn.disabled = false; btn.textContent = "＋ В очередь"; }
 }
 function copyHistory() {
   if (!MH_ITEMS.length) return toast("Список пуст");
