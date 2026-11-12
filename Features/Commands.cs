@@ -294,7 +294,11 @@ public sealed class Commands
         if (found == null) return;
         var cmd = found.Cmd;
         var log = _hub.Log;
-        if (!cmd.Bool("enabled", true)) { log.Add("skip", $"{name} от {msg.Login}: команда выключена"); return; }
+        if (!cmd.Bool("enabled", true))
+        {
+            log.Add("skip", $"{name} от {msg.Login}: команда выключена — включите её в «Чат → Команды → Стандартные команды»");
+            return;
+        }
         var access = cmd.Str("access", "everyone");
         if (!msg.Allowed(access))
         {
