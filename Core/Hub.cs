@@ -42,6 +42,7 @@ public sealed class Hub
     public readonly Features.Votes Votes;
     public readonly Features.Moderation Moderation;
     public readonly Features.CommandImport CommandImport;
+    public readonly Features.Captions Captions;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -96,6 +97,7 @@ public sealed class Hub
         Votes = new Features.Votes(this);
         Moderation = new Features.Moderation(this);
         CommandImport = new Features.CommandImport(this);
+        Captions = new Features.Captions(this);
     }
 
     /// <summary>Язык программы из настроек («ui.language»: ru / en).</summary>
@@ -111,6 +113,7 @@ public sealed class Hub
         Loop.Start(Music.Run);
         Loop.Start(Alerts.Run);
         Loop.Start(Votes.Run);
+        Loop.Post(() => Captions.Apply());
         Loop.Start(Donations.Run);
         Loop.Start(YtDlp.UpdateIfNeeded);
         Loop.Start(Updater.Run);
@@ -125,7 +128,7 @@ public sealed class Hub
 
     public void Stop()
     {
-        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.SaveQueue(true); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
+        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.SaveQueue(true); Captions.Stop(); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
     }
 
     public void OnAccountChanged(string kind)

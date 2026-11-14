@@ -35,7 +35,7 @@ public sealed partial class WebServer
           ("donationalerts", "client_secret"), ("donationalerts", "refresh_token"),
           ("announce", "tg_token"), ("announce", "dc_webhook") };
     private static readonly string[] Sections =
-        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes", "mod" };
+        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes", "mod", "captions" };
 
     public WebServer(Hub hub) { _hub = hub; }
 
@@ -177,6 +177,7 @@ public sealed partial class WebServer
         app.MapGet("/chat", (HttpContext c) => NoStore(c, Page("chat.html")));
         app.MapGet("/music-obs", (HttpContext c) => NoStore(c, Page("music-obs.html")));
         app.MapGet("/votes", (HttpContext c) => NoStore(c, Page("votes.html")));
+        app.MapGet("/captions", (HttpContext c) => NoStore(c, Page("captions.html")));
         app.MapGet("/ws/chat", (RequestDelegate)WsChat);
         app.MapGet("/api/chat/overlay", H((c, b) => Ok(_hub.ChatOverlay.Config())));
         app.MapGet("/callback", D(Callback));
@@ -319,6 +320,12 @@ public sealed partial class WebServer
             Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных") })));
         app.MapPost("/api/stream-summary/{id}/send", H(async (c, b) =>
             Ok(new { message = await _hub.Announce.SendSummary(Route(c, "id"), b.Str("target") == "discord" ? "discord" : "telegram") })));
+
+        // субтитры речи
+        app.MapGet("/api/captions", H((c, b) => Ok(_hub.Captions.State(c.Request.Query["full"] == "1"))));
+        app.MapGet("/api/captions/devices", H((c, b) => Ok(new { items = Features.Captions.Devices() })));
+        app.MapPost("/api/captions/toggle", H((c, b) => Ok(new { enabled = _hub.Captions.Toggle() })));
+        app.MapPost("/api/captions/download", H((c, b) => Ok(new { message = _hub.Captions.StartDownload(b.Str("engine"), b.Str("model")) })));
 
         // фильтр спама и ссылок
         app.MapGet("/api/mod", H((c, b) => Ok(_hub.Moderation.State())));
@@ -651,6 +658,7 @@ public sealed partial class WebServer
         _hub.Settings.Save();
         _hub.ApplyLanguage();
         _hub.Music.ApplySettings();
+        if (body["captions"] != null) _hub.Captions.Apply();
         if (_hub.Donations.Token != oldDa) _hub.Donations.Restart();
         if (body["twitch"] is JsonObject && _hub.Twitch.Streamer.Ready) _hub.EventSub.Restart();
         if (body["hotkeys"] is JsonObject) _hub.ApplyHotkeys();

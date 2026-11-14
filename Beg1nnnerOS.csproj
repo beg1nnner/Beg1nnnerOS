@@ -12,7 +12,7 @@
     <RootNamespace>Beg1nnnerOS</RootNamespace>
     <AssemblyName>Beg1nnnerOS</AssemblyName>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>2.5.0</Version>
+    <Version>2.6.0</Version>
     <Product>Beg1nnnerOS</Product>
     <SatelliteResourceLanguages>ru;en</SatelliteResourceLanguages>
     <!-- Не превращать предупреждения анализаторов в ошибки -->
@@ -27,6 +27,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="Whisper.net" Version="1.8.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.8.1" />
+    <PackageReference Include="Vosk" Version="0.3.38" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.*" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="System.IO.Hashing" Version="8.0.0" />

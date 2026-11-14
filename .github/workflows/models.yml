@@ -1,0 +1,34 @@
+# Модели распознавания речи для субтитров. Кладутся в релиз «models» этого репозитория,
+# чтобы программа скачивала их с GitHub (Hugging Face и сайт Vosk доступны не у всех провайдеров).
+# Запуск: Actions → Models → Run workflow (нужен один раз или при смене моделей).
+name: Models
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Скачать модели
+        run: |
+          set -e
+          mkdir m && cd m
+          for f in ggml-tiny-q5_1.bin ggml-base-q5_1.bin ggml-small-q5_1.bin; do
+            curl -fL --retry 3 -o "$f" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$f"
+          done
+          curl -fL --retry 3 -o vosk-model-small-ru-0.22.zip https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip
+          curl -fL --retry 3 -o vosk-model-small-en-us-0.15.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          ls -la
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: models
+          name: Модели для субтитров
+          body: Модели распознавания речи (Whisper ggml и Vosk). Программа скачивает их сама — устанавливать вручную не нужно.
+          prerelease: true
+          make_latest: false
+          files: m/*

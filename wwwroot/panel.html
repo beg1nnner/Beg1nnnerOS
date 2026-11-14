@@ -88,6 +88,9 @@
   /* опросы и прогнозы */
   .vt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:16px; align-items:start; }
   button.liked { color:#f472b6; border-color:#f472b680; }
+  .cap-opt { flex:1; min-width:280px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; }
+  .cap-opt:has(input:checked) { border-color:var(--accent); background:#9146ff1f; }
+  .cap-opt input { width:auto !important; }
   .vt-tpls { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
   .vt-tpl { background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:5px 11px; font-size:12.5px; color:var(--fg); }
   .vt-tpl:hover { border-color:var(--accent); }
@@ -140,6 +143,7 @@
   <button data-p="alerts">✨ МедиаАлерты</button>
   <button data-p="events">🔔 События</button>
   <button data-p="votes">🗳 Опросы и прогнозы</button>
+  <button data-p="captions">💬 Субтитры</button>
   <button data-p="settings">⚙️ Настройки</button>
   <button data-p="pro" id="nav-pro">🚀 Дополнительно</button>
   <button class="upd-nav hidden" id="nav-upd" onclick="updNavClick()"></button>
@@ -920,6 +924,64 @@
   </div>
 </section>
 
+<!-- ================= СУБТИТРЫ ================= -->
+<section id="p-captions" class="hidden">
+  <h2 style="margin:0">💬 Субтитры в OBS</h2>
+  <div class="muted small" style="margin:4px 0 12px">Программа слушает ваш микрофон и выводит речь текстом на экран стрима. Распознавание идёт на этом компьютере — без интернета и платных сервисов. Можно сразу показывать перевод на английский.</div>
+  <div class="card hl">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+      <label class="switch"><input type="checkbox" data-s="captions.enabled" data-autosave> <b>Субтитры включены</b></label>
+      <span class="pill" id="cap-status"></span>
+    </div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;align-items:flex-end">
+      <label class="f grow" style="min-width:260px"><span>Микрофон</span><select data-s="captions.device" id="cap-dev"></select></label>
+      <label class="f" style="width:170px"><span>Язык речи</span><select data-s="captions.lang"><option value="ru">Русский</option><option value="en">English</option></select></label>
+      <div class="small muted" style="margin-bottom:9px">Вкл./выкл.: <b>Ctrl+Alt+S</b> (включите горячие клавиши в «Настройках»)</div>
+    </div>
+    <div class="small muted" style="margin-top:10px">Уровень микрофона</div>
+    <div class="bar" style="height:8px"><i id="cap-level" style="background:linear-gradient(90deg,#22c55e,#eab308)"></i></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">🧠 Движок распознавания</h3>
+    <div class="row" style="flex-wrap:wrap;gap:12px">
+      <label class="opt cap-opt"><input type="radio" name="cap-eng" value="whisper" onchange="capEngine(this.value)"> <b>Точный · Whisper</b><div class="small muted">лучше понимает речь, ставит знаки препинания и сам переводит на английский; задержка 1–3 секунды</div></label>
+      <label class="opt cap-opt"><input type="radio" name="cap-eng" value="vosk" onchange="capEngine(this.value)"> <b>Быстрый · Vosk</b><div class="small muted">слова появляются сразу, подходит для слабых ПК; точность ниже, перевод — через локальный переводчик из «Чат → Инструменты»</div></label>
+    </div>
+    <input type="hidden" data-s="captions.engine" id="cap-engine">
+    <div class="row" style="margin-top:12px;align-items:flex-end;flex-wrap:wrap">
+      <label class="f" style="width:300px" id="cap-model-f"><span>Модель Whisper</span><select data-s="captions.model" id="cap-model"></select></label>
+      <button id="cap-dl" onclick="capDownload()">⬇ Скачать модель</button>
+      <div class="grow" id="cap-dl-box" style="min-width:220px"></div>
+    </div>
+    <div class="muted small" style="margin-top:6px">Модель скачивается один раз (с GitHub). Распознавание работает на процессоре: если субтитры отстают — выберите модель поменьше или режим Vosk.</div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">🌐 Что показывать</h3>
+    <div class="row" style="flex-wrap:wrap;align-items:flex-end">
+      <label class="f" style="width:260px"><span>Текст на экране</span><select data-s="captions.show">
+        <option value="orig">Только речь как есть</option><option value="both">Речь + английский перевод</option><option value="en">Только английский</option></select></label>
+      <label class="f" style="width:170px"><span>Скрывать через, сек</span><input type="number" min="1" max="60" data-s="captions.hide_sec"></label>
+      <label class="f" style="width:150px"><span>Строк на экране</span><input type="number" min="1" max="4" data-s="captions.max_lines"></label>
+      <label class="switch" style="margin-bottom:9px"><input type="checkbox" data-s="captions.censor"> Заменять мат звёздочками (список из «Модерации»)</label>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">🎥 Источник для OBS</h3>
+    <div class="row"><code id="cap-url"></code><button class="sm" onclick="copy(base()+'/captions')">Скопировать адрес</button></div>
+    <div class="muted small">«Источники» → «+» → «Браузер», 1920×1080, поверх игры. Фон прозрачный.</div>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap;align-items:flex-end">
+      <label class="f" style="width:200px"><span>Оформление</span><select data-s="captions.style" onchange="capPreview()">
+        <option value="classic">Классика (плашка)</option><option value="outline">Обводка без фона</option><option value="neon">Неон</option><option value="light">Светлая плашка</option></select></label>
+      <label class="f" style="width:150px"><span>Размер шрифта, px</span><input type="number" min="14" max="80" data-s="captions.font_size" onchange="capPreview()"></label>
+      <label class="f" style="width:150px"><span>Положение</span><select data-s="captions.position" onchange="capPreview()"><option value="bottom">Снизу</option><option value="top">Сверху</option></select></label>
+    </div>
+    <div class="muted small" style="margin:10px 0 6px">Предпросмотр:</div>
+    <iframe id="cap-prev" class="ov" style="width:960px;height:270px;border-radius:8px"></iframe>
+    <div class="muted small" style="margin-top:10px">Сейчас распознано:</div>
+    <div id="cap-live" class="small" data-noi18n style="min-height:40px;margin-top:4px"></div>
+  </div>
+</section>
+
 <!-- ================= ДОПОЛНИТЕЛЬНО ================= -->
 <section id="p-pro" class="hidden">
   <h2 style="margin:0">🚀 Дополнительно</h2>
@@ -1134,6 +1196,7 @@ function go(p, sub) {
   if (p === "settings") { loadBackups(); loadTools(); }
   if (p === "pro") loadPro();
   if (p === "votes") vtOpen();
+  if (p === "captions") capOpen();
   try { history.replaceState(null, "", "#" + p); } catch (e) {}
 }
 document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -2572,6 +2635,63 @@ async function impGo() {
     else closeModal();
     loadCommands();
   } catch (e) { $("imp-go").disabled = false; }
+}
+
+// ================= СУБТИТРЫ =================
+let CAP = null, CAP_T = null;
+async function capOpen() {
+  $("cap-url").textContent = base() + "/captions";
+  try {
+    const d = await api("/captions/devices");
+    const cur = getPath(S, "captions.device") || "";
+    $("cap-dev").innerHTML = '<option value="">Микрофон по умолчанию</option>' + d.items.map(x => `<option value="${esc(x.id)}">${esc(x.id)}</option>`).join("");
+    $("cap-dev").value = cur;
+  } catch (e) {}
+  const eng = getPath(S, "captions.engine") || "whisper";
+  document.querySelectorAll('input[name=cap-eng]').forEach(r => r.checked = r.value === eng);
+  capPreview();
+  await capLoad();
+  clearInterval(CAP_T);
+  CAP_T = setInterval(() => { if ($("p-captions").classList.contains("hidden")) { clearInterval(CAP_T); CAP_T = null; return; } capLoad(); }, 700);
+}
+function capEngine(v) { $("cap-engine").value = v; $("savebar").classList.remove("hidden"); capRender(); }
+function capPreview() {
+  const st = document.querySelector('[data-s="captions.style"]').value || "classic";
+  const fs = document.querySelector('[data-s="captions.font_size"]').value || 30;
+  $("cap-prev").src = `/captions?preview=1&style=${st}&size=${Math.round(fs / 2)}&show=${document.querySelector('[data-s="captions.show"]').value || "both"}`;
+}
+async function capLoad() { try { CAP = await api("/captions?full=1"); } catch (e) { return; } capRender(); }
+function capRender() {
+  const c = CAP; if (!c) return;
+  const eng = $("cap-engine").value || c.engine;
+  $("cap-status").textContent = c.status;
+  $("cap-status").className = "pill " + (c.running ? "ok" : c.status.startsWith("ошибка") || c.status.startsWith("микрофон") ? "err" : "");
+  $("cap-level").style.width = Math.round((c.level || 0) * 100) + "%";
+  const models = eng === "vosk" ? c.vosk_models : c.whisper_models;
+  $("cap-model-f").classList.toggle("hidden", eng === "vosk");
+  const sel = $("cap-model"), want = getPath(S, "captions.model") || "base";
+  if (sel.dataset.sig !== JSON.stringify(c.whisper_models)) {
+    sel.innerHTML = c.whisper_models.map(m => `<option value="${m.key}">${esc(m.title)}${m.ready ? " ✓" : ""}</option>`).join("");
+    sel.value = sel.dataset.touched ? sel.value : want; sel.dataset.sig = JSON.stringify(c.whisper_models);
+  }
+  const key = eng === "vosk" ? (document.querySelector('[data-s="captions.lang"]').value === "en" ? "en" : "ru") : sel.value;
+  const m = models.find(x => x.key === key) || models[0];
+  const dl = c.download;
+  $("cap-dl").classList.toggle("hidden", !!(m && m.ready) || dl.active);
+  $("cap-dl").textContent = "⬇ Скачать модель" + (m ? ` (${m.title.split("·")[1] || ""})` : "");
+  $("cap-dl-box").innerHTML = dl.active ? `<div class="small muted">Скачиваю модель… ${Math.round(dl.progress * 100)}%</div><div class="bar"><i style="width:${Math.round(dl.progress * 100)}%"></i></div>`
+    : dl.error ? `<span class="small" style="color:#f87171">${esc(dl.error)}</span>`
+    : m && m.ready ? `<span class="small" style="color:#22c55e">✓ Модель скачана</span>` : "";
+  const ln = (c.lines || []).slice(-3);
+  $("cap-live").innerHTML = ln.map(l => `<div>${esc(l.text)}${l.en ? ` <span class="muted">— ${esc(l.en)}</span>` : ""}</div>`).join("")
+    + (c.partial ? `<div class="muted"><i>${esc(c.partial)}</i></div>` : "") || '<span class="muted">пока тишина</span>';
+}
+$("cap-model") && $("cap-model").addEventListener("change", e => { e.target.dataset.touched = "1"; capRender(); });
+async function capDownload() {
+  const eng = $("cap-engine").value || (CAP && CAP.engine) || "whisper";
+  const model = eng === "vosk" ? (document.querySelector('[data-s="captions.lang"]').value === "en" ? "en" : "ru") : $("cap-model").value;
+  try { const r = await api("/captions/download", {engine: eng, model}); toast(r.message); } catch (e) {}
+  capLoad();
 }
 </script>
 </body>

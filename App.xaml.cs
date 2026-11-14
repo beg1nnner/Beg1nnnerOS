@@ -111,6 +111,9 @@ public partial class App : Application
         {
             case "pause_music": Hub.Music.TogglePause(); break;
             case "skip": Hub.Music.Skip("горячая клавиша"); break;
+            case "captions_toggle":
+                ShowBalloon(L.T("Субтитры"), Hub.Captions.Toggle() ? L.T("Субтитры включены") : L.T("Субтитры выключены"));
+                break;
             case "like_track":
                 try
                 {

@@ -19,6 +19,7 @@
   .h .n { flex:1; min-width:0; } .h .w { font-size:.82em; opacity:.65; }
   .h button { flex:none; padding:2px 9px; }
   #like.on { color:#f472b6; border-color:#f472b680; }
+  #cc.on { color:#22d3ee; border-color:#22d3ee80; }
   .vtpl { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
   .vtpl button { padding:4px 9px; font-size:.9em; }
   .vr { margin:7px 0; border-radius:6px; }
@@ -44,7 +45,7 @@
     <div class="muted small" id="who"></div>
     <div class="small" id="likemsg" style="color:#f472b6;min-height:0"></div>
     <div class="row" style="margin-top:8px">
-      <button id="pause">⏯ Пауза</button><button id="skip">⏭ Пропуск</button><button id="like" title="Понравился — добавить в резервный плейлист">♡</button>
+      <button id="pause">⏯ Пауза</button><button id="skip">⏭ Пропуск</button><button id="like" title="Понравился — добавить в резервный плейлист">♡</button><button id="cc" title="Субтитры речи в OBS">CC</button>
       <input type="range" min="0" max="100" id="vol" class="grow" title="Громкость музыки">
       <span id="volv" class="small muted"></span>
     </div>
@@ -106,6 +107,8 @@ $("dense").onclick = () => { const on = document.body.classList.toggle("dense");
   try { localStorage.setItem("dock-dense", on ? "1" : "0"); } catch (e) {} };
 $("pause").onclick = () => post("/api/music/pause");
 $("skip").onclick = () => post("/api/music/skip");
+$("cc").onclick = async () => { const r = await post("/api/captions/toggle"); if (r.ok) $("cc").classList.toggle("on", r.data.enabled); };
+setInterval(async () => { try { const j = await (await fetch("/api/captions", {cache: "no-store"})).json(); if (j.ok) $("cc").classList.toggle("on", !!j.data.enabled); } catch (e) {} }, 3000);
 let likeT = null;
 $("like").onclick = async () => {
   const r = await post("/api/music/like");
