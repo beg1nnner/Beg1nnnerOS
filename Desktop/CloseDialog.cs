@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Beg1nnnerOS.Core;
 
 namespace Beg1nnnerOS.Desktop;
 
@@ -24,15 +25,15 @@ public sealed class CloseDialog : Window
         var root = new StackPanel { Margin = new Thickness(22), MaxWidth = 460 };
         root.Children.Add(new TextBlock
         {
-            Text = trayAvailable ? "Закрыть Beg1nnnerOS или свернуть в трей?" : "Закрыть Beg1nnnerOS?",
+            Text = trayAvailable ? L.T("Закрыть Beg1nnnerOS или свернуть в трей?") : L.T("Закрыть Beg1nnnerOS?"),
             FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = fg, Margin = new Thickness(0, 0, 0, 8),
         });
         root.Children.Add(new TextBlock
         {
-            Text = "В трее музыка, чат, таймеры и источники OBS продолжают работать. При закрытии всё останавливается.",
+            Text = L.T("В трее музыка, чат, таймеры и источники OBS продолжают работать. При закрытии всё останавливается."),
             TextWrapping = TextWrapping.Wrap, Foreground = muted, Margin = new Thickness(0, 0, 0, 14),
         });
-        var remember = new CheckBox { Content = "Запомнить выбор (можно изменить в настройках)", Foreground = fg, Margin = new Thickness(0, 0, 0, 16) };
+        var remember = new CheckBox { Content = L.T("Запомнить выбор (можно изменить в настройках)"), Foreground = fg, Margin = new Thickness(0, 0, 0, 16) };
         root.Children.Add(remember);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
 
@@ -53,9 +54,9 @@ public sealed class CloseDialog : Window
             return b;
         }
 
-        if (trayAvailable) buttons.Children.Add(Make("Свернуть в трей", "tray", true));
-        buttons.Children.Add(Make("Закрыть программу", "exit", !trayAvailable));
-        buttons.Children.Add(Make("Отмена", "cancel", false));
+        if (trayAvailable) buttons.Children.Add(Make(L.T("Свернуть в трей"), "tray", true));
+        buttons.Children.Add(Make(L.T("Закрыть программу"), "exit", !trayAvailable));
+        buttons.Children.Add(Make(L.T("Отмена"), "cancel", false));
         root.Children.Add(buttons);
         Content = root;
     }

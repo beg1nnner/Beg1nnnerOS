@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<script src="/static/i18n.js"></script>
 <link rel="icon" href="/static/favicon.png">
 <title>Beg1nnnerOS — чат</title>
 <style>
@@ -64,7 +65,7 @@
 </style>
 </head>
 <body class="t-classic">
-<div id="chat"></div>
+<div id="chat" data-noi18n></div>
 <script>
 const P = new URLSearchParams(location.search);
 const DEMO = P.has("demo");

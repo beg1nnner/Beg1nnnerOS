@@ -482,7 +482,7 @@ public sealed class Music
         var t = Queue[idx];
         var n = Queue.Count(x => x.Login == login);
         var extra = n > 1 ? $" (всего ваших: {n})" : "";
-        return $"{name}, «{Short(t.Title, 50)}» — {idx + 1}-й в очереди, заиграет через {Mins(SecondsUntil(idx))}{extra}";
+        return $"{name}, «{Short(t.Title, 50)}» — №{idx + 1} в очереди, заиграет через {Mins(SecondsUntil(idx))}{extra}";
     }
 
     public string CancelOwn(string login, string name)

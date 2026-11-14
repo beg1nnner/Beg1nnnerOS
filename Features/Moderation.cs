@@ -173,7 +173,7 @@ public sealed class Moderation
         else if (v.Action == "delete") v.Action = "timeout";
         else v.Timeout = Math.Min(v.Timeout * (n - 1) * 2, 86400);
         if (v.Action == "timeout") v.Timeout = Math.Max(v.Timeout, c.Int(v.Rule + ".timeout", 60));
-        v.Detail = (v.Detail == "" ? "" : v.Detail + ", ") + $"{n}-е нарушение";
+        v.Detail = (v.Detail == "" ? "" : v.Detail + ", ") + $"нарушение №{n}";
     }
 
     // ---------- действие ----------

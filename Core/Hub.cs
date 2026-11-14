@@ -67,6 +67,7 @@ public sealed class Hub
         Http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         Http.DefaultRequestHeaders.UserAgent.ParseAdd($"Beg1nnnerOS/{Config.Version}");
         Settings = new JsonStore(Path.Combine(Config.Profile, "settings.json"), Config.DefaultSettings());
+        ApplyLanguage();
         // озвучка удалена в 2.5.0 — убираем её старые настройки (и ключ Yandex) из профиля
         if (S.Obj("pro") is JsonObject pro && pro.Remove("tts")) Settings.Save();
         State = new JsonStore(Path.Combine(Config.Profile, "state.json"),
@@ -96,6 +97,9 @@ public sealed class Hub
         Moderation = new Features.Moderation(this);
         CommandImport = new Features.CommandImport(this);
     }
+
+    /// <summary>Язык программы из настроек («ui.language»: ru / en).</summary>
+    public void ApplyLanguage() => L.SetLanguage(S.Str("ui.language", "ru"), Path.Combine(Config.WebDir, "i18n", "en.json"));
 
     public void Start()
     {

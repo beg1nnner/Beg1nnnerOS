@@ -151,10 +151,23 @@ public sealed class Votes
             prediction = PredView(_pred),
             poll_error = _pollError,
             prediction_error = _predError,
-            templates = new { polls = c.Arr("poll_templates") ?? new JsonArray(), predictions = c.Arr("pred_templates") ?? new JsonArray() },
+            templates = new { polls = Tpl(c.Arr("poll_templates"), "choices"), predictions = Tpl(c.Arr("pred_templates"), "outcomes") },
             overlay = new { hide_sec = c.Int("overlay_hide_sec", 20), show_points = c.Bool("overlay_points", true) },
             now = ActionLog.Now,
         };
+    }
+
+    /// <summary>Шаблоны для панели; готовые русские шаблоны при английском языке показываются по-английски.</summary>
+    private static JsonArray Tpl(JsonArray src, string optsKey)
+    {
+        var arr = (JsonArray)(src?.DeepClone() ?? new JsonArray());
+        if (!L.En) return arr;
+        foreach (var t in arr.OfType<JsonObject>())
+        {
+            t["title"] = L.TE(t.Str("title"));
+            if (t[optsKey] is JsonArray o) t[optsKey] = new JsonArray(o.Select(x => (JsonNode)L.TE(J.AsStr(x))).ToArray());
+        }
+        return arr;
     }
 
     private record Choice(string Id, string Title, int Votes, int Points);

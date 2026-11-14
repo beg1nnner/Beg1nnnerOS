@@ -158,6 +158,7 @@ public sealed class Announce
     // ---------- отправка ----------
     private async Task Send(string text, string photo, string link, string what, string kind)
     {
+        text = L.T(text);
         var c = Cfg;
         if (c.Bool("tg_enabled"))
         {

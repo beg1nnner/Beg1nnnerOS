@@ -224,6 +224,7 @@ public sealed partial class WebServer
 
         // настройки
         app.MapGet("/api/settings", H((c, b) => GetSettings()));
+        app.MapGet("/api/lang", (HttpContext c) => NoStore(c, Json(new { ok = true, data = new { lang = L.Lang } })));
         app.MapPost("/api/settings", H((c, b) => SaveSettings(b)));
 
         // Twitch
@@ -623,6 +624,7 @@ public sealed partial class WebServer
                     break;
                 case "ui":
                     if (nw.Str("close_action") is not ("ask" or "tray" or "exit")) nw["close_action"] = "ask";
+                    if (nw.Str("language") is not ("ru" or "en")) nw["language"] = "ru";
                     break;
                 case "pro":
                     ValidatePro(nw, incoming, data.Obj("pro"));
@@ -647,6 +649,7 @@ public sealed partial class WebServer
             }
         }
         _hub.Settings.Save();
+        _hub.ApplyLanguage();
         _hub.Music.ApplySettings();
         if (_hub.Donations.Token != oldDa) _hub.Donations.Restart();
         if (body["twitch"] is JsonObject && _hub.Twitch.Streamer.Ready) _hub.EventSub.Restart();

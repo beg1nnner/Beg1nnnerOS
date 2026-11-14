@@ -412,7 +412,7 @@ public sealed class TwitchClient
 
     public async Task<bool> SendChat(string text, string replyTo = null)
     {
-        text = (text ?? "").Trim();
+        text = L.T((text ?? "").Trim());   // английский язык программы: ответы бота тоже по-английски
         if (text == "") return false;
         if (!Cfg.Bool("allow_send"))
         {

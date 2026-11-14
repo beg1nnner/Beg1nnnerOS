@@ -45,7 +45,7 @@ public partial class App : Application
         }
         DispatcherUnhandledException += (s, ex) =>
         {
-            Hub?.Log.Error($"Ошибка интерфейса: {ex.Exception.Message}");
+            Hub?.Log.Error(L.T($"Ошибка интерфейса: {ex.Exception.Message}"));
             ex.Handled = true;
         };
 
@@ -55,7 +55,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Не удалось запустить Beg1nnnerOS: " + ex.Message, "Beg1nnnerOS", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(L.T("Не удалось запустить Beg1nnnerOS: ") + ex.Message, "Beg1nnnerOS", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
             return;
         }
@@ -88,7 +88,7 @@ public partial class App : Application
         };
         Hub.Loop.Post(() => Hub.ApplyHotkeys());
         if (Hub.S.Bool("ui.tray", true)) CreateTray();
-        else Hub.TrayStatus = "выключен в настройках";
+        else Hub.TrayStatus = L.T("выключен в настройках");
         _win.Show();
     }
 
@@ -115,9 +115,9 @@ public partial class App : Application
                 try
                 {
                     var (liked, msg) = Hub.Music.ToggleLikeCurrent();
-                    ShowBalloon(liked ? "♥ Трек понравился" : "♡ Лайк снят", msg);
+                    ShowBalloon(liked ? L.T("♥ Трек понравился") : L.T("♡ Лайк снят"), msg);
                 }
-                catch (Beg1nnnerOS.Twitch.UserError e) { ShowBalloon("Лайк трека", e.Message); }
+                catch (Beg1nnnerOS.Twitch.UserError e) { ShowBalloon(L.T("Лайк трека"), e.Message); }
                 break;
             case "stop_alerts": Hub.Loop.Start(Hub.Alerts.StopAll); break;
             case "pause_events": Hub.Events.SetPaused(!Hub.Events.Paused); break;
@@ -129,18 +129,18 @@ public partial class App : Application
         try
         {
             var menu = new WinForms.ContextMenuStrip();
-            menu.Items.Add("Открыть Beg1nnnerOS", null, (s, e) => ShowMain());
+            menu.Items.Add(L.T("Открыть Beg1nnnerOS"), null, (s, e) => ShowMain());
             menu.Items.Add(new WinForms.ToolStripSeparator());
-            menu.Items.Add("Пауза / продолжить музыку", null, (s, e) => Hub.Loop.Post(() => RunAction("pause_music")));
-            menu.Items.Add("Пропустить трек", null, (s, e) => Hub.Loop.Post(() => RunAction("skip")));
-            var pauseEvents = new WinForms.ToolStripMenuItem("Пауза уведомлений");
+            menu.Items.Add(L.T("Пауза / продолжить музыку"), null, (s, e) => Hub.Loop.Post(() => RunAction("pause_music")));
+            menu.Items.Add(L.T("Пропустить трек"), null, (s, e) => Hub.Loop.Post(() => RunAction("skip")));
+            var pauseEvents = new WinForms.ToolStripMenuItem(L.T("Пауза уведомлений"));
             pauseEvents.Click += (s, e) => Hub.Loop.Post(() => RunAction("pause_events"));
             menu.Items.Add(pauseEvents);
-            menu.Items.Add("Остановить МедиаАлерты", null, (s, e) => Hub.Loop.Post(() => RunAction("stop_alerts")));
+            menu.Items.Add(L.T("Остановить МедиаАлерты"), null, (s, e) => Hub.Loop.Post(() => RunAction("stop_alerts")));
             menu.Items.Add(new WinForms.ToolStripSeparator());
-            menu.Items.Add("💜 Поблагодарить разработчика", null, (s, e) => Shell.OpenUrl("https://www.donationalerts.com/r/beginner24"));
-            menu.Items.Add("✉ Связь, предложения и ошибки", null, (s, e) => Shell.OpenUrl("https://t.me/Beg1nnner"));
-            menu.Items.Add("Выход", null, async (s, e) => await ExitApp());
+            menu.Items.Add(L.T("💜 Поблагодарить разработчика"), null, (s, e) => Shell.OpenUrl("https://www.donationalerts.com/r/beginner24"));
+            menu.Items.Add(L.T("✉ Связь, предложения и ошибки"), null, (s, e) => Shell.OpenUrl("https://t.me/Beg1nnner"));
+            menu.Items.Add(L.T("Выход"), null, async (s, e) => await ExitApp());
             menu.Opening += (s, e) => pauseEvents.Checked = Hub.Events.Paused;
             _tray = new WinForms.NotifyIcon
             {
@@ -150,11 +150,11 @@ public partial class App : Application
                 Visible = true,
             };
             _tray.DoubleClick += (s, e) => ShowMain();
-            Hub.TrayStatus = "работает";
+            Hub.TrayStatus = L.T("работает");
         }
         catch (Exception ex)
         {
-            Hub.TrayStatus = "ошибка: " + ex.Message;
+            Hub.TrayStatus = L.T("ошибка: ") + ex.Message;
         }
     }
 
@@ -174,16 +174,16 @@ public partial class App : Application
                 _trayUpdate.Click += (s, e) => Hub.Loop.Post(() =>
                 {
                     try { Hub.Updater.EnsureCanInstall(); Hub.Loop.Start(Hub.Updater.Install); }
-                    catch (Exception ex) { Hub.Log.Error("Обновление: " + ex.Message); Shell.OpenUrl(Hub.Updater.PageUrl); }
+                    catch (Exception ex) { Hub.Log.Error(L.T("Обновление: ") + ex.Message); Shell.OpenUrl(Hub.Updater.PageUrl); }
                 });
                 _tray.ContextMenuStrip.Items.Insert(0, _trayUpdate);
                 _tray.ContextMenuStrip.Items.Insert(1, new WinForms.ToolStripSeparator());
             }
-            _trayUpdate.Text = $"⬇ Обновить до версии {version}";
+            _trayUpdate.Text = L.T($"⬇ Обновить до версии {version}");
             _tray.BalloonTipClicked -= OnUpdateBalloon;
             _tray.BalloonTipClicked += OnUpdateBalloon;
-            _tray.ShowBalloonTip(8000, $"Доступна новая версия Beg1nnnerOS {version}",
-                "Нажмите, чтобы открыть программу, затем «Обновить». Настройки сохранятся.", WinForms.ToolTipIcon.Info);
+            _tray.ShowBalloonTip(8000, L.T($"Доступна новая версия Beg1nnnerOS {version}"),
+                L.T("Нажмите, чтобы открыть программу, затем «Обновить». Настройки сохранятся."), WinForms.ToolTipIcon.Info);
         }
         catch { }
     }
@@ -193,7 +193,7 @@ public partial class App : Application
     {
         Dispatcher.InvokeAsync(() =>
         {
-            try { _tray?.ShowBalloonTip(2500, title, text, WinForms.ToolTipIcon.None); } catch { }
+            try { _tray?.ShowBalloonTip(2500, L.T(title), L.T(text), WinForms.ToolTipIcon.None); } catch { }
         });
     }
 
@@ -229,8 +229,8 @@ public partial class App : Application
             if (!_trayHintShown)
             {
                 _trayHintShown = true;
-                _tray.ShowBalloonTip(3000, "Beg1nnnerOS работает в трее",
-                    "Музыка, чат и OBS продолжают работать. Полный выход — через меню значка.", WinForms.ToolTipIcon.Info);
+                _tray.ShowBalloonTip(3000, L.T("Beg1nnnerOS работает в трее"),
+                    L.T("Музыка, чат и OBS продолжают работать. Полный выход — через меню значка."), WinForms.ToolTipIcon.Info);
             }
         }
         else if (action == "exit")
@@ -252,7 +252,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            Hub?.Log.Error("Не удалось перезапустить программу: " + ex.Message);
+            Hub?.Log.Error(L.T("Не удалось перезапустить программу: ") + ex.Message);
             return;
         }
         await ExitApp();

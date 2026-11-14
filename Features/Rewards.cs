@@ -43,8 +43,8 @@ public sealed class Rewards
         if (m.Bool("rewards_enabled"))
             foreach (var kv in m.Obj("rewards"))
                 if (kv.Value.Bool("enabled"))
-                    outp["music:" + kv.Key] = new Desired(kv.Value.Str("title"), kv.Value.Int("cost"),
-                        kv.Key is "order" or "priority", kv.Key == "skip" ? "Пропускает текущий трек" : MusicPrompt);
+                    outp["music:" + kv.Key] = new Desired(L.TE(kv.Value.Str("title")), kv.Value.Int("cost"),
+                        kv.Key is "order" or "priority", kv.Key == "skip" ? L.TE("Пропускает текущий трек") : L.TE(MusicPrompt));
         if (_hub.S.Bool("alerts.enabled"))
             foreach (var a in _hub.Alerts.Items)
                 if (a.Bool("enabled"))

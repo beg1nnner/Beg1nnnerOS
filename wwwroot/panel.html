@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<script src="/static/i18n.js"></script>
 <link rel="icon" href="/static/favicon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Beg1nnnerOS</title>
@@ -157,7 +158,7 @@
   <div class="row" style="align-items:stretch">
     <div class="card grow" style="min-width:320px">
       <div class="muted small">Сейчас играет</div>
-      <div class="np-title" id="np-title">—</div>
+      <div class="np-title" id="np-title" data-noi18n>—</div>
       <div class="muted small" id="np-who"></div>
       <div class="bar"><i id="np-bar"></i></div>
       <div class="row small muted"><span id="np-pos"></span><span class="grow"></span><span id="np-votes"></span></div>
@@ -792,6 +793,14 @@
     <div class="muted small" style="margin-top:8px">Применяется сразу к панели и док-панели OBS.</div>
   </div>
   <div class="card">
+    <h3>🌐 Язык / Language</h3>
+    <div class="row" style="align-items:flex-end;flex-wrap:wrap">
+      <label class="f" style="width:220px"><span>Язык программы / Program language</span>
+        <select data-s="ui.language" data-autosave data-noi18n><option value="ru">Русский</option><option value="en">English</option></select></label>
+      <span class="muted small grow" style="margin-bottom:8px">Меняет язык панели, док-панели, источников OBS, ответов бота в чате и постов в Telegram/Discord. Свои тексты (команды, шаблоны) остаются как вы их написали. Меню значка в трее сменит язык после перезапуска.</span>
+    </div>
+  </div>
+  <div class="card">
     <h3>Интерфейс и управление</h3>
     <label class="switch"><input type="checkbox" data-s="ui.tray"> Значок в трее (меню: панель, музыка, уведомления, алерты, выход) — после перезапуска</label>
     <label class="f" style="margin-top:10px;max-width:360px"><span>При нажатии на крестик окна</span>
@@ -1160,6 +1169,7 @@ async function loadSettings() {
     <td style="width:220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
   $("savebar").classList.add("hidden");
   applyUiTheme(S.ui.theme || "twitch"); renderUiThemes(); renderChatThemes(true); renderOut();
+  if (window.i18nInputs) window.i18nInputs();
   renderEvents(); fitOverlay();
 }
 function collect() {
@@ -1176,7 +1186,9 @@ function collect() {
   return out;
 }
 async function saveSettings() {
+  const langBefore = S && S.ui ? (S.ui.language || "ru") : "ru";
   const r = await api("/settings", collect());
+  if ((collect().ui || {}).language && (collect().ui.language || "ru") !== langBefore) { location.reload(); return; }
   toast(r.restart_required ? "Сохранено. Новый порт заработает после перезапуска." : "Сохранено");
   await loadSettings(); poll();
   if (!$("p-settings").classList.contains("hidden") || !$("p-chat").classList.contains("hidden")) loadTools();
@@ -1373,12 +1385,19 @@ async function closeWizard(done) {
   if (done) { try { await api("/wizard", {done: true}); } catch (e) {} toast("Настройка завершена — удачного стрима!"); }
 }
 function wzGo(d) { WZ.step = Math.max(0, Math.min(WZ_STEPS.length - 1, WZ.step + d)); wzRender(); }
+async function wzLang(l) {
+  try { await api("/settings", {ui: {language: l}}); } catch (e) { return; }
+  sessionStorage.setItem("wz-reopen", "1"); location.reload();
+}
 function wzRender() {
   const r = ST ? ST.ready : null, k = WZ_STEPS[WZ.step];
   const bars = WZ_STEPS.map((_, i) => `<i class="${i <= WZ.step ? "on" : ""}"></i>`).join("");
   let body = "";
   if (k === "twitch") {
-    body = `<h2>👋 Добро пожаловать в Beg1nnnerOS</h2>
+    body = `<div class="row" data-noi18n style="justify-content:flex-end;gap:6px;margin-bottom:-6px">
+        <button class="sm ${(S && S.ui && S.ui.language === "en") ? "" : "primary"}" onclick="wzLang('ru')">Русский</button>
+        <button class="sm ${(S && S.ui && S.ui.language === "en") ? "primary" : ""}" onclick="wzLang('en')">English</button></div>
+      <h2>👋 Добро пожаловать в Beg1nnnerOS</h2>
       <div class="muted">Четыре коротких шага — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
       <div id="wz-tw" style="margin-top:16px"></div>`;
   } else if (k === "bot") {
@@ -1471,6 +1490,7 @@ async function poll() {
   if (r.quick_login && !KEYS_SHOWN) { KEYS_SHOWN = true; if (!(S && S.twitch && S.twitch.client_id)) $("keys-body").classList.add("hidden"); }
   $("tw-login-btn").textContent = r.streamer.ok ? "Войти в Twitch заново" : "Войти через Twitch";
   if (!WZ_AUTO && !r.wizard_done && !r.streamer.ok) { WZ_AUTO = true; openWizard(0); }
+  if (sessionStorage.getItem("wz-reopen") && !WZ.open) { sessionStorage.removeItem("wz-reopen"); WZ_AUTO = true; openWizard(0); }
   if (WZ.open) wzRefresh();
   cards.push(card("Стример", r.streamer.ok ? r.streamer.login : "Нет входа", r.streamer.ok ? (r.streamer.problem ? "warn" : "ok") : "err",
     r.streamer.ok && !r.streamer.problem && !r.streamer.missing_scopes.length ? null : ["settings"],
@@ -1587,7 +1607,7 @@ async function loadCommands() {
   CMDS = await api("/commands");
   const tog = (kind, id, on) => `<input type="checkbox" ${on ? "checked" : ""} onchange="api('/commands/toggle',{kind:'${kind}',id:'${id}',enabled:this.checked})">`;
   $("c-custom").innerHTML = CMDS.custom.map(c => `<tr><td><b>${esc(c.name)}</b> <span class="muted small">${esc(c.aliases.join(" "))}</span></td>
-    <td class="ellipsis" style="max-width:340px">${esc(c.response)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("custom", c.id, c.enabled)}</td>
+    <td class="ellipsis" style="max-width:340px" data-noi18n>${esc(c.response)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("custom", c.id, c.enabled)}</td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editCustom('${c.id}')">Изменить</button>
     <button class="sm danger" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">✕</button></td></tr>`).join("")
     || '<tr><td colspan="6" class="muted">Своих команд пока нет. Пример: !привет → «Привет, {user}! Добро пожаловать на канал»</td></tr>';
@@ -1638,14 +1658,14 @@ function editStd(k) {
 let TIMERS = {repeating:[], viewer:[]};
 async function loadTimers() {
   TIMERS = await api("/timers");
-  $("c-timers").innerHTML = TIMERS.repeating.map(t => `<tr><td><b>${esc(t.name)}</b></td><td class="ellipsis" style="max-width:340px">${esc(t.text)}</td>
+  $("c-timers").innerHTML = TIMERS.repeating.map(t => `<tr><td data-noi18n><b>${esc(t.name)}</b></td><td class="ellipsis" style="max-width:340px" data-noi18n>${esc(t.text)}</td>
     <td>${t.interval} мин</td><td>${t.min_messages}</td>
     <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editTimer('${t.id}')">Изменить</button>
     <button class="sm danger" onclick="if(confirm('Удалить таймер?')) api('/timers/${t.id}',undefined,'DELETE').then(loadTimers)">✕</button></td></tr>`).join("")
     || '<tr><td colspan="6" class="muted">Таймеров нет</td></tr>';
   const now = Date.now() / 1000;
-  $("c-vtimers").innerHTML = TIMERS.viewer.map(t => `<tr><td><code>${t.id}</code></td><td>${esc(t.name)}</td><td>${esc(t.text)}</td>
+  $("c-vtimers").innerHTML = TIMERS.viewer.map(t => `<tr><td><code>${t.id}</code></td><td data-noi18n>${esc(t.name)}</td><td data-noi18n>${esc(t.text)}</td>
     <td>${fmt(t.due - now)}</td><td><button class="sm danger" onclick="api('/viewer_timers/${t.id}',undefined,'DELETE').then(loadTimers)">Отменить</button></td></tr>`).join("")
     || '<tr><td colspan="5" class="muted">Активных разовых таймеров нет</td></tr>';
 }
@@ -1944,7 +1964,7 @@ function renderThemes() {
   $("th-list").innerHTML = list.map(t => {
     const used = (t.kind === "player" ? S.overlay.theme : S.chat_overlay.theme) === "custom:" + t.id;
     const baseName = (t.kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES)[t.base] || t.base;
-    return `<tr><td><b>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
+    return `<tr><td><b data-noi18n>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
       <td>${esc(baseName)}</td><td>${used ? '<span class="ok">✓ выбрана</span>' : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
       <td style="text-align:right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
       <button class="sm" title="Копия" onclick="themeDuplicate('${t.id}')">⧉</button>
@@ -2171,7 +2191,7 @@ async function loadStreams() {
     statCard("Сообщений в чате", t.messages.toLocaleString("ru-RU")) + statCard("Новых фолловеров", t.follows) +
     statCard("Подписок", t.subs, `битов: ${t.bits.toLocaleString("ru-RU")}`) + statCard("Донаты", money(t.donations), `заказов музыки: ${t.orders}`);
   $("ss-list").innerHTML = r.streams.map(s => `<tr style="cursor:pointer" onclick="showStream('${esc(s.id)}')">
-    <td>${dt(s.started)}</td><td class="ellipsis" style="max-width:260px" title="${esc(s.title)}">${esc(s.title || "—")}<div class="small muted">${esc(s.category)}</div></td>
+    <td>${dt(s.started)}</td><td class="ellipsis" style="max-width:260px" title="${esc(s.title)}" data-noi18n>${esc(s.title || "—")}<div class="small muted">${esc(s.category)}</div></td>
     <td>${fmt(s.duration)}</td><td>${s.peak}</td><td>${s.avg}</td><td>${s.messages}</td><td>${s.chatters}</td><td>${s.follows}</td>
     <td>${s.subs}</td><td>${s.bits}</td><td>${money(s.donations)}</td><td>${s.orders}</td></tr>`).join("")
     || '<tr><td colspan="12" class="muted">За этот период стримов нет. Статистика появится после первого эфира с запущенной программой.</td></tr>';
@@ -2248,7 +2268,7 @@ function renderGiveaway(g) {
   $("gv-run").classList.toggle("hidden", g.status === "idle");
   if (g.status === "idle") { if (!$("gv-prize").value) gvFill(); return; }
   const how = [g.keyword && `слово ${esc(g.keyword)}`, g.reward_title && `награда «${esc(g.reward_title)}»`].filter(Boolean).join(" или ");
-  $("gv-info").innerHTML = `🎁 ${esc(g.prize)} <span class="small muted">· ${how} · участников: ${g.count}${g.tickets !== g.count ? ` (билетов ${g.tickets})` : ""}${g.ends_in ? ` · до закрытия ${fmt(g.ends_in)}` : ""}</span>`;
+  $("gv-info").innerHTML = `🎁 <span data-noi18n>${esc(g.prize)}</span> <span class="small muted">· ${how} · участников: ${g.count}${g.tickets !== g.count ? ` (билетов ${g.tickets})` : ""}${g.ends_in ? ` · до закрытия ${fmt(g.ends_in)}` : ""}</span>`;
   $("gv-close").classList.toggle("hidden", g.status !== "open");
   $("gv-winners-list").innerHTML = g.winners.length ? "<b>Победители:</b> " + g.winners.map(w =>
     `<span class="pill ok" style="font-size:13px">🏆 ${esc(w.name)}${w.sub ? " ⭐" : ""}</span> <button class="sm" onclick="api('/pro/giveaway/reroll',{login:'${esc(w.login)}'}).then(loadGiveaway)">Перевыбрать</button>`).join(" ") : "";

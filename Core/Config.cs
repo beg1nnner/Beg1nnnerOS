@@ -158,7 +158,7 @@ public static class Config
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
                   "like_track": "ctrl+alt+l"},
-      "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false},
+      "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false, "language": "ru"},
       "pro": {
         "themes": [],
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},

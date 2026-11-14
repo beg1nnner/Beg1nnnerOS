@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     public MainWindow(App app)
     {
         InitializeComponent();
+        SplashText.Text = L.T(SplashText.Text);
         _app = app;
         Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(15, 15, 20);
         Loaded += async (s, e) => await InitWeb();
@@ -48,18 +49,18 @@ public partial class MainWindow : Window
                 }
             };
             core.NavigationCompleted += (s, e) => Splash.Visibility = Visibility.Collapsed;
-            core.ProcessFailed += (s, e) => SplashText.Text = "Интерфейс перезапускается…";
+            core.ProcessFailed += (s, e) => SplashText.Text = L.T("Интерфейс перезапускается…");
             Web.Source = new Uri(_app.PanelUrl);
         }
         catch (WebView2RuntimeNotFoundException)
         {
-            SplashText.Text = "Не найден Microsoft Edge WebView2 Runtime. Установите его со страницы Microsoft " +
-                              "(она откроется в браузере) и перезапустите Beg1nnnerOS.";
+            SplashText.Text = L.T("Не найден Microsoft Edge WebView2 Runtime. Установите его со страницы Microsoft ") +
+                              L.T("(она откроется в браузере) и перезапустите Beg1nnnerOS.");
             Shell.OpenUrl("https://developer.microsoft.com/microsoft-edge/webview2/");
         }
         catch (Exception ex)
         {
-            SplashText.Text = "Не удалось открыть интерфейс: " + ex.Message;
+            SplashText.Text = L.T("Не удалось открыть интерфейс: ") + ex.Message;
         }
     }
 
