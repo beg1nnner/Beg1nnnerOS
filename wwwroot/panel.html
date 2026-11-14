@@ -107,6 +107,15 @@
   .vt-row.pick:hover { background:#ffffff10; }
   .vt-row.pick.sel { background:#9146ff30; outline:1px solid var(--accent); }
   .vt-acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .mod-rule { padding:10px 0; border-bottom:1px solid var(--line); }
+  .mod-rule:last-child { border-bottom:0; }
+  .mod-it { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .mod-it:last-child { border-bottom:0; }
+  .mod-it .tm { width:44px; flex:none; font-size:12px; color:var(--muted); padding-top:2px; }
+  .mod-it .bd { flex:1; min-width:0; }
+  .mod-it .tx { font-size:12.5px; color:var(--muted); overflow-wrap:anywhere; margin-top:2px; }
+  .mod-tag { font-size:11.5px; padding:1px 7px; border-radius:999px; background:#2a2a36; margin-left:6px; }
+  .mod-tag.timeout { background:#7f1d1d; color:#fecaca; } .mod-tag.delete { background:#713f12; color:#fde68a; }
 </style>
 </head>
 <body>
@@ -169,7 +178,7 @@
     <div class="row"><h3 class="grow" style="margin:0">Журнал действий и ошибок</h3>
       <select id="log-kind" style="width:auto" onchange="loadLog()">
         <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
-        <option value="command">Команды</option><option value="event">События</option><option value="timer">Таймеры</option>
+        <option value="command">Команды</option><option value="mod">Модерация</option><option value="event">События</option><option value="timer">Таймеры</option>
         <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
       </select>
       <button class="sm" onclick="api('/log/clear',{}).then(loadLog)">Очистить</button></div>
@@ -360,7 +369,7 @@
 <section id="p-chat" class="hidden">
   <h2>Чат</h2>
   <div class="tabs" data-group="chat">
-    <button data-t="cmds" class="on">Команды и таймеры</button><button data-t="vtimers">Разовые таймеры</button><button data-t="cstats">Статистика</button><button data-t="tools">Инструменты</button><button data-t="obschat">Чат в OBS</button>
+    <button data-t="cmds" class="on">Команды и таймеры</button><button data-t="vtimers">Разовые таймеры</button><button data-t="cstats">Статистика</button><button data-t="tools">Инструменты</button><button data-t="mod">Модерация</button><button data-t="obschat">Чат в OBS</button>
   </div>
   <div data-tab="cmds">
     <div class="card">
@@ -434,6 +443,109 @@
       <div class="muted small" style="margin:4px 0 8px">Если зритель написал по-русски, забыв переключить раскладку (ghbdtn → привет), отправитель публикует исправленный вариант с именем зрителя. Оригинал не меняется; команды, ссылки и обычный английский пропускаются. Распознаются и короткие слова со сленгом (re → ку, kj[ → лох); ники и эмоуты не трогаются.</div>
       <div class="row"><input id="ly-in" class="grow" value="ghbdtn rfr ltkf?"><button onclick="layoutTest()">Проверить</button></div>
       <div id="ly-out" class="muted" style="margin-top:6px"></div>
+    </div>
+  </div>
+  <div data-tab="mod" class="hidden">
+    <div id="mod-warn"></div>
+    <div class="card hl">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+        <label class="switch"><input type="checkbox" data-s="mod.enabled"> <b>Фильтр спама и ссылок включён</b></label>
+        <span class="muted small" id="mod-count"></span>
+      </div>
+      <div class="muted small" style="margin:6px 0 10px">Программа проверяет каждое сообщение и сама удаляет его или даёт таймаут — от имени вашего аккаунта. Удалённые сообщения не попадают в чат OBS и не запускают команды. Стример и модераторы не проверяются.</div>
+      <div class="row" style="flex-wrap:wrap;gap:18px">
+        <label class="switch"><input type="checkbox" data-s="mod.exempt_vip"> Не проверять VIP</label>
+        <label class="switch"><input type="checkbox" data-s="mod.exempt_sub"> Не проверять подписчиков</label>
+        <label class="switch"><input type="checkbox" data-s="mod.escalate"> Повторное нарушение — строже</label>
+        <label class="f" style="width:150px;margin:0"><span>в течение, мин</span><input type="number" min="1" max="1440" data-s="mod.escalate_min"></label>
+      </div>
+      <div class="muted small" style="margin-top:4px">«Строже»: предупреждение → удаление → таймаут, а таймаут каждый раз становится длиннее (до суток).</div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Правила</h3>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.links.enabled"> <b>🔗 Ссылки</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Любые сайты, кроме разрешённых ниже. Ловит и хитрости вроде «site (dot) com». Модератор может разрешить ссылку: <code>!разрешить ник</code>.</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.links.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.links.timeout"></label><label class="f" style="width:150px"><span>«!разрешить» на, сек</span><input type="number" min="10" max="600" data-s="mod.links.permit_sec"></label>
+        </div>
+      </div>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.words.enabled"> <b>🚫 Запрещённые слова</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Список ниже. Находит и «замаскированные» слова: латиница вместо кириллицы, «с.л.о.в.о», «с л о в о».</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.words.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.words.timeout"></label>
+        </div>
+      </div>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.repeat.enabled"> <b>🔁 Повторы</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Одно и то же сообщение от зрителя несколько раз подряд.</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.repeat.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.repeat.timeout"></label><label class="f" style="width:110px"><span>Сколько раз</span><input type="number" min="2" max="10" data-s="mod.repeat.count"></label><label class="f" style="width:110px"><span>За сек</span><input type="number" min="5" max="600" data-s="mod.repeat.window"></label>
+        </div>
+      </div>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.caps.enabled"> <b>🔠 Капс</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Смайлы не считаются. Короткие сообщения («ЛОЛ», «GG») не трогаются.</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.caps.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.caps.timeout"></label><label class="f" style="width:110px"><span>От букв</span><input type="number" min="3" data-s="mod.caps.min_len"></label><label class="f" style="width:110px"><span>Заглавных, %</span><input type="number" min="30" max="100" data-s="mod.caps.percent"></label>
+        </div>
+      </div>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.symbols.enabled"> <b>〰 Флуд символами и смайлами</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Один символ много раз подряд («!!!!!!!!!!!!», «аааааааааааа») или слишком много смайлов в одном сообщении.</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.symbols.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.symbols.timeout"></label><label class="f" style="width:120px"><span>Символ подряд</span><input type="number" min="4" data-s="mod.symbols.run"></label><label class="f" style="width:120px"><span>Смайлов, макс.</span><input type="number" min="0" data-s="mod.symbols.emotes"></label>
+        </div>
+      </div>
+      <div class="mod-rule">
+        <label class="switch"><input type="checkbox" data-s="mod.length.enabled"> <b>📏 Длинные сообщения</b></label>
+        <div class="muted small" style="margin:2px 0 6px 46px">Простыни текста и копипасты.</div>
+        <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.length.action" onchange="modActs()">
+            <option value="warn">Предупредить</option><option value="delete">Удалить сообщение</option><option value="timeout">Таймаут</option></select></label>
+          <label class="f mod-to" style="width:110px"><span>Таймаут, сек</span><input type="number" min="1" data-s="mod.length.timeout"></label><label class="f" style="width:120px"><span>Макс. символов</span><input type="number" min="20" data-s="mod.length.max"></label>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="align-items:stretch;gap:16px;flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:300px">
+        <h3 style="margin-top:0">🔗 Разрешённые сайты</h3>
+        <label class="f"><span>По одному в строке; поддомены разрешаются тоже (twitch.tv → clips.twitch.tv)</span><textarea data-s="mod.links.allow" data-list rows="6"></textarea></label>
+      </div>
+      <div class="card" style="flex:1;min-width:300px">
+        <h3 style="margin-top:0">🚫 Запрещённые слова</h3>
+        <label class="f"><span>По одному в строке. Часть слова ловится везде; «=слово» — только целым словом</span><textarea data-s="mod.words.list" data-list rows="6" placeholder="казино&#10;=лох&#10;free followers"></textarea></label>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">💬 Сообщения бота</h3>
+      <label class="switch"><input type="checkbox" data-s="mod.notify"> Писать в чат, за что наказан зритель (не чаще раза в 5 секунд)</label>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap">
+        <label class="f grow"><span>Предупреждение и удаление — {user}, {reason}</span><input data-s="mod.warn_text"></label>
+        <label class="f grow"><span>Таймаут — {user}, {reason}, {time}</span><input data-s="mod.timeout_text"></label>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🧪 Проверить сообщение</h3>
+      <div class="row"><input id="mod-test" class="grow" placeholder="Вставьте сообщение — программа покажет, что с ним будет" onkeydown="if(event.key==='Enter')modTest()">
+        <button onclick="modTest()">Проверить</button></div>
+      <div id="mod-test-out" class="small" style="margin-top:8px"></div>
+      <div class="muted small">Проверка идёт по сохранённым настройкам — сначала нажмите «Сохранить», если меняли правила.</div>
+    </div>
+    <div class="card">
+      <div class="row"><h3 class="grow" style="margin:0">📋 Журнал срабатываний</h3><button class="sm" onclick="loadMod()">Обновить</button></div>
+      <div id="mod-list" style="margin-top:10px"></div>
     </div>
   </div>
   <div data-tab="obschat" class="hidden">
@@ -1050,6 +1162,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   if (b.dataset.t === "obschat") renderChatThemes(true);
   if (b.dataset.t === "sstats") loadStreams();
   if (b.dataset.t === "mhist") loadHistory();
+  if (b.dataset.t === "mod") { loadMod(); modActs(); }
   if (["themes", "tts", "give", "prof"].includes(b.dataset.t)) loadPro();
 }));
 
@@ -2353,6 +2466,37 @@ function vtRender() {
       <button class="primary" onclick="vtResolve(this)">🏆 Выбрать победителя</button>
       <button class="danger" onclick="if(confirm('Отменить прогноз? Все баллы вернутся зрителям.')) vtDo('/votes/prediction/cancel',{},this)">Отменить и вернуть баллы</button>`
       : `<button class="sm" onclick="VT_HIDE.add('${r.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
+}
+
+// ================= МОДЕРАЦИЯ =================
+function modActs() {
+  document.querySelectorAll('#p-chat [data-tab="mod"] .mod-rule').forEach(r => {
+    const sel = r.querySelector('select'), to = r.querySelector('.mod-to');
+    if (sel && to) to.style.opacity = sel.value === "timeout" ? 1 : .45;
+  });
+}
+async function modTest() {
+  const t = $("mod-test").value.trim(); if (!t) return;
+  const r = await api("/mod/test", {text: t});
+  $("mod-test-out").innerHTML = r.ok ? `<b style="color:#22c55e">✓ ${esc(r.message)}</b>` : `<b style="color:#f59e0b">⚠ ${esc(r.message)}</b>`;
+}
+async function modUnban(id, btn) {
+  btn.disabled = true;
+  try { const r = await api("/mod/unban", {user_id: id}); toast(r.message); btn.textContent = "✓ снят"; } catch (e) { btn.disabled = false; }
+}
+async function loadMod() {
+  let m; try { m = await api("/mod"); } catch (e) { return; }
+  $("mod-warn").innerHTML = !m.ready ? `<div class="card hl">⚠️ Сначала войдите в Twitch.</div>`
+    : !m.scopes ? `<div class="card hl">⚠️ Чтобы удалять сообщения и давать таймауты, программе нужны права модератора. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button></div>` : "";
+  $("mod-count").textContent = m.count ? `Срабатываний сегодня: ${m.count}` : "Сегодня нарушений не было";
+  $("mod-list").innerHTML = m.items.map(i => {
+    const d = new Date(i.ts * 1000);
+    return `<div class="mod-it"><span class="tm">${d.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</span>
+      <div class="bd"><b>${esc(i.user)}</b><span class="mod-tag ${i.action}">${esc(i.action_title)}</span><span class="mod-tag">${esc(i.rule)}${i.detail ? " · " + esc(i.detail) : ""}</span>
+        ${i.ok ? "" : `<span class="small" style="color:#f87171;margin-left:6px">не получилось: ${esc(i.error)}</span>`}
+        <div class="tx">${esc(i.text)}</div></div>
+      ${i.action === "timeout" && i.ok ? `<button class="sm" onclick="modUnban('${esc(i.user_id)}',this)">Снять таймаут</button>` : ""}</div>`;
+  }).join("") || '<span class="muted small">Пока пусто — здесь появятся удалённые сообщения, таймауты и предупреждения этого запуска программы.</span>';
 }
 </script>
 </body>

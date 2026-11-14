@@ -40,6 +40,7 @@ public sealed class Hub
     public readonly Updater Updater;
     public readonly Features.Announce Announce;
     public readonly Features.Votes Votes;
+    public readonly Features.Moderation Moderation;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -89,6 +90,7 @@ public sealed class Hub
         Updater = new Updater(this);
         Announce = new Features.Announce(this);
         Votes = new Features.Votes(this);
+        Moderation = new Features.Moderation(this);
     }
 
     public void Start()
@@ -145,6 +147,20 @@ public sealed class Hub
         var uid = ev.Str("chatter_user_id");
         // В OBS показываем все сообщения чата, включая ответы программы (их можно скрыть в настройках)
         var own = Twitch.SentIds.Contains(mid) || (S.Str("twitch.sender") == "bot" && Twitch.Bot.Ready && uid == Twitch.Bot.UserId);
+        // Фильтр спама: удалённое сообщение не попадает ни в OBS, ни в команды
+        Features.Moderation.Verdict verdict = null;
+        if (!own && uid != Twitch.Streamer.UserId)
+        {
+            var bset = new HashSet<string>((ev["badges"] as JsonArray ?? new JsonArray()).Select(b => b.Str("set_id")));
+            try { verdict = Moderation.Check(ev, uid, ev.Str("chatter_user_login"), ev.Str("chatter_user_name"), ev.Str("message.text"), bset); }
+            catch (Exception e) { Log.Add("error", "Фильтр спама: " + e.Message); }
+            if (verdict != null)
+            {
+                var v = verdict;
+                Loop.Start(() => Moderation.Apply(v));
+                if (v.Hides) return;
+            }
+        }
         ChatOverlay.OnMessage(ev, own);
         // Ответы приложения не запускают команды повторно; в режиме бота его сообщения игнорируются
         if (Twitch.SentIds.Contains(mid)) return;
@@ -165,6 +181,7 @@ public sealed class Hub
         };
         Stats.Chat(msg.Login, msg.Name, Stream.Key);
         Timers.OnChatMessage();
+        if (await Moderation.OnCommand(msg)) return;   // !разрешить ник
         if (await Pro.OnChat(msg)) return;   // розыгрыш, мини-игры, !tts
         if (msg.Text.StartsWith("!"))
         {

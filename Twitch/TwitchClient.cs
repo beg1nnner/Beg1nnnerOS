@@ -123,10 +123,12 @@ public sealed class TwitchClient
         "channel:read:hype_train", "channel:read:polls", "channel:read:ads",
         "channel:read:vips", "moderator:read:chatters", "clips:edit",
         "channel:manage:polls", "channel:manage:predictions",
+        "moderator:manage:chat_messages", "moderator:manage:banned_users",
     };
     public static readonly string[] BotScopes = { "user:read:chat", "user:write:chat", "user:bot" };
     /// <summary>Запрашиваются при входе, но их отсутствие не считается проблемой (нужны для отдельных функций).</summary>
-    public static readonly string[] OptionalScopes = { "clips:edit", "channel:manage:polls", "channel:manage:predictions" };
+    public static readonly string[] OptionalScopes = { "clips:edit", "channel:manage:polls", "channel:manage:predictions",
+        "moderator:manage:chat_messages", "moderator:manage:banned_users" };
 
     /// <summary>
     /// Client ID встроенного приложения Beg1nnnerOS (тип клиента «Public» на dev.twitch.tv).

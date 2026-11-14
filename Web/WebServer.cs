@@ -35,7 +35,7 @@ public sealed partial class WebServer
           ("donationalerts", "client_secret"), ("donationalerts", "refresh_token"),
           ("announce", "tg_token"), ("announce", "dc_webhook") };
     private static readonly string[] Sections =
-        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes" };
+        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes", "mod" };
 
     public WebServer(Hub hub) { _hub = hub; }
 
@@ -315,6 +315,11 @@ public sealed partial class WebServer
             Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных") })));
         app.MapPost("/api/stream-summary/{id}/send", H(async (c, b) =>
             Ok(new { message = await _hub.Announce.SendSummary(Route(c, "id"), b.Str("target") == "discord" ? "discord" : "telegram") })));
+
+        // фильтр спама и ссылок
+        app.MapGet("/api/mod", H((c, b) => Ok(_hub.Moderation.State())));
+        app.MapPost("/api/mod/test", H((c, b) => Ok(_hub.Moderation.Test(b.Str("text")))));
+        app.MapPost("/api/mod/unban", H(async (c, b) => Ok(new { message = await _hub.Moderation.Unban(b.Str("user_id")) })));
 
         // опросы и прогнозы Twitch
         app.MapGet("/api/votes", H((c, b) => Ok(_hub.Votes.State())));
