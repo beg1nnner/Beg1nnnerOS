@@ -66,6 +66,8 @@ public sealed class Hub
         Http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         Http.DefaultRequestHeaders.UserAgent.ParseAdd($"Beg1nnnerOS/{Config.Version}");
         Settings = new JsonStore(Path.Combine(Config.Profile, "settings.json"), Config.DefaultSettings());
+        // озвучка удалена в 2.5.0 — убираем её старые настройки (и ключ Yandex) из профиля
+        if (S.Obj("pro") is JsonObject pro && pro.Remove("tts")) Settings.Save();
         State = new JsonStore(Path.Combine(Config.Profile, "state.json"),
             new JsonObject { ["announced_stream"] = "", ["autopost_stream"] = "", ["reward_ids"] = new JsonObject() });
         Log = new ActionLog(Config.Profile);
@@ -117,7 +119,7 @@ public sealed class Hub
 
     public void Stop()
     {
-        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Pro.Tts.Clear(); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
+        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
     }
 
     public void OnAccountChanged(string kind)
@@ -182,7 +184,7 @@ public sealed class Hub
         Stats.Chat(msg.Login, msg.Name, Stream.Key);
         Timers.OnChatMessage();
         if (await Moderation.OnCommand(msg)) return;   // !разрешить ник
-        if (await Pro.OnChat(msg)) return;   // розыгрыш, мини-игры, !tts
+        if (await Pro.OnChat(msg)) return;   // розыгрыш, мини-игры
         if (msg.Text.StartsWith("!"))
         {
             await Commands.Handle(msg);

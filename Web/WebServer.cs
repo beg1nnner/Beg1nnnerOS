@@ -530,9 +530,6 @@ public sealed partial class WebServer
         var tr = s.Obj("tools.translate");
         tr["has_api_key"] = tr.Str("api_key") != "";
         tr["api_key"] = "";
-        var tts = s.Obj("pro.tts");
-        tts["has_yandex_key"] = tts.Str("yandex_key") != "";
-        tts["yandex_key"] = "";
         var cloud = s.Obj("pro.cloud");
         cloud["has_password"] = cloud.Str("password") != "";
         cloud["password"] = "";

@@ -12,7 +12,7 @@ using Beg1nnnerOS.Twitch;
 namespace Beg1nnnerOS.Pro;
 
 /// <summary>
-/// Дополнительные функции: свои темы оверлеев, озвучка, профили, расширенная статистика,
+/// Дополнительные функции: свои темы оверлеев, профили, расширенная статистика,
 /// облачная копия, розыгрыши и мини-игры. Все бесплатные.
 /// </summary>
 public sealed class ProHub
@@ -21,7 +21,6 @@ public sealed class ProHub
     private static readonly Regex FontRe = new(@"^[\w\s,""'\-]{0,80}$");
 
     private readonly Hub _hub;
-    public readonly Tts Tts;
     public readonly Giveaway Giveaway;
     public readonly Games Games;
     public readonly CloudSync Cloud;
@@ -29,7 +28,6 @@ public sealed class ProHub
     public ProHub(Hub hub)
     {
         _hub = hub;
-        Tts = new Tts(hub);
         Giveaway = new Giveaway(hub);
         Games = new Games(hub);
         Cloud = new CloudSync(hub);
@@ -37,13 +35,12 @@ public sealed class ProHub
 
     public void Start()
     {
-        _hub.Loop.Start(Tts.Run);
         _hub.Loop.Start(Giveaway.Run);
         _hub.Loop.Start(Cloud.Run);
     }
 
     // ---------- события ----------
-    /// <summary>Сообщение чата. true — сообщение обработано розыгрышем, игрой или озвучкой (дальше не идёт).</summary>
+    /// <summary>Сообщение чата. true — сообщение обработано розыгрышем или игрой (дальше не идёт).</summary>
     public async Task<bool> OnChat(ChatMsg msg)
     {
         if (await Giveaway.OnChat(msg)) return true;
@@ -53,12 +50,6 @@ public sealed class ProHub
         {
             var parts = t.Split(' ', 2);
             var cmd = parts[0].ToLowerInvariant();
-            if (cmd is "!tts" or "!say" or "!озвучь")
-            {
-                var reply = Tts.OnCommand(msg, parts.Length > 1 ? parts[1] : "");
-                if (reply != null) await _hub.Twitch.SendChat(reply);
-                return true;
-            }
             if (cmd is "!розыгрыш" or "!giveaway" && Giveaway.Status == "open")
             {
                 var how = Giveaway.Keyword != "" ? $"напишите {Giveaway.Keyword}" : $"купите награду «{Giveaway.RewardTitle}»";
@@ -72,7 +63,7 @@ public sealed class ProHub
     private static double Num(Dictionary<string, string> v, string key) =>
         v.TryGetValue(key, out var s) && double.TryParse((s ?? "").Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0;
 
-    /// <summary>Событие канала: статистика стримов и озвучка.</summary>
+    /// <summary>Событие канала: статистика стримов.</summary>
     public void OnEvent(string type, Dictionary<string, string> v)
     {
         var user = v.GetValueOrDefault("user", "");
@@ -88,15 +79,12 @@ public sealed class ProHub
             }
         }
         catch (Exception e) { _hub.Log.Error("Статистика событий: " + e.Message); }
-        if (type == "donation") Tts.OnDonation(user, v.GetValueOrDefault("amount", ""), v.GetValueOrDefault("currency", ""), v.GetValueOrDefault("message", ""));
-        else if (type == "cheer") Tts.OnCheer(user, v.GetValueOrDefault("bits", ""), v.GetValueOrDefault("message", ""));
     }
 
-    /// <summary>Награда за баллы, которой не управляет программа: озвучка или участие в розыгрыше.</summary>
+    /// <summary>Награда за баллы, которой не управляет программа: участие в розыгрыше.</summary>
     public async Task OnRedemption(JsonNode ev)
     {
-        if (await Giveaway.OnReward(ev)) return;
-        Tts.OnReward(ev.Str("reward.title"), ev.Str("user_name"), ev.Str("user_input"));
+        await Giveaway.OnReward(ev);
     }
 
     // ---------- свои темы оверлеев ----------

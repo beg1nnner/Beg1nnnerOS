@@ -26,7 +26,7 @@ public sealed class CloudSync
     private static readonly string[] SecretPaths =
     {
         "twitch.client_secret", "yandex.token", "donationalerts.client_secret", "donationalerts.token",
-        "donationalerts.refresh_token", "tools.translate.api_key", "pro.tts.yandex_key",
+        "donationalerts.refresh_token", "tools.translate.api_key",
     };
 
     private readonly Hub _hub;

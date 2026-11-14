@@ -52,7 +52,7 @@ public sealed class Events
 
     public void Notify(string type, Dictionary<string, string> values)
     {
-        _hub.Pro.OnEvent(type, values);   // статистика стримов и озвучка
+        _hub.Pro.OnEvent(type, values);   // статистика стримов
         var et = Config.EventTypes.FirstOrDefault(e => e.Key == type);
         var title = et?.Title ?? type;
         _hub.Log.Add("event", $"{title}: " + string.Join(", ", values.Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => $"{p.Key}={p.Value}")));

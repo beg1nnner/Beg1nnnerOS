@@ -40,7 +40,7 @@ public sealed class Player
         }
     }
 
-    /// <summary>Временное приглушение (на время озвучки): 1 — без изменений.</summary>
+    /// <summary>Временное приглушение: 1 — без изменений.</summary>
     public float Duck
     {
         get => _duck;

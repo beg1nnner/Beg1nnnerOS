@@ -159,11 +159,6 @@ public static class Config
       "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false},
       "pro": {
         "themes": [],
-        "tts": {"enabled": false, "engine": "windows", "voice": "", "rate": 0, "volume": 80, "device": "",
-                "yandex_key": "", "yandex_folder": "", "yandex_voice": "alena", "yandex_speed": 1.0,
-                "donations": true, "min_donation": 0, "bits": true, "min_bits": 100, "reward_title": "",
-                "command": false, "command_access": "vip", "command_cooldown": 30,
-                "max_length": 200, "read_name": true, "skip_links": true, "duck_music": true, "banned_words": []},
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},
         "games": {"enabled": false, "dice": true, "duel": true, "cooldown": 30, "duel_timeout": 60, "guess_max": 100},
         "giveaway": {"prize": "", "keyword": "!участвую", "reward_title": "", "minutes": 0, "subs_only": false,

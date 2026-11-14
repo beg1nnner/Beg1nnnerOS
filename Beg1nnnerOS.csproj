@@ -30,7 +30,6 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.*" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="System.IO.Hashing" Version="8.0.0" />
-    <PackageReference Include="System.Speech" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

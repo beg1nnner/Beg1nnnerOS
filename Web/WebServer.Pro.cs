@@ -21,7 +21,6 @@ public sealed partial class WebServer
         app.MapGet("/api/pro", H((c, b) => Ok(new
         {
             pro = P.State(),
-            tts = P.Tts.State(),
             giveaway = P.Giveaway.State(),
             games = P.Games.State(),
             cloud = new { status = P.Cloud.Status, file = P.Cloud.Peek(), folders = CloudSync.DetectFolders() },
@@ -31,7 +30,6 @@ public sealed partial class WebServer
         // лёгкий опрос для открытой вкладки (без поиска папок и чтения копии)
         app.MapGet("/api/pro/live", H((c, b) => Ok(new
         {
-            tts = new { status = P.Tts.Status, queue = P.Tts.QueueCount },
             giveaway = P.Giveaway.State(),
             games = P.Games.State(),
         })));
@@ -39,18 +37,6 @@ public sealed partial class WebServer
         // свои темы оверлеев
         app.MapPost("/api/pro/themes", H((c, b) => Ok(P.SaveTheme(b))));
         app.MapDelete("/api/pro/themes/{id}", H((c, b) => { P.DeleteTheme(Route(c, "id")); return Ok(); }));
-
-        // озвучка
-        app.MapPost("/api/pro/tts/test", H(async (c, b) =>
-        {
-            var text = P.Tts.Clean(b.Str("text") != "" ? b.Str("text") : "Проверка озвучки Beg1nnnerOS. Спасибо за донат!");
-            try { await P.Tts.Speak(text); }
-            catch (Exception e) when (e is InvalidOperationException or System.Net.Http.HttpRequestException or TaskCanceledException)
-            { throw new UserError("Озвучка не получилась: " + e.Message); }
-            return Ok();
-        }));
-        app.MapPost("/api/pro/tts/skip", H((c, b) => { P.Tts.Skip(); return Ok(); }));
-        app.MapPost("/api/pro/tts/clear", H((c, b) => { P.Tts.Clear(); return Ok(); }));
 
         // статистика стримов
         app.MapGet("/api/pro/streams", H((c, b) =>
@@ -132,30 +118,7 @@ public sealed partial class WebServer
     private static void ValidatePro(JsonObject nw, JsonObject incoming, JsonObject old)
     {
         nw["themes"] = old?["themes"]?.DeepClone() ?? new JsonArray();
-        var tts = nw.Obj("tts");
-        if (tts != null)
-        {
-            tts.Remove("has_yandex_key");
-            if (incoming.Str("tts.yandex_key").Trim() == "") tts["yandex_key"] = old.Str("tts.yandex_key");
-            tts["yandex_key"] = tts.Str("yandex_key").Trim();
-            if (tts.Str("engine") is not ("windows" or "yandex")) tts["engine"] = "windows";
-            if (!Tts.YandexVoices.Contains(tts.Str("yandex_voice"))) tts["yandex_voice"] = "alena";
-            tts["rate"] = Math.Max(-10, Math.Min(10, tts.Int("rate")));
-            tts["volume"] = Math.Max(0, Math.Min(100, tts.Int("volume", 80)));
-            tts["yandex_speed"] = Math.Max(0.5, Math.Min(2.0, tts.Num("yandex_speed", 1.0)));
-            tts["min_donation"] = Math.Max(0, tts.Num("min_donation"));
-            tts["min_bits"] = Math.Max(1, tts.Int("min_bits", 100));
-            tts["max_length"] = Math.Max(20, Math.Min(1000, tts.Int("max_length", 200)));
-            tts["command_cooldown"] = Math.Max(0, Math.Min(3600, tts.Int("command_cooldown", 30)));
-            if (!Commands.Access.ContainsKey(tts.Str("command_access"))) tts["command_access"] = "vip";
-            if (tts.Str("reward_title").Length > 45) throw new UserError("Название награды для озвучки — не длиннее 45 символов", "pro.tts.reward_title");
-            if (tts["banned_words"] is JsonValue)
-            {
-                var arr = new JsonArray();
-                foreach (var w in tts.Str("banned_words").Split('\n').Select(x => x.Trim()).Where(x => x != "")) arr.Add(w);
-                tts["banned_words"] = arr;
-            }
-        }
+        nw.Remove("tts");   // озвучка удалена из программы
         var cloud = nw.Obj("cloud");
         if (cloud != null)
         {

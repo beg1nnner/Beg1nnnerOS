@@ -878,7 +878,7 @@
   <h2 style="margin:0">🚀 Дополнительно</h2>
   <div id="cloud-offer" class="card hl hidden" style="margin-top:12px"></div>
   <div class="tabs" data-group="pro" style="margin-top:14px">
-    <button data-t="themes" class="on">Темы оверлеев</button><button data-t="tts">Озвучка</button>
+    <button data-t="themes" class="on">Темы оверлеев</button>
     <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши и игры</button><button data-t="prof">Профили и облако</button>
   </div>
 
@@ -916,69 +916,6 @@
           <div class="small muted" style="margin-top:8px" id="th-prevnote"></div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Озвучка -->
-  <div data-tab="tts" class="hidden">
-    <div class="card hl">
-      <div class="row"><h3 class="grow" style="margin:0">Озвучка</h3><span id="tts-status" class="pill"></span>
-        <label class="switch"><input type="checkbox" data-s="pro.tts.enabled"> Включена</label></div>
-      <div class="row" style="margin-top:12px">
-        <label class="f"><span>Голоса</span><select data-s="pro.tts.engine" id="tts-engine"><option value="windows">Голоса Windows (бесплатно, офлайн)</option><option value="yandex">Yandex SpeechKit (живые голоса)</option></select></label>
-        <label class="f grow"><span>Устройство вывода звука</span><select data-s="pro.tts.device" id="tts-dev"></select></label>
-        <label class="f"><span>Громкость: <b id="tts-volv"></b></span><input type="range" min="0" max="100" data-s="pro.tts.volume" id="tts-vol"></label>
-      </div>
-      <div class="row tts-win">
-        <label class="f grow"><span>Голос Windows</span><select data-s="pro.tts.voice" id="tts-voice"></select></label>
-        <label class="f"><span>Скорость (−10…10)</span><input type="number" min="-10" max="10" data-s="pro.tts.rate"></label>
-      </div>
-      <div class="tts-ya">
-        <div class="row">
-          <label class="f grow"><span>API-ключ Yandex Cloud</span><input type="password" data-s="pro.tts.yandex_key" data-secret="pro.tts.has_yandex_key" autocomplete="new-password"></label>
-          <label class="f"><span>Голос</span><select data-s="pro.tts.yandex_voice" id="tts-yvoice"></select></label>
-          <label class="f"><span>Скорость (0.5–2)</span><input type="number" min="0.5" max="2" step="0.1" data-s="pro.tts.yandex_speed"></label>
-        </div>
-        <details class="small muted"><summary style="cursor:pointer">Как получить API-ключ Yandex SpeechKit</summary><ol>
-          <li>Зайдите в консоль Yandex Cloud, создайте платёжный аккаунт и каталог.</li>
-          <li>Создайте сервисный аккаунт с ролью <code>ai.speechkit-tts.user</code>.</li>
-          <li>В сервисном аккаунте создайте API-ключ и вставьте его сюда. Синтез платный по тарифам Yandex Cloud.</li></ol></details>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <input id="tts-test" class="grow" placeholder="Текст для проверки" value="Проверка озвучки. Спасибо за донат!">
-        <button onclick="api('/pro/tts/test',{text:$('tts-test').value}).then(()=>toast('Готово'))">▶ Проверить голос</button>
-        <button class="sm" onclick="api('/pro/tts/skip',{})">⏭ Пропустить</button>
-        <button class="sm" onclick="api('/pro/tts/clear',{})">Очистить очередь</button>
-      </div>
-      <div class="small muted" style="margin-top:6px">Перед проверкой сохраните настройки. Звук озвучки попадает в стрим через «Звук с рабочего стола» в OBS, как и музыка.</div>
-    </div>
-    <div class="card">
-      <h3>Что озвучивать</h3>
-      <div class="row">
-        <label class="switch"><input type="checkbox" data-s="pro.tts.donations"> Донаты DonationAlerts</label>
-        <label class="f"><span>от суммы</span><input type="number" min="0" data-s="pro.tts.min_donation" style="width:110px"></label>
-        <label class="switch"><input type="checkbox" data-s="pro.tts.bits"> Биты (Cheer)</label>
-        <label class="f"><span>от количества</span><input type="number" min="1" data-s="pro.tts.min_bits" style="width:110px"></label>
-      </div>
-      <div class="row">
-        <label class="f grow"><span>Награда за баллы для озвучки (название как на Twitch, с вводом текста)</span><input data-s="pro.tts.reward_title" maxlength="45" placeholder="Например: Озвучить сообщение"></label>
-      </div>
-      <div class="row">
-        <label class="switch"><input type="checkbox" data-s="pro.tts.command"> Команда <code>!tts текст</code></label>
-        <label class="f"><span>Кому доступна</span><select data-s="pro.tts.command_access" id="tts-access"></select></label>
-        <label class="f"><span>Кулдаун на зрителя, сек</span><input type="number" min="0" data-s="pro.tts.command_cooldown" style="width:110px"></label>
-      </div>
-      <div class="small muted">Награду для озвучки создайте сами в панели автора Twitch (с полем «Требуется ввод текста») — программа озвучит текст зрителя.</div>
-    </div>
-    <div class="card">
-      <h3>Фильтры</h3>
-      <div class="row">
-        <label class="switch"><input type="checkbox" data-s="pro.tts.read_name"> Читать имя («Ник задонатил 100 рублей…»)</label>
-        <label class="switch"><input type="checkbox" data-s="pro.tts.skip_links"> Не читать ссылки</label>
-        <label class="switch"><input type="checkbox" data-s="pro.tts.duck_music"> Приглушать музыку на время озвучки</label>
-        <label class="f"><span>Макс. длина, символов</span><input type="number" min="20" max="1000" data-s="pro.tts.max_length" style="width:110px"></label>
-      </div>
-      <label class="f"><span>Запрещённые слова (по одному в строке) — такие сообщения не озвучиваются</span><textarea data-s="pro.tts.banned_words" data-list rows="3"></textarea></label>
     </div>
   </div>
 
@@ -1163,7 +1100,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   if (b.dataset.t === "sstats") loadStreams();
   if (b.dataset.t === "mhist") loadHistory();
   if (b.dataset.t === "mod") { loadMod(); modActs(); }
-  if (["themes", "tts", "give", "prof"].includes(b.dataset.t)) loadPro();
+  if (["themes", "give", "prof"].includes(b.dataset.t)) loadPro();
 }));
 
 // ---------- настройки (data-s) ----------
@@ -1171,8 +1108,6 @@ async function loadSettings() {
   const j = await api("/settings");
   S = j.data; ACCESS = j.access; META.events = j.event_types;
   $("dev").innerHTML = '<option value="">Системное по умолчанию</option>' + j.devices.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
-  $("tts-dev").innerHTML = $("dev").innerHTML;
-  $("tts-access").innerHTML = Object.entries(j.access).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
   document.querySelectorAll("[data-s]").forEach(el => {
     const v = getPath(S, el.dataset.s);
     if (el.type === "checkbox") el.checked = !!v;
@@ -1921,35 +1856,14 @@ window.addEventListener("resize", () => { if (!$("p-music").classList.contains("
 
 // ================= ДОПОЛНИТЕЛЬНО =================
 let PRO = null, editingTheme = null;
-const YA_VOICES = {alena:"Алёна", filipp:"Филипп", ermil:"Ермил", jane:"Джейн", madirus:"Мадирус", omazh:"Омаж", zahar:"Захар",
-  dasha:"Даша", julia:"Юлия", lera:"Лера", masha:"Маша", marina:"Марина", alexander:"Александр", kirill:"Кирилл", anton:"Антон"};
-$("tts-yvoice").innerHTML = Object.entries(YA_VOICES).map(([k, v]) => `<option value="${k}">${v} (${k})</option>`).join("");
 const PLAYER_BASES = {classic:"Классика", minimal:"Минимал", neon:"Неон", vinyl:"Винил", bar:"Полоса", glass:"Стекло", retro:"Терминал"};
 const CHAT_BASE_NAMES = {classic:"Классика", cards:"Карточки", bubbles:"Пузыри", neon:"Неон", retro:"Терминал", compact:"Компакт", light:"Светлая"};
 
 async function loadPro() {
   try { PRO = await api("/pro"); } catch (e) { return; }
   if (!S) return;
-  // озвучка
-  const T = PRO.tts;
-  $("tts-status").textContent = T.status + (T.queue ? ` · в очереди ${T.queue}` : "");
-  $("tts-status").className = "pill " + (T.status.startsWith("ошибка") ? "err" : T.status === "говорит" ? "ok" : "");
-  const vs = T.voices.length ? T.voices : [];
-  $("tts-voice").innerHTML = '<option value="">Русский голос по умолчанию</option>' +
-    vs.map(v => `<option value="${esc(v.name)}">${esc(v.name)} — ${esc(v.culture)}</option>`).join("");
-  $("tts-voice").value = getPath(S, "pro.tts.voice") || "";
-  $("tts-yvoice").value = getPath(S, "pro.tts.yandex_voice") || "alena";
-  ttsEngineUi();
   renderThemes(); renderGiveaway(PRO.giveaway); renderGames(PRO.games); renderProfiles(); renderCloud();
 }
-function ttsEngineUi() {
-  const ya = $("tts-engine").value === "yandex";
-  document.querySelectorAll(".tts-ya").forEach(x => x.classList.toggle("hidden", !ya));
-  document.querySelectorAll(".tts-win").forEach(x => x.classList.toggle("hidden", ya));
-  $("tts-volv").textContent = $("tts-vol").value;
-}
-$("tts-engine").addEventListener("change", ttsEngineUi);
-$("tts-vol").addEventListener("input", ttsEngineUi);
 
 // ---------- свои темы ----------
 function renderThemes() {
@@ -2324,12 +2238,10 @@ async function cloudRestore() {
 setInterval(async () => {
   if ($("p-pro").classList.contains("hidden")) return;
   const tab = document.querySelector('#p-pro .tabs button.on')?.dataset.t;
-  if (tab !== "give" && tab !== "tts") return;
+  if (tab !== "give") return;
   try {
     const L = await api("/pro/live");
-    if (tab === "give") { renderGiveaway(L.giveaway); renderGames(L.games); }
-    else { $("tts-status").textContent = L.tts.status + (L.tts.queue ? ` · в очереди ${L.tts.queue}` : "");
-           $("tts-status").className = "pill " + (L.tts.status.startsWith("ошибка") ? "err" : L.tts.status === "говорит" ? "ok" : ""); }
+    renderGiveaway(L.giveaway); renderGames(L.games);
   } catch (e) {}
 }, 2000);
 // при запуске: предложение восстановить облачную копию

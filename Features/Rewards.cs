@@ -169,7 +169,7 @@ public sealed class Rewards
             if (GetDesired().Values.Any(d => string.Equals(d.Title, title, StringComparison.OrdinalIgnoreCase)))
                 _hub.Log.Error($"Награда «{title}» выкуплена, но она не связана с программой (создана вручную на Twitch?). " +
                                "Удалите её на Twitch и нажмите «Синхронизировать с Twitch» в разделе «Награды».");
-            await _hub.Pro.OnRedemption(ev);   // озвучка или участие в розыгрыше
+            await _hub.Pro.OnRedemption(ev);   // участие в розыгрыше
             return;
         }
         if (status != "" && status != "unfulfilled") return;
