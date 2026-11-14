@@ -17,12 +17,20 @@
   .h .t { flex:none; width:42px; font-size:.85em; opacity:.6; }
   .h .n { flex:1; min-width:0; } .h .w { font-size:.82em; opacity:.65; }
   .h button { flex:none; padding:2px 9px; }
+  .vtpl { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
+  .vtpl button { padding:4px 9px; font-size:.9em; }
+  .vr { margin:7px 0; border-radius:6px; }
+  .vr .tt { display:flex; justify-content:space-between; gap:8px; font-size:.95em; }
+  .vr .bb { height:7px; background:#00000040; border-radius:4px; overflow:hidden; margin-top:3px; }
+  .vr .bb i { display:block; height:100%; background:var(--accent); transition:width .5s; }
+  .vr.pick { cursor:pointer; padding:3px 5px; margin:4px -5px; } .vr.pick:hover { background:#ffffff10; }
+  .vr.sel { outline:1px solid var(--accent); background:#9146ff30; } .vr.win .tt span { color:#facc15; font-weight:600; }
 </style>
 </head>
 <body>
 <div class="row" style="justify-content:space-between">
   <div class="tabs" style="margin-bottom:8px;border:none">
-    <button data-t="music" class="on">Музыка</button><button data-t="hist">История</button><button data-t="media">Медиа</button>
+    <button data-t="music" class="on">Музыка</button><button data-t="hist">История</button><button data-t="media">Медиа</button><button data-t="votes">Опросы</button>
   </div>
   <button class="sm" id="dense">Плотно</button>
 </div>
@@ -61,6 +69,22 @@
   </div>
   <div class="card" id="alist"></div>
 </div>
+<div id="t-votes" class="hidden">
+  <div id="vwarn"></div>
+  <div class="card" id="vlive-poll"></div>
+  <div class="card" id="vlive-pred"></div>
+  <div class="card" id="vstart">
+    <div class="muted small">Быстрый запуск — опрос:</div><div class="vtpl" id="vtp"></div>
+    <div class="muted small">прогноз:</div><div class="vtpl" id="vtr"></div>
+    <details style="margin-top:6px"><summary class="small">Свой вопрос</summary>
+      <div class="row" style="margin-top:6px"><select id="vkind"><option value="poll">Опрос</option><option value="pred">Прогноз</option></select>
+        <select id="vdur"><option value="60">1 мин</option><option value="120" selected>2 мин</option><option value="300">5 мин</option><option value="600">10 мин</option></select></div>
+      <input id="vq" placeholder="Вопрос" style="width:100%;margin-top:6px" maxlength="60">
+      <input id="vo" placeholder="Варианты через / : Да / Нет" style="width:100%;margin-top:6px">
+      <button class="primary" id="vgo" style="margin-top:6px">▶ Запустить</button>
+    </details>
+  </div>
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -70,7 +94,9 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   $("t-music").classList.toggle("hidden", b.dataset.t !== "music");
   $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
   $("t-media").classList.toggle("hidden", b.dataset.t !== "media");
+  $("t-votes").classList.toggle("hidden", b.dataset.t !== "votes");
   if (b.dataset.t === "hist") hist();
+  if (b.dataset.t === "votes") votes();
 });
 try { if (localStorage.getItem("dock-dense") === "1") document.body.classList.add("dense"); } catch (e) {}
 $("dense").onclick = () => { const on = document.body.classList.toggle("dense");
@@ -133,7 +159,64 @@ $("hcopy").onclick = async () => {
   try { await navigator.clipboard.writeText(text); $("hcopy").textContent = "✓"; } catch (e) { $("hcopy").textContent = "✗"; }
   setTimeout(() => $("hcopy").textContent = "📋", 1500);
 };
-tick(); alerts(); setInterval(tick, 1500); setInterval(alerts, 30000); setInterval(hist, 10000);
+// Опросы и прогнозы: быстрый запуск по шаблону, живые результаты, управление
+let V = null, VPICK = "", VBUSY = false;
+const vnum = n => Math.round(n).toLocaleString("ru-RU");
+const vleft = t => { const s = Math.max(0, Math.round(t - Date.now() / 1000)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : s + " с"; };
+async function vdo(url, body, ask) {
+  if (VBUSY || (ask && !confirm(ask))) return; VBUSY = true;
+  try { const r = await post("/api/votes/" + url, body); if (!r.ok) alert(r.error); else VPICK = ""; } finally { VBUSY = false; votes(); }
+}
+async function votes() {
+  if ($("t-votes").classList.contains("hidden")) return;
+  try { const j = await (await fetch("/api/votes", {cache: "no-store"})).json(); if (!j.ok) return; V = j.data; } catch (e) { return; }
+  const w = [];
+  if (!V.ready) w.push("Войдите в Twitch в программе");
+  else if (!V.scopes.polls || !V.scopes.predictions) w.push("Нужны новые права: в программе нажмите «Войти в Twitch заново»");
+  [V.poll_error, V.prediction_error].filter(Boolean).forEach(e => w.push(esc(e)));
+  $("vwarn").innerHTML = w.map(x => `<div class="card small">⚠️ ${x}</div>`).join("");
+  $("vtp").innerHTML = V.templates.polls.map((t, i) => `<button data-k="poll" data-i="${i}" title="${esc(t.choices.join(" / "))}">${esc(t.title)}</button>`).join("") || '<span class="muted small">нет шаблонов</span>';
+  $("vtr").innerHTML = V.templates.predictions.map((t, i) => `<button data-k="pred" data-i="${i}" title="${esc(t.outcomes.join(" / "))}">${esc(t.title)}</button>`).join("") || '<span class="muted small">нет шаблонов</span>';
+  document.querySelectorAll(".vtpl button[data-k]").forEach(b => b.onclick = () => {
+    const t = (b.dataset.k === "poll" ? V.templates.polls : V.templates.predictions)[+b.dataset.i];
+    if (b.dataset.k === "poll") vdo("poll/start", {title: t.title, choices: t.choices, duration: t.duration}, `Запустить опрос «${t.title}»?`);
+    else vdo("prediction/start", {title: t.title, outcomes: t.outcomes, window: t.window}, `Запустить прогноз «${t.title}»?`);
+  });
+  const p = V.poll;
+  if (!p) $("vlive-poll").classList.add("hidden");
+  else {
+    const max = Math.max(...p.choices.map(c => c.votes));
+    $("vlive-poll").classList.remove("hidden");
+    $("vlive-poll").innerHTML = `<div class="muted small">📊 Опрос · ${p.active ? "осталось " + vleft(p.ends) : "завершён"} · ${p.total} гол.</div><b>${esc(p.title)}</b>
+      ${p.choices.map(c => `<div class="vr ${!p.active && max > 0 && c.votes === max ? "win" : ""}"><div class="tt"><span>${esc(c.title)}</span><span>${c.pct}% · ${c.votes}</span></div><div class="bb"><i style="width:${c.pct}%"></i></div></div>`).join("")}
+      ${p.active ? `<button class="danger sm" id="vpend">⏹ Завершить</button>` : ""}`;
+    if ($("vpend")) $("vpend").onclick = () => vdo("poll/end", {}, "Завершить опрос досрочно?");
+  }
+  const r = V.prediction, live = r && (r.active || r.locked);
+  if (!r) $("vlive-pred").classList.add("hidden");
+  else {
+    $("vlive-pred").classList.remove("hidden");
+    $("vlive-pred").innerHTML = `<div class="muted small">🔮 Прогноз · ${r.active ? "ставки " + vleft(r.locks) : r.locked ? "ставки закрыты" : r.status === "CANCELED" ? "отменён" : "завершён"} · ${vnum(r.total_points)} баллов</div><b>${esc(r.title)}</b>
+      ${r.outcomes.map(o => `<div class="vr ${live ? "pick" : ""} ${o.id === VPICK ? "sel" : ""} ${r.winner === o.id ? "win" : ""}" data-o="${o.id}"><div class="tt"><span>${r.winner === o.id ? "🏆 " : ""}${esc(o.title)}</span><span>${o.pct}% · ${o.users} чел.</span></div><div class="bb"><i style="width:${o.pct}%"></i></div></div>`).join("")}
+      ${live ? `<div class="row" style="margin-top:6px;flex-wrap:wrap">${r.active ? `<button class="sm" id="vlock">🔒 Закрыть ставки</button>` : ""}
+        <button class="sm primary" id="vwin">🏆 Победитель</button><button class="sm danger" id="vcancel">Отмена</button></div>
+        <div class="muted small" style="margin-top:4px">Нажмите на исход, затем «Победитель»</div>` : ""}`;
+    $("vlive-pred").querySelectorAll(".vr.pick").forEach(el => el.onclick = () => { VPICK = el.dataset.o; votes(); });
+    if ($("vlock")) $("vlock").onclick = () => vdo("prediction/lock");
+    if ($("vcancel")) $("vcancel").onclick = () => vdo("prediction/cancel", {}, "Отменить прогноз и вернуть баллы?");
+    if ($("vwin")) $("vwin").onclick = () => {
+      const o = r.outcomes.find(x => x.id === VPICK); if (!o) return alert("Сначала нажмите на исход-победитель");
+      vdo("prediction/resolve", {outcome_id: o.id}, `Победил «${o.title}»? Баллы будут выплачены.`);
+    };
+  }
+  $("vstart").classList.toggle("hidden", !!((p && p.active) && live));
+}
+$("vgo").onclick = () => {
+  const opts = $("vo").value.split("/").map(x => x.trim()).filter(Boolean), title = $("vq").value.trim(), d = +$("vdur").value;
+  if ($("vkind").value === "poll") vdo("poll/start", {title, choices: opts, duration: d});
+  else vdo("prediction/start", {title, outcomes: opts, window: d});
+};
+tick(); alerts(); setInterval(tick, 1500); setInterval(alerts, 30000); setInterval(hist, 10000); setInterval(votes, 2000);
 </script>
 </body>
 </html>

@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.4.0";
+    public const string Version = "2.5.0";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -96,6 +96,17 @@ public static class Config
       "autopost": {"enabled": false, "text": ""},
       "announce": {"tg_enabled": false, "tg_token": "", "tg_chat": "", "dc_enabled": false, "dc_webhook": "",
                    "text": "", "photo": true, "delay": 60, "summary_auto": false, "clips_post": false},
+      "votes": {"chat_results": true, "chat_start": false, "chat_lock": true, "overlay_hide_sec": 20, "overlay_points": true,
+                "poll_templates": [
+                  {"title": "Во что играем дальше?", "choices": ["Продолжаем", "Другая игра", "Общение"], "duration": 120},
+                  {"title": "Как вам трек?", "choices": ["🔥 Огонь", "👍 Норм", "👎 Не моё"], "duration": 60},
+                  {"title": "Сложность?", "choices": ["Легко", "Нормально", "Хардкор"], "duration": 90}
+                ],
+                "pred_templates": [
+                  {"title": "Выиграю этот раунд?", "outcomes": ["Да", "Нет"], "window": 120},
+                  {"title": "Пройду босса с первой попытки?", "outcomes": ["Да", "Нет"], "window": 180},
+                  {"title": "Сколько смертей будет?", "outcomes": ["0–2", "3–5", "6+"], "window": 120}
+                ]},
       "music": {
         "rewards_enabled": true,
         "rewards": {

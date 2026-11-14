@@ -35,7 +35,7 @@ public sealed partial class WebServer
           ("donationalerts", "client_secret"), ("donationalerts", "refresh_token"),
           ("announce", "tg_token"), ("announce", "dc_webhook") };
     private static readonly string[] Sections =
-        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce" };
+        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes" };
 
     public WebServer(Hub hub) { _hub = hub; }
 
@@ -176,6 +176,7 @@ public sealed partial class WebServer
         app.MapGet("/panel", (HttpContext c) => NoStore(c, Page("panel.html")));
         app.MapGet("/chat", (HttpContext c) => NoStore(c, Page("chat.html")));
         app.MapGet("/music-obs", (HttpContext c) => NoStore(c, Page("music-obs.html")));
+        app.MapGet("/votes", (HttpContext c) => NoStore(c, Page("votes.html")));
         app.MapGet("/ws/chat", (RequestDelegate)WsChat);
         app.MapGet("/api/chat/overlay", H((c, b) => Ok(_hub.ChatOverlay.Config())));
         app.MapGet("/callback", D(Callback));
@@ -314,6 +315,16 @@ public sealed partial class WebServer
             Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных") })));
         app.MapPost("/api/stream-summary/{id}/send", H(async (c, b) =>
             Ok(new { message = await _hub.Announce.SendSummary(Route(c, "id"), b.Str("target") == "discord" ? "discord" : "telegram") })));
+
+        // опросы и прогнозы Twitch
+        app.MapGet("/api/votes", H((c, b) => Ok(_hub.Votes.State())));
+        app.MapPost("/api/votes/refresh", H(async (c, b) => { await _hub.Votes.Refresh(); return Ok(_hub.Votes.State()); }));
+        app.MapPost("/api/votes/poll/start", H(async (c, b) => Ok(new { message = await _hub.Votes.StartPoll(b) })));
+        app.MapPost("/api/votes/poll/end", H(async (c, b) => Ok(new { message = await _hub.Votes.EndPoll(b.Bool("archive")) })));
+        app.MapPost("/api/votes/prediction/start", H(async (c, b) => Ok(new { message = await _hub.Votes.StartPrediction(b) })));
+        app.MapPost("/api/votes/prediction/{action}", H(async (c, b) =>
+            Ok(new { message = await _hub.Votes.UpdatePrediction(Route(c, "action"), b.Str("outcome_id")) })));
+        app.MapPost("/api/votes/templates", H((c, b) => { _hub.Votes.SaveTemplates(b.Str("kind") == "poll" ? "poll" : "prediction", b["list"]); return Ok(); }));
 
         // история сыгранных треков
         app.MapGet("/api/music/history", H((c, b) =>

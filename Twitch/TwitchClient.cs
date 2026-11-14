@@ -47,7 +47,7 @@ public sealed class TwitchAccount
     {
         var need = Kind == "streamer" ? TwitchClient.StreamerScopes : TwitchClient.BotScopes;
         var have = Scopes;
-        // clips:edit нужен только для команды !клип — без него программа работает, поэтому не требуем перезахода
+        // clips:edit (!клип), опросы и прогнозы — отдельные функции — без него программа работает, поэтому не требуем перезахода
         return need.Where(s => !have.Contains(s) && !TwitchClient.OptionalScopes.Contains(s)).ToList();
     }
 
@@ -122,10 +122,11 @@ public sealed class TwitchClient
         "channel:read:redemptions", "channel:manage:redemptions",
         "channel:read:hype_train", "channel:read:polls", "channel:read:ads",
         "channel:read:vips", "moderator:read:chatters", "clips:edit",
+        "channel:manage:polls", "channel:manage:predictions",
     };
     public static readonly string[] BotScopes = { "user:read:chat", "user:write:chat", "user:bot" };
     /// <summary>Запрашиваются при входе, но их отсутствие не считается проблемой (нужны для отдельных функций).</summary>
-    public static readonly string[] OptionalScopes = { "clips:edit" };
+    public static readonly string[] OptionalScopes = { "clips:edit", "channel:manage:polls", "channel:manage:predictions" };
 
     /// <summary>
     /// Client ID встроенного приложения Beg1nnnerOS (тип клиента «Public» на dev.twitch.tv).
@@ -468,7 +469,7 @@ public sealed class TwitchClient
     }
 
     // ---------- запросы данных ----------
-    private static JsonNode First(JsonNode js) => (js["data"] as JsonArray)?.FirstOrDefault();
+    public static JsonNode First(JsonNode js) => (js["data"] as JsonArray)?.FirstOrDefault();
 
     /// <summary>Создаёт клип последних ~30 секунд эфира. Возвращает ID клипа (сам клип готов через 10–20 с).</summary>
     public async Task<string> CreateClip() =>

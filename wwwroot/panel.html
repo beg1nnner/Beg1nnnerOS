@@ -84,6 +84,29 @@
   #p-pro input[type=color] { width:64px; height:36px; padding:3px; cursor:pointer; }
   iframe.ov { border:1px solid var(--line); border-radius:8px; background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px;
     transform-origin:0 0; }
+  /* опросы и прогнозы */
+  .vt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:16px; align-items:start; }
+  .vt-tpls { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
+  .vt-tpl { background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:5px 11px; font-size:12.5px; color:var(--fg); }
+  .vt-tpl:hover { border-color:var(--accent); }
+  .vt-opts { display:flex; flex-direction:column; gap:6px; }
+  .vt-opt { display:flex; gap:6px; align-items:center; }
+  .vt-opt input { flex:1; font-size:13.5px; padding:8px 10px; }
+  .vt-opt .n { width:18px; color:var(--muted); font-size:12px; text-align:right; }
+  .vt-live { border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:var(--panel2); margin-bottom:12px; }
+  .vt-live h4 { margin:0 0 4px; font-size:15.5px; }
+  .vt-st { font-size:12px; padding:2px 8px; border-radius:999px; background:#2a2a36; color:var(--muted); margin-left:6px; vertical-align:2px; }
+  .vt-st.on { background:#14532d; color:#86efac; } .vt-st.lock { background:#713f12; color:#fde68a; }
+  .vt-row { margin:9px 0; }
+  .vt-row .t { display:flex; justify-content:space-between; gap:10px; font-size:13.5px; margin-bottom:4px; }
+  .vt-row .t b { font-variant-numeric:tabular-nums; }
+  .vt-bar { height:10px; background:#00000040; border-radius:6px; overflow:hidden; }
+  .vt-bar i { display:block; height:100%; background:var(--accent); border-radius:6px; transition:width .5s; }
+  .vt-row.win .t span { color:#facc15; font-weight:600; }
+  .vt-row.pick { cursor:pointer; border-radius:8px; padding:4px 6px; margin:4px -6px; }
+  .vt-row.pick:hover { background:#ffffff10; }
+  .vt-row.pick.sel { background:#9146ff30; outline:1px solid var(--accent); }
+  .vt-acts { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -94,6 +117,7 @@
   <button data-p="chat">💬 Чат</button>
   <button data-p="alerts">✨ МедиаАлерты</button>
   <button data-p="events">🔔 События</button>
+  <button data-p="votes">🗳 Опросы и прогнозы</button>
   <button data-p="settings">⚙️ Настройки</button>
   <button data-p="pro" id="nav-pro">🚀 Дополнительно</button>
   <button class="upd-nav hidden" id="nav-upd" onclick="updNavClick()"></button>
@@ -667,6 +691,76 @@
   </div>
 </section>
 
+<!-- ================= ОПРОСЫ И ПРОГНОЗЫ ================= -->
+<section id="p-votes" class="hidden">
+  <h2 style="margin:0">🗳 Опросы и прогнозы Twitch</h2>
+  <div class="muted small" style="margin:4px 0 12px">Запускайте прямо отсюда или из док-панели OBS: зрители голосуют в обычном окне Twitch, а здесь и в оверлее видны живые результаты. Работает на каналах компаньонов (affiliate) и партнёров.</div>
+  <div id="vt-warn"></div>
+  <div class="vt-grid">
+    <div class="card">
+      <h3 style="margin-top:0">📊 Опрос</h3>
+      <div id="vt-poll-live"></div>
+      <div id="vt-poll-form">
+        <div class="small muted">Шаблоны:</div>
+        <div class="vt-tpls" id="vt-poll-tpls"></div>
+        <label class="f"><span>Вопрос <span class="muted" id="vt-pq-n"></span></span><input id="vt-pq" maxlength="60" placeholder="Во что играем дальше?" oninput="vtCount()"></label>
+        <div class="small muted" style="margin:8px 0 4px">Варианты (2–5, до 25 символов)</div>
+        <div class="vt-opts" id="vt-popts"></div>
+        <div class="row" style="margin-top:10px;align-items:flex-end;flex-wrap:wrap">
+          <label class="f"><span>Длительность</span><select id="vt-pdur">
+            <option value="30">30 сек</option><option value="60">1 мин</option><option value="120" selected>2 мин</option><option value="180">3 мин</option>
+            <option value="300">5 мин</option><option value="600">10 мин</option><option value="900">15 мин</option><option value="1800">30 мин</option></select></label>
+          <label class="switch" style="margin-bottom:9px"><input type="checkbox" id="vt-ppts" onchange="$('vt-pptsn').disabled=!this.checked"> доп. голоса за баллы</label>
+          <label class="f" style="width:110px"><span>Баллов за голос</span><input id="vt-pptsn" type="number" min="1" value="100" disabled></label>
+        </div>
+        <div class="vt-acts">
+          <button class="primary" id="vt-pstart" onclick="vtStartPoll()">▶ Запустить опрос</button>
+          <button class="sm" onclick="vtSaveTpl('poll')">☆ Сохранить как шаблон</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔮 Прогноз (ставки баллами канала)</h3>
+      <div id="vt-pred-live"></div>
+      <div id="vt-pred-form">
+        <div class="small muted">Шаблоны:</div>
+        <div class="vt-tpls" id="vt-pred-tpls"></div>
+        <label class="f"><span>Вопрос <span class="muted" id="vt-rq-n"></span></span><input id="vt-rq" maxlength="45" placeholder="Выиграю этот раунд?" oninput="vtCount()"></label>
+        <div class="small muted" style="margin:8px 0 4px">Исходы (2–10, до 25 символов)</div>
+        <div class="vt-opts" id="vt-ropts"></div>
+        <div class="row" style="margin-top:10px">
+          <label class="f"><span>Приём ставок</span><select id="vt-rwin">
+            <option value="30">30 сек</option><option value="60">1 мин</option><option value="120" selected>2 мин</option><option value="180">3 мин</option>
+            <option value="300">5 мин</option><option value="600">10 мин</option><option value="900">15 мин</option><option value="1800">30 мин</option></select></label>
+        </div>
+        <div class="vt-acts">
+          <button class="primary" id="vt-rstart" onclick="vtStartPred()">▶ Запустить прогноз</button>
+          <button class="sm" onclick="vtSaveTpl('prediction')">☆ Сохранить как шаблон</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="vt-grid" style="margin-top:16px">
+    <div class="card">
+      <h3 style="margin-top:0">💬 Сообщения в чат</h3>
+      <label class="switch"><input type="checkbox" data-s="votes.chat_start"> Бот сообщает о начале опроса или прогноза</label><br>
+      <label class="switch"><input type="checkbox" data-s="votes.chat_results"> Бот пишет итоги (проценты, победитель, кто больше всех выиграл)</label><br>
+      <label class="switch"><input type="checkbox" data-s="votes.chat_lock"> Сообщать, что ставки закрыты</label>
+      <div class="muted small" style="margin-top:8px">Если в «Событиях» включено уведомление «Опрос», итог опроса пишет оно — дубля не будет.</div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🎥 Источник для OBS</h3>
+      <div class="muted small">Полоски голосов и ставок прямо на стриме. Появляется сам, когда идёт опрос или прогноз.</div>
+      <div class="row" style="margin-top:8px"><code id="vt-url"></code><button class="sm" onclick="copy(base()+'/votes')">Скопировать адрес</button></div>
+      <div class="muted small">«Источники» → «+» → «Браузер», ширина 600, высота 500. Фон прозрачный.</div>
+      <div class="row" style="margin-top:8px">
+        <label class="f" style="width:160px"><span>Скрывать после итога, сек</span><input type="number" min="0" max="600" data-s="votes.overlay_hide_sec"></label>
+        <label class="switch" style="margin-top:18px"><input type="checkbox" data-s="votes.overlay_points"> Показывать баллы в прогнозе</label>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= ДОПОЛНИТЕЛЬНО ================= -->
 <section id="p-pro" class="hidden">
   <h2 style="margin:0">🚀 Дополнительно</h2>
@@ -943,6 +1037,7 @@ function go(p, sub) {
   if (p === "events") { renderEvents(); loadTools(); }
   if (p === "settings") { loadBackups(); loadTools(); }
   if (p === "pro") loadPro();
+  if (p === "votes") vtOpen();
   try { history.replaceState(null, "", "#" + p); } catch (e) {}
 }
 document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -2128,6 +2223,137 @@ setInterval(async () => {
 setTimeout(() => loadPro().then(() => {
   if (PRO && PRO.cloud.file && PRO.cloud.file.offer) toast("☁️ В облаке есть копия профиля с другого компьютера — см. «Дополнительно» → «Профили и облако»");
 }), 2500);
+
+// ================= ОПРОСЫ И ПРОГНОЗЫ =================
+let VT = null, VT_T = null, VT_PICK = "", VT_BUSY = false;
+const VT_HIDE = new Set();   // скрытые итоги (только в этой вкладке)
+function vtOpen() {
+  $("vt-url").textContent = base() + "/votes";
+  if (!$("vt-popts").children.length) { vtSetOpts("vt-popts", ["", ""], 5); vtSetOpts("vt-ropts", ["Да", "Нет"], 10); }
+  vtLoad(true);
+  clearInterval(VT_T);
+  VT_T = setInterval(() => { if ($("p-votes").classList.contains("hidden")) { clearInterval(VT_T); VT_T = null; return; } vtLoad(); }, 2000);
+}
+async function vtLoad(refresh) {
+  try { VT = refresh ? await api("/votes/refresh", {}) : await api("/votes"); } catch (e) { return; }
+  vtRender();
+}
+function vtSetOpts(box, vals, max) {
+  const el = $(box); el.dataset.max = max;
+  el.innerHTML = vals.map((v, i) => vtOptRow(box, v, i)).join("");
+  vtOptBtn(box);
+}
+function vtOptRow(box, v, i) {
+  return `<div class="vt-opt"><span class="n">${i + 1}</span><input maxlength="25" value="${esc(v)}" placeholder="Вариант ${i + 1}">
+    <button class="sm" title="Убрать" onclick="vtDelOpt('${box}',this)">✕</button></div>`;
+}
+function vtOptBtn(box) {
+  const el = $(box), n = el.querySelectorAll(".vt-opt").length, max = +el.dataset.max;
+  el.querySelectorAll(".vt-add").forEach(x => x.remove());
+  el.querySelectorAll(".vt-opt .n").forEach((x, i) => x.textContent = i + 1);
+  if (n < max) el.insertAdjacentHTML("beforeend", `<button class="sm vt-add" style="align-self:flex-start" onclick="vtAddOpt('${box}')">+ вариант</button>`);
+}
+function vtAddOpt(box) {
+  const el = $(box), n = el.querySelectorAll(".vt-opt").length;
+  el.querySelector(".vt-add").insertAdjacentHTML("beforebegin", vtOptRow(box, "", n));
+  vtOptBtn(box); el.querySelectorAll(".vt-opt input")[n].focus();
+}
+function vtDelOpt(box, b) {
+  if ($(box).querySelectorAll(".vt-opt").length <= 2) { b.parentElement.querySelector("input").value = ""; return; }
+  b.parentElement.remove(); vtOptBtn(box);
+}
+const vtVals = box => [...$(box).querySelectorAll(".vt-opt input")].map(i => i.value.trim()).filter(Boolean);
+function vtCount() {
+  $("vt-pq-n").textContent = $("vt-pq").value.length ? `${$("vt-pq").value.length}/60` : "";
+  $("vt-rq-n").textContent = $("vt-rq").value.length ? `${$("vt-rq").value.length}/45` : "";
+}
+function vtSelect(id, v) { const el = $(id); if (![...el.options].some(o => o.value == v)) el.insertAdjacentHTML("beforeend", `<option value="${v}">${v} сек</option>`); el.value = v; }
+function vtUseTpl(kind, i) {
+  const t = (kind === "poll" ? VT.templates.polls : VT.templates.predictions)[i]; if (!t) return;
+  if (kind === "poll") { $("vt-pq").value = t.title; vtSetOpts("vt-popts", t.choices.length >= 2 ? t.choices : [...t.choices, ""], 5); vtSelect("vt-pdur", t.duration || 120); }
+  else { $("vt-rq").value = t.title; vtSetOpts("vt-ropts", t.outcomes.length >= 2 ? t.outcomes : [...t.outcomes, ""], 10); vtSelect("vt-rwin", t.window || 120); }
+  vtCount();
+}
+async function vtSaveTpl(kind) {
+  const poll = kind === "poll", title = $(poll ? "vt-pq" : "vt-rq").value.trim(), opts = vtVals(poll ? "vt-popts" : "vt-ropts");
+  if (!title || opts.length < 2) return toast("Заполните вопрос и минимум 2 варианта", true);
+  const list = [...(poll ? VT.templates.polls : VT.templates.predictions)].filter(t => t.title !== title);
+  list.unshift(poll ? {title, choices: opts, duration: +$("vt-pdur").value} : {title, outcomes: opts, window: +$("vt-rwin").value});
+  await api("/votes/templates", {kind, list}); toast("Шаблон сохранён"); vtLoad();
+}
+async function vtDelTpl(kind, i, ev) {
+  ev.stopPropagation();
+  const list = [...(kind === "poll" ? VT.templates.polls : VT.templates.predictions)]; list.splice(i, 1);
+  await api("/votes/templates", {kind, list}); vtLoad();
+}
+async function vtDo(path, body, btn) {
+  if (VT_BUSY) return; VT_BUSY = true; if (btn) btn.disabled = true;
+  try { const r = await api(path, body || {}); if (r && r.message) toast(r.message); VT_PICK = ""; await vtLoad(); }
+  catch (e) {} finally { VT_BUSY = false; if (btn) btn.disabled = false; }
+}
+function vtStartPoll() {
+  vtDo("/votes/poll/start", {title: $("vt-pq").value, choices: vtVals("vt-popts"), duration: +$("vt-pdur").value,
+    points: $("vt-ppts").checked, points_per_vote: +$("vt-pptsn").value}, $("vt-pstart"));
+}
+function vtStartPred() { vtDo("/votes/prediction/start", {title: $("vt-rq").value, outcomes: vtVals("vt-ropts"), window: +$("vt-rwin").value}, $("vt-rstart")); }
+function vtResolve(btn) {
+  if (!VT_PICK) return toast("Нажмите на исход-победитель в списке выше", true);
+  const o = VT.prediction.outcomes.find(x => x.id === VT_PICK);
+  if (!confirm(`Победил исход «${o ? o.title : "?"}»? Баллы будут выплачены, отменить нельзя.`)) return;
+  vtDo("/votes/prediction/resolve", {outcome_id: VT_PICK}, btn);
+}
+function vtLeft(t) {
+  const s = Math.max(0, Math.round(t - Date.now() / 1000));
+  return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s} с`;
+}
+const vtNum = n => Math.round(n).toLocaleString("ru-RU");
+function vtRender() {
+  const v = VT; if (!v) return;
+  const warn = [];
+  if (!v.ready) warn.push(`Сначала войдите в Twitch — <a href="#" onclick="go('settings');return false">Настройки → Подключения</a>.`);
+  else if (!v.scopes.polls || !v.scopes.predictions)
+    warn.push(`Нужны новые права Twitch для опросов и прогнозов. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button>`);
+  [v.poll_error, v.prediction_error].filter(Boolean).forEach(e => warn.push(esc(e)));
+  $("vt-warn").innerHTML = warn.map(w => `<div class="card hl" style="margin-bottom:12px">⚠️ ${w}</div>`).join("");
+  const tpl = (kind, list) => list.map((t, i) => `<button class="vt-tpl" onclick="vtUseTpl('${kind}',${i})" title="${esc((t.choices || t.outcomes || []).join(" / "))}">${esc(t.title)}
+    <span onclick="vtDelTpl('${kind}',${i},event)" title="Удалить шаблон" style="opacity:.5;margin-left:4px">✕</span></button>`).join("") || `<span class="muted small">нет — заполните форму и нажмите «Сохранить как шаблон»</span>`;
+  $("vt-poll-tpls").innerHTML = tpl("poll", v.templates.polls);
+  $("vt-pred-tpls").innerHTML = tpl("prediction", v.templates.predictions);
+
+  // опрос
+  const p = v.poll && !VT_HIDE.has(v.poll.id) ? v.poll : null;
+  $("vt-poll-form").classList.toggle("hidden", !!(p && p.active));
+  if (!p) $("vt-poll-live").innerHTML = "";
+  else {
+    const max = Math.max(...p.choices.map(c => c.votes));
+    const st = p.active ? `<span class="vt-st on">идёт · осталось ${vtLeft(p.ends)}</span>` : `<span class="vt-st">${p.status === "TERMINATED" ? "завершён досрочно" : "завершён"}</span>`;
+    $("vt-poll-live").innerHTML = `<div class="vt-live"><h4>${esc(p.title)} ${st}</h4>
+      <div class="muted small">${p.total} ${p.total % 10 === 1 && p.total % 100 !== 11 ? "голос" : "голосов"}${p.points ? ` · доп. голос за ${vtNum(p.points_per_vote)} баллов` : ""}</div>
+      ${p.choices.map(c => `<div class="vt-row ${!p.active && c.votes === max && max > 0 ? "win" : ""}"><div class="t"><span>${!p.active && c.votes === max && max > 0 ? "🏆 " : ""}${esc(c.title)}</span><b>${c.pct}% · ${c.votes}</b></div>
+        <div class="vt-bar"><i style="width:${c.pct}%"></i></div></div>`).join("")}
+      <div class="vt-acts">${p.active ? `<button class="danger" onclick="if(confirm('Завершить опрос досрочно?')) vtDo('/votes/poll/end',{},this)">⏹ Завершить сейчас</button>`
+        : `<button class="sm" onclick="VT_HIDE.add('${p.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
+  }
+
+  // прогноз
+  const r = v.prediction && !VT_HIDE.has(v.prediction.id) ? v.prediction : null, live = r && (r.active || r.locked);
+  $("vt-pred-form").classList.toggle("hidden", !!live);
+  if (!r) { $("vt-pred-live").innerHTML = ""; return; }
+  if (VT_PICK && !r.outcomes.some(o => o.id === VT_PICK)) VT_PICK = "";
+  const st = r.active ? `<span class="vt-st on">ставки · ${vtLeft(r.locks)}</span>` : r.locked ? `<span class="vt-st lock">ставки закрыты</span>`
+    : `<span class="vt-st">${r.status === "CANCELED" ? "отменён" : "завершён"}</span>`;
+  $("vt-pred-live").innerHTML = `<div class="vt-live"><h4>${esc(r.title)} ${st}</h4>
+    <div class="muted small">${r.total_users} участн. · ${vtNum(r.total_points)} баллов в банке${live ? " · нажмите на исход, чтобы выбрать победителя" : ""}</div>
+    ${r.outcomes.map(o => `<div class="vt-row ${live ? "pick" : ""} ${o.id === VT_PICK ? "sel" : ""} ${r.winner === o.id ? "win" : ""}" ${live ? `onclick="VT_PICK='${o.id}';vtRender()"` : ""}>
+      <div class="t"><span>${r.winner === o.id ? "🏆 " : ""}${esc(o.title)}</span><b>${o.pct}% · ${vtNum(o.points)} 🪙 · ${o.users} чел.${o.ratio ? ` · 1:${o.ratio}` : ""}</b></div>
+      <div class="vt-bar"><i style="width:${o.pct}%;background:${o.color === "pink" ? "#f472b6" : o.color === "blue" ? "#60a5fa" : "var(--accent)"}"></i></div>
+      ${o.top.length ? `<div class="muted small" style="margin-top:3px">топ: ${o.top.map(t => `${esc(t.name)} ${vtNum(t.points)}`).join(", ")}</div>` : ""}</div>`).join("")}
+    <div class="vt-acts">${live ? `
+      ${r.active ? `<button onclick="vtDo('/votes/prediction/lock',{},this)">🔒 Закрыть ставки</button>` : ""}
+      <button class="primary" onclick="vtResolve(this)">🏆 Выбрать победителя</button>
+      <button class="danger" onclick="if(confirm('Отменить прогноз? Все баллы вернутся зрителям.')) vtDo('/votes/prediction/cancel',{},this)">Отменить и вернуть баллы</button>`
+      : `<button class="sm" onclick="VT_HIDE.add('${r.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
+}
 </script>
 </body>
 </html>

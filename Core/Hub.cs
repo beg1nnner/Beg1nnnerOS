@@ -39,6 +39,7 @@ public sealed class Hub
     public readonly ProHub Pro;
     public readonly Updater Updater;
     public readonly Features.Announce Announce;
+    public readonly Features.Votes Votes;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -87,6 +88,7 @@ public sealed class Hub
         Pro = new ProHub(this);
         Updater = new Updater(this);
         Announce = new Features.Announce(this);
+        Votes = new Features.Votes(this);
     }
 
     public void Start()
@@ -98,6 +100,7 @@ public sealed class Hub
         Loop.Start(Events.Run);
         Loop.Start(Music.Run);
         Loop.Start(Alerts.Run);
+        Loop.Start(Votes.Run);
         Loop.Start(Donations.Run);
         Loop.Start(YtDlp.UpdateIfNeeded);
         Loop.Start(Updater.Run);

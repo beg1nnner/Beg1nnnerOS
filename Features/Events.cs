@@ -148,6 +148,7 @@ public sealed class Events
                 Notify("hype", new() { ["event"] = begin ? "начался" : "завершился", ["level"] = ev.Int("level", 1).ToString(), ["details"] = details });
                 break;
             case "channel.poll.begin":
+                _hub.Loop.Start(async () => { try { await _hub.Votes.Refresh(); } catch { } });   // опрос запущен на сайте Twitch — подхватываем сразу
                 var choices = string.Join(" / ", (ev["choices"] as JsonArray ?? new JsonArray()).Select(c => c.Str("title")));
                 Notify("poll", new() { ["event"] = "началось", ["title"] = S("title"), ["details"] = $"Варианты: {choices}" });
                 break;
