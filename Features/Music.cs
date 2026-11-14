@@ -227,6 +227,7 @@ public sealed class Music
         RestoreQueue();
         _ = ObsWatch();
         _ = PersistLoop();
+        _ = CrossfadeWatch();
         while (true)
         {
             await _wake.Task;
@@ -545,11 +546,17 @@ public sealed class Music
         {
             _downloads.Remove(t.Vid);
             var reason = Reason(e);
-            _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {reason}");
-            Current = null;
-            Wake();
-            await TellViewer(t, reason);
-            return;
+            // YouTube не отдал трек — пробуем найти этот же трек в Яндекс Музыке
+            path = Current == t ? await YandexInstead(t, reason) : null;
+            if (path == null)
+            {
+                Loading = false;
+                _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {reason}");
+                if (Current == t) Current = null;
+                Wake();
+                await TellViewer(t, reason);
+                return;
+            }
         }
         finally { Loading = false; }
         if (Current != t) return;   // пропущен во время загрузки
@@ -576,6 +583,50 @@ public sealed class Music
         _hub.Log.Add("music", $"Играет: {t.Title}" + (t.Requester != "" ? $" (заказ {t.Requester})" : ""));
         ShowToast($"♪ {t.Title}");
         Prefetch();
+    }
+
+    // ---------- запасной источник: Яндекс Музыка ----------
+    private static readonly Regex TitleJunk = new(
+        @"\s*[\(\[](?:official|officiall?y|video|audio|lyrics?|lyric video|music video|mv|hd|hq|4k|премьера|клип|official music video|visuali[sz]er|текст|караоке|remaster(?:ed)?[^\)\]]*|\d{4})[^\)\]]*[\)\]]|\s*\|.*$|\s*(?:official\s+(?:music\s+)?video|lyrics?)\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>Чистое «исполнитель — название» для поиска: без «(Official Video)», «[HD]», «| Премьера» и т. п.</summary>
+    public static string CleanTitle(string title)
+    {
+        var s = TitleJunk.Replace(title ?? "", "");
+        s = Regex.Replace(s, @"\s+(?:ft\.?|feat\.?)\s+.*$", "", RegexOptions.IgnoreCase);
+        return Regex.Replace(s, @"\s{2,}", " ").Trim(' ', '-', '–', '—');
+    }
+
+    /// <summary>Скачивает тот же трек из Яндекс Музыки. null — не нашёлся или запасной источник выключен.</summary>
+    private async Task<string> YandexInstead(Track t, string reason)
+    {
+        if (t.Vid.StartsWith("ym:") || !Cfg.Bool("yandex_fallback", true) || _hub.Yandex.Token == "") return null;
+        var query = CleanTitle(t.Title);
+        if (query.Length < 2) return null;
+        try
+        {
+            var y = await _hub.Yandex.Search(query);
+            // длительность должна быть похожей — иначе это скорее другой трек (ремикс, кавер)
+            if (t.Duration > 0 && y.Duration > 0 && Math.Abs(t.Duration - y.Duration) > Math.Max(25, t.Duration * 0.15))
+            {
+                _hub.Log.Add("skip", $"Яндекс Музыка: «{y.Title}» не похож по длительности на «{t.Title}» — не подменяю");
+                return null;
+            }
+            if (Current != t) return null;
+            var oldTitle = t.Title;
+            t.Vid = "ym:" + y.Id; t.Title = y.Title; t.PageUrl = y.Url; t.Source = "yandex";
+            if (y.Duration > 0) t.Duration = y.Duration;
+            Loading = true;
+            var path = await GetAudio(t);
+            _hub.Log.Add("music", $"YouTube не отдал «{oldTitle}» ({reason}) — играет из Яндекс Музыки: {y.Title}");
+            return path;
+        }
+        catch (Exception e)
+        {
+            _hub.Log.Add("skip", $"Яндекс Музыка как запасной источник: {e.Message}");
+            return null;
+        }
     }
 
     /// <summary>Понятная причина ошибки на русском.</summary>
@@ -632,6 +683,8 @@ public sealed class Music
     /// <summary>Запуск трека: в OBS (если выбран этот режим и OBS-страница на связи) или в программе.</summary>
     private void StartPlayback(Track t, string path, double startAt)
     {
+        var fadeIn = _nextFade;
+        _nextFade = 0;
         var gain = GainDb(t.Vid);
         if (gain != 0) _hub.Log.Add("skip", $"Громкость «{t.Title}» выровнена на {gain:+0.0;-0.0} дБ");
         if (ObsMode && ObsConnected && !_obsFailed.Contains(t.Vid))
@@ -642,6 +695,7 @@ public sealed class Music
             _obsPath = path;
             _obsPos = _obsStart = startAt;
             _obsPaused = false;
+            _obsFade = fadeIn;
             return;
         }
         if (ObsMode && !ObsConnected && !_obsWarned)
@@ -650,7 +704,7 @@ public sealed class Music
             _hub.Log.Error("Музыка: выбран режим «в OBS», но источник с плеером в OBS не открыт — играю из программы. Добавьте в OBS источник «Браузер» с адресом из раздела «Музыка».");
         }
         _obsActive = false;
-        Player.Play(path, OnEnd, gain, startAt);
+        Player.Play(path, OnEnd, gain, startAt, fadeIn);
     }
 
     /// <summary>Переносит текущий трек из OBS в программу с того же места.</summary>
@@ -685,6 +739,56 @@ public sealed class Music
         }
     }
 
+    // ---------- плавный переход между треками (кроссфейд) ----------
+    private double _nextFade, _obsFade;
+    private int _xfadeGen = -1;
+    private string _prepicked = "";
+    public int CrossfadeSec => Math.Clamp(Cfg.Int("crossfade", 4), 0, 12);
+
+    /// <summary>
+    /// За N секунд до конца трека запускает следующий поверх затухающего. Следующий трек должен быть уже скачан,
+    /// иначе переход обычный. Резервный трек выбирается заранее (уступит место, если придёт заказ).
+    /// </summary>
+    private async Task CrossfadeWatch()
+    {
+        while (true)
+        {
+            await Task.Delay(250);
+            try
+            {
+                var cf = CrossfadeSec;
+                var cur = Current;
+                if (cf <= 0 || cur == null || Loading || IsPaused) continue;
+                var gen = _obsActive ? _obsGen : Player.Gen;
+                if (gen == _xfadeGen) continue;
+                var total = _obsActive ? cur.Duration : Player.Total;
+                if (total < cf * 3) continue;   // очень короткий трек — без перехода
+                var left = total - Position;
+                // резервный трек выбираем заранее, чтобы успел скачаться
+                if (Queue.Count == 0 && FallbackOn && left <= cf + 15 && _prepicked != cur.Id)
+                {
+                    _prepicked = cur.Id;
+                    try { await LoadFallback(); } catch { }
+                    var fb = Queue.Count == 0 && Current == cur ? NextFallback() : null;
+                    if (fb != null) { Queue.Add(fb); Prefetch(); }
+                }
+                if (left > cf || left <= 0.3 || Queue.Count == 0) continue;
+                var next = Queue[0];
+                if (!_downloads.TryGetValue(next.Vid, out var task) || !task.IsCompletedSuccessfully) continue;
+                _xfadeGen = gen;
+                _nextFade = cf;
+                if (_obsActive) { _obsActive = false; OnEnd(_obsGen, ""); }
+                else
+                {
+                    Player.FadeOut(cf);
+                    Current = null;
+                    Wake();
+                }
+            }
+            catch (Exception e) { _hub.Log.Add("skip", "Плавный переход: " + e.Message); }
+        }
+    }
+
     /// <summary>Опрос от OBS-страницы: она сообщает позицию/окончание/ошибку и получает, что играть.</summary>
     public object ObsPoll(int gen, double pos, int ended, string err)
     {
@@ -715,6 +819,7 @@ public sealed class Music
             start = _obsStart,
             paused = active && _obsPaused,
             gain = Math.Round(gainLin, 4),
+            fade = Math.Round(_obsFade, 2),
         };
     }
 
@@ -731,7 +836,8 @@ public sealed class Music
     {
         if (Current == null) return false;
         var title = Current.Title;
-        Player.Stop();
+        if (CrossfadeSec > 0 && !_obsActive) Player.FadeOut(0.6); else Player.Stop();   // пропуск — короткое затухание без щелчка
+        _nextFade = CrossfadeSec > 0 ? 0.6 : 0;
         _obsActive = false;
         Current = null;
         _hub.Log.Add("music", $"Пропущен: {title}" + (reason != "" ? $" ({reason})" : ""));
@@ -924,6 +1030,7 @@ public sealed class Music
         track.Login = login;
         track.Priority = priority;
         track.Redemption = redemption;
+        Queue.RemoveAll(q => q.Fallback);   // заранее выбранный резервный трек уступает заказу
         var idx = Queue.FindIndex(x => x.Priority < priority);
         if (idx < 0) idx = Queue.Count;
         Queue.Insert(idx, track);

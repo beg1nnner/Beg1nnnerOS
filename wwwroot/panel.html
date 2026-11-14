@@ -297,6 +297,18 @@
       </div>
     </div>
     <div class="card">
+      <h3>🎚 Плавные переходы</h3>
+      <div class="row" style="align-items:center;flex-wrap:wrap">
+        <label class="f" style="width:230px"><span>Переход между треками: <b id="xf-v"></b></span><input type="range" min="0" max="12" step="1" data-s="music.crossfade" oninput="$('xf-v').textContent=this.value>0?this.value+' сек':'выключен'"></label>
+        <span class="muted small grow">Следующий трек скачивается заранее и начинается, пока предыдущий затухает — без тишины между песнями, как на радио. Работает и в программе, и в OBS. Пропуск трека тоже идёт с коротким затуханием, без щелчка.</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🟡 Если YouTube не работает</h3>
+      <label class="switch"><input type="checkbox" data-s="music.yandex_fallback"> Искать этот же трек в Яндекс Музыке, если YouTube не отдал заказ</label>
+      <div class="muted small" style="margin-top:6px">Когда YouTube тормозит, недоступен или не даёт скачать видео (18+, блокировка в стране), программа находит трек по названию в Яндекс Музыке и включает его — зритель получает свою песню, а не ошибку. Трек с непохожей длительностью (ремикс, кавер) не подставляется. Нужен токен Яндекс Музыки — сохраните его в «Настройках».</div>
+    </div>
+    <div class="card">
       <h3>💾 Очередь после вылета</h3>
       <div class="row" style="align-items:flex-end;flex-wrap:wrap">
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.restore_queue"> Восстанавливать очередь и текущий трек после перезапуска программы или компьютера</label>
@@ -1140,6 +1152,7 @@ async function loadSettings() {
     else if (el.hasAttribute("data-list")) el.value = (v || []).join("\n");
     else el.value = v ?? "";
   });
+  if ($("xf-v")) { const v = +getPath(S, "music.crossfade") || 0; $("xf-v").textContent = v > 0 ? v + " сек" : "выключен"; }
   $("secret").placeholder = S.twitch.has_secret ? "•••••• сохранён (пусто — оставить прежний)" : "";
   document.querySelectorAll("[data-secret]").forEach(el => el.placeholder = getPath(S, el.dataset.secret) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
   META.hotkeys = j.hotkey_actions;

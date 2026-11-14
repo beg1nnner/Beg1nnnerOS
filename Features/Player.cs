@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -16,10 +17,21 @@ public sealed class Player
     private double _gainDb;
     private float _volume = 0.36f;
     private float _duck = 1f;
+    private float _fade = 1f;   // плавное нарастание в начале трека (0…1)
 
     public int Gen;
     public bool Paused;
     public string DeviceId = "";
+
+    /// <summary>Длина файла, с.</summary>
+    public double Total
+    {
+        get
+        {
+            try { return _reader?.TotalTime.TotalSeconds ?? 0; }
+            catch { return 0; }
+        }
+    }
 
     public double Position
     {
@@ -36,7 +48,7 @@ public sealed class Player
         set
         {
             _volume = Math.Max(0, Math.Min(1, value));
-            if (_vol != null) _vol.Volume = _volume * _duck;
+            if (_vol != null) _vol.Volume = _volume * _duck * _fade;
         }
     }
 
@@ -47,7 +59,7 @@ public sealed class Player
         set
         {
             _duck = Math.Max(0, Math.Min(1, value));
-            if (_vol != null) _vol.Volume = _volume * _duck;
+            if (_vol != null) _vol.Volume = _volume * _duck * _fade;
         }
     }
 
@@ -92,7 +104,7 @@ public sealed class Player
     }
 
     /// <summary>Запускает воспроизведение. onEnd(gen, ошибка) вызывается в контексте, где создан плеер.</summary>
-    public int Play(string path, Action<int, string> onEnd, double gainDb = 0, double startAt = 0)
+    public int Play(string path, Action<int, string> onEnd, double gainDb = 0, double startAt = 0, double fadeIn = 0)
     {
         Stop();
         var gen = ++Gen;
@@ -104,7 +116,8 @@ public sealed class Player
         }
         _gain = new GainLimiter(_reader.ToSampleProvider());
         GainDb = gainDb;
-        _vol = new VolumeSampleProvider(_gain) { Volume = _volume * _duck };
+        _fade = fadeIn > 0.05 ? 0f : 1f;
+        _vol = new VolumeSampleProvider(_gain) { Volume = _volume * _duck * _fade };
         var device = FindDevice();
         _out = device != null
             ? new WasapiOut(device, AudioClientShareMode.Shared, true, 200)
@@ -116,7 +129,54 @@ public sealed class Player
         _out.Init(_vol);
         _out.Play();
         Paused = false;
+        if (fadeIn > 0.05) _ = FadeIn(_vol, fadeIn);
         return gen;
+    }
+
+    private async Task FadeIn(VolumeSampleProvider vol, double seconds)
+    {
+        var start = DateTime.UtcNow;
+        while (true)
+        {
+            await Task.Delay(30).ConfigureAwait(false);
+            if (_vol != vol) return;   // трек уже сменился
+            var k = (float)Math.Min(1, (DateTime.UtcNow - start).TotalSeconds / seconds);
+            _fade = k * k * (3 - 2 * k);   // мягкая S-кривая
+            vol.Volume = _volume * _duck * _fade;
+            if (k >= 1) return;
+        }
+    }
+
+    /// <summary>
+    /// Плавно гасит текущий трек за seconds и освобождает его, не вызывая onEnd.
+    /// Плеер сразу свободен: следующий трек может стартовать поверх затухающего (кроссфейд).
+    /// </summary>
+    public void FadeOut(double seconds)
+    {
+        if (_out == null) { Stop(); return; }
+        Gen++;
+        var o = _out; var r = _reader; var vol = _vol;
+        _out = null; _reader = null; _vol = null; _gain = null;
+        Paused = false;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var from = vol.Volume;
+                var start = DateTime.UtcNow;
+                while (true)
+                {
+                    await Task.Delay(30);
+                    var k = Math.Min(1, (DateTime.UtcNow - start).TotalSeconds / Math.Max(0.05, seconds));
+                    vol.Volume = (float)(from * (1 - k) * (1 - k));
+                    if (k >= 1) break;
+                }
+            }
+            catch { }
+            try { o.Stop(); } catch { }
+            try { o.Dispose(); } catch { }
+            try { r?.Dispose(); } catch { }
+        });
     }
 
     public void SetPaused(bool paused)
