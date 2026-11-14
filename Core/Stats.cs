@@ -154,12 +154,13 @@ public sealed class Stats
         a2.Add(("$lim", Math.Clamp(limit, 1, 500)));
         a2.Add(("$off", Math.Max(0, offset)));
         var items = new List<object>();
-        foreach (var r in Query("SELECT ts, title, url, source, requester, login, duration, fallback FROM played" + w +
+        foreach (var r in Query("SELECT ts, title, url, source, requester, login, duration, fallback, vid FROM played" + w +
                                 " ORDER BY ts DESC LIMIT $lim OFFSET $off", a2.ToArray()))
             items.Add(new
             {
                 ts = Convert.ToDouble(r[0]), title = r[1]?.ToString(), url = r[2]?.ToString(), source = r[3]?.ToString(),
                 requester = r[4]?.ToString(), login = r[5]?.ToString(), duration = Convert.ToInt64(r[6]), fallback = Convert.ToInt64(r[7]) == 1,
+                vid = r[8]?.ToString() ?? "",
             });
         return new { total, items };
     }

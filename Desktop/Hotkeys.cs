@@ -17,6 +17,7 @@ public static class Hotkeys
     {
         ["pause_music"] = ("Пауза или продолжение музыки", "ctrl+alt+p"),
         ["skip"] = ("Пропуск текущей композиции", "ctrl+alt+right"),
+        ["like_track"] = ("Лайк текущего трека (добавить в резервный плейлист или убрать)", "ctrl+alt+l"),
         ["stop_alerts"] = ("Остановка МедиаАлертов", "ctrl+alt+backspace"),
         ["pause_events"] = ("Пауза или возобновление уведомлений о событиях", "ctrl+alt+n"),
     };

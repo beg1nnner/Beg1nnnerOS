@@ -111,6 +111,14 @@ public partial class App : Application
         {
             case "pause_music": Hub.Music.TogglePause(); break;
             case "skip": Hub.Music.Skip("горячая клавиша"); break;
+            case "like_track":
+                try
+                {
+                    var (liked, msg) = Hub.Music.ToggleLikeCurrent();
+                    ShowBalloon(liked ? "♥ Трек понравился" : "♡ Лайк снят", msg);
+                }
+                catch (Beg1nnnerOS.Twitch.UserError e) { ShowBalloon("Лайк трека", e.Message); }
+                break;
             case "stop_alerts": Hub.Loop.Start(Hub.Alerts.StopAll); break;
             case "pause_events": Hub.Events.SetPaused(!Hub.Events.Paused); break;
         }
@@ -178,6 +186,15 @@ public partial class App : Application
                 "Нажмите, чтобы открыть программу, затем «Обновить». Настройки сохранятся.", WinForms.ToolTipIcon.Info);
         }
         catch { }
+    }
+
+    /// <summary>Короткое уведомление Windows (например, «трек понравился» по горячей клавише во время игры).</summary>
+    private void ShowBalloon(string title, string text)
+    {
+        Dispatcher.InvokeAsync(() =>
+        {
+            try { _tray?.ShowBalloonTip(2500, title, text, WinForms.ToolTipIcon.None); } catch { }
+        });
     }
 
     private void OnUpdateBalloon(object sender, EventArgs e)

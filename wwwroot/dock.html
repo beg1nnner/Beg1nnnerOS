@@ -17,6 +17,7 @@
   .h .t { flex:none; width:42px; font-size:.85em; opacity:.6; }
   .h .n { flex:1; min-width:0; } .h .w { font-size:.82em; opacity:.65; }
   .h button { flex:none; padding:2px 9px; }
+  #like.on { color:#f472b6; border-color:#f472b680; }
   .vtpl { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; }
   .vtpl button { padding:4px 9px; font-size:.9em; }
   .vr { margin:7px 0; border-radius:6px; }
@@ -40,8 +41,9 @@
     <div class="muted small">Сейчас играет</div>
     <div class="now-title" id="now">—</div>
     <div class="muted small" id="who"></div>
+    <div class="small" id="likemsg" style="color:#f472b6;min-height:0"></div>
     <div class="row" style="margin-top:8px">
-      <button id="pause">⏯ Пауза</button><button id="skip">⏭ Пропуск</button>
+      <button id="pause">⏯ Пауза</button><button id="skip">⏭ Пропуск</button><button id="like" title="Понравился — добавить в резервный плейлист">♡</button>
       <input type="range" min="0" max="100" id="vol" class="grow" title="Громкость музыки">
       <span id="volv" class="small muted"></span>
     </div>
@@ -103,6 +105,13 @@ $("dense").onclick = () => { const on = document.body.classList.toggle("dense");
   try { localStorage.setItem("dock-dense", on ? "1" : "0"); } catch (e) {} };
 $("pause").onclick = () => post("/api/music/pause");
 $("skip").onclick = () => post("/api/music/skip");
+let likeT = null;
+$("like").onclick = async () => {
+  const r = await post("/api/music/like");
+  $("likemsg").textContent = r.ok ? (r.data.liked ? "♥ В резервном плейлисте" : "♡ Убран из резервного плейлиста") : r.error;
+  clearTimeout(likeT); likeT = setTimeout(() => $("likemsg").textContent = "", 3000);
+  tick();
+};
 let volBusy = 0, masterBusy = 0;
 $("vol").oninput = e => { volBusy = Date.now(); $("volv").textContent = e.target.value; post("/api/music/volume", {volume:+e.target.value}); };
 $("master").oninput = e => { masterBusy = Date.now(); $("mv").textContent = e.target.value; post("/api/alerts/volume", {volume:+e.target.value}); };
@@ -117,6 +126,7 @@ async function tick() {
     if (document.documentElement.dataset.theme !== s.ui_theme) document.documentElement.dataset.theme = s.ui_theme;
     const m = s.music, c = m.current;
     $("now").textContent = c ? c.title : "—";
+    $("like").textContent = c && c.liked ? "♥" : "♡"; $("like").classList.toggle("on", !!(c && c.liked)); $("like").disabled = !c;
     $("who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "") + (c.paused ? " · пауза" : "") : "";
     if (Date.now() - volBusy > 1500) { $("vol").value = m.volume; $("volv").textContent = m.volume; }
     if (Date.now() - masterBusy > 1500) { $("master").value = s.alerts.volume; $("mv").textContent = s.alerts.volume; }

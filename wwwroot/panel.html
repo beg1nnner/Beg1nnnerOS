@@ -86,6 +86,7 @@
     transform-origin:0 0; }
   /* опросы и прогнозы */
   .vt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:16px; align-items:start; }
+  button.liked { color:#f472b6; border-color:#f472b680; }
   .vt-tpls { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
   .vt-tpl { background:var(--panel2); border:1px solid var(--line); border-radius:999px; padding:5px 11px; font-size:12.5px; color:var(--fg); }
   .vt-tpl:hover { border-color:var(--accent); }
@@ -163,6 +164,7 @@
       <div class="row" style="margin-top:10px">
         <button onclick="api('/music/pause',{})">⏯ Пауза</button>
         <button onclick="api('/music/skip',{})">⏭ Пропуск</button>
+        <button id="np-like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)">♡ Лайк</button>
         <button onclick="if(confirm('Заблокировать текущий трек и пропустить?')) api('/music/block',{})">🚫 Блок</button>
         <span class="small muted">Громкость</span>
         <input type="range" min="0" max="100" id="live-vol" class="grow" style="max-width:220px">
@@ -305,6 +307,11 @@
         <label class="switch"><input type="checkbox" data-s="music.fallback_shuffle"> Случайный порядок</label>
         <label class="switch"><input type="checkbox" data-s="music.fallback_interrupt"> Прерывать резервный трек, когда приходит заказ</label>
         <span class="small muted" id="fb-status" style="margin-left:auto"></span>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:center">
+        <label class="switch"><input type="checkbox" data-s="music.fallback_liked"> Играть и понравившиеся треки ♥</label>
+        <button class="sm" onclick="openLiked()">♥ Понравившиеся <span id="fb-liked-n"></span></button>
+        <span class="small muted">Лайк — кнопкой «♡ Лайк» в «Эфире», в док-панели OBS, в истории треков или горячей клавишей (по умолчанию Ctrl+Alt+L, включите в «Настройках»). Ссылку на плейлист можно не указывать — тогда играют только понравившиеся.</span>
       </div>
     </div>
   </div>
@@ -1230,6 +1237,7 @@ function fmtWhen(ts) {
   return (today ? "" : d.toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit"}) + " ") + d.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"});
 }
 async function loadHistory(more) {
+  if (!more) await loadLikedSet();
   const off = more ? MH_ITEMS.length : 0;
   const q = new URLSearchParams({scope: $("mh-scope").value, q: $("mh-q").value, fallback: $("mh-fb").checked ? "1" : "0", offset: off, limit: 50});
   let r; try { r = await api("/music/history?" + q); } catch (e) { return; }
@@ -1238,9 +1246,38 @@ async function loadHistory(more) {
   $("mh-list").innerHTML = MH_ITEMS.map((t, i) => `<tr><td class="small muted">${fmtWhen(t.ts)}</td>
       <td>${t.fallback ? "📻 " : (SRC_ICON[t.source] || "") + " "}${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a>` : esc(t.title)}</td>
       <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td>
-      <td style="text-align:right"><button class="sm" title="Добавить в очередь заново" onclick="requeue(${i}, this)">＋ В очередь</button></td></tr>`).join("")
+      <td style="text-align:right;white-space:nowrap">${t.vid ? `<button class="sm ${LIKED.has(t.vid) ? "liked" : ""}" title="Понравился — в резервный плейлист" onclick="likeHist(${i}, this)">${LIKED.has(t.vid) ? "♥" : "♡"}</button>` : ""}
+        <button class="sm" title="Добавить в очередь заново" onclick="requeue(${i}, this)">＋ В очередь</button></td></tr>`).join("")
     || '<tr><td colspan="5" class="muted">За этот период треков нет</td></tr>';
   $("mh-more").classList.toggle("hidden", MH_ITEMS.length >= r.total);
+}
+// ---------- «лайки» ----------
+let LIKED = new Set(), LIKED_ITEMS = [];
+async function loadLikedSet() { try { LIKED_ITEMS = (await api("/music/liked")).items; LIKED = new Set(LIKED_ITEMS.map(x => x.vid)); } catch (e) {} }
+async function likeNow() {
+  try { const r = await api("/music/like", {}); toast((r.liked ? "♥ " : "♡ ") + r.message); poll(); } catch (e) {}
+}
+async function likeHist(i, btn) {
+  const t = MH_ITEMS[i]; if (!t || !t.vid) return;
+  try {
+    const r = await api("/music/like", {vid: t.vid, title: t.title, url: t.url, source: t.source, duration: t.duration, requester: t.requester});
+    if (r.liked) LIKED.add(t.vid); else LIKED.delete(t.vid);
+    btn.textContent = r.liked ? "♥" : "♡"; btn.classList.toggle("liked", r.liked); toast((r.liked ? "♥ " : "♡ ") + r.message);
+  } catch (e) {}
+}
+async function openLiked() {
+  await loadLikedSet();
+  const rows = LIKED_ITEMS.slice().reverse();
+  modal(`<h3 style="margin-top:0">♥ Понравившиеся треки (${rows.length})</h3>
+    <div class="muted small">Играют в резервном плейлисте, когда нет заказов (если включено «Играть и понравившиеся треки»).</div>
+    <div style="max-height:60vh;overflow:auto;margin-top:10px">${rows.map(x => `<div class="list-item" data-vid="${esc(x.vid)}">
+      <span class="grow">${SRC_ICON[x.source] || ""} ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title)}
+        <span class="muted small">${x.requester ? "· заказ " + esc(x.requester) : ""} · ${fmtWhen(x.ts)}</span></span>
+      <button class="sm danger" onclick="unlike('${esc(x.vid)}', this)">Убрать</button></div>`).join("") || '<div class="muted">Пока пусто — нажмите «♡ Лайк», когда играет трек, который нравится.</div>'}</div>
+    <div style="text-align:right;margin-top:12px"><button onclick="closeModal()">Закрыть</button></div>`);
+}
+async function unlike(vid, btn) {
+  try { await api("/music/liked/" + encodeURIComponent(vid), undefined, "DELETE"); btn.closest(".list-item").remove(); LIKED.delete(vid); poll(); } catch (e) {}
 }
 /** Заказать трек из истории заново (как ручной заказ стримера). */
 async function requeue(i, btn) {
@@ -1433,6 +1470,9 @@ async function poll() {
   $("ready").innerHTML = cards.join("");
   const c = m.current;
   $("np-title").textContent = c ? c.title : "—";
+  $("np-like").textContent = c && c.liked ? "♥ Нравится" : "♡ Лайк";
+  $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
+  if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
     + (c.gain_db ? ` · громкость ${c.gain_db > 0 ? "+" : "−"}${Math.abs(c.gain_db).toFixed(1)} дБ` : "") + (c.in_obs ? " · играет в OBS" : "") : "";
   MUS_OBS = m.obs_connected; renderOut();

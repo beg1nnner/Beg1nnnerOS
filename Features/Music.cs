@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Beg1nnnerOS.Core;
+using Beg1nnnerOS.Twitch;
 
 namespace Beg1nnnerOS.Features;
 
@@ -88,7 +89,62 @@ public sealed class Music
     private double Position => _obsActive ? _obsPos : Player.Position;
     private bool IsPaused => _obsActive ? _obsPaused : Player.Paused;
 
-    public Music(Hub hub) { _hub = hub; }
+    public Music(Hub hub)
+    {
+        _hub = hub;
+        Liked = new JsonStore(Path.Combine(Config.Profile, "liked.json"), new JsonObject { ["items"] = new JsonArray() });
+    }
+
+    // ---------- «лайки»: понравившиеся треки попадают в резервный плейлист ----------
+    public readonly JsonStore Liked;
+    public JsonArray LikedItems => (JsonArray)Liked.Data["items"];
+    public bool IsLiked(string vid) => vid != "" && LikedItems.Any(x => x.Str("vid") == vid);
+    private bool LikedInFallback => Cfg.Bool("fallback_liked", true) && LikedItems.Count > 0;
+
+    /// <summary>Лайк/снятие лайка текущего трека (горячая клавиша, панель, док-панель).</summary>
+    public (bool Liked, string Message) ToggleLikeCurrent()
+    {
+        var t = Current;
+        if (t == null) throw new UserError("Сейчас ничего не играет");
+        return ToggleLike(t.Vid, t.Title, t.PageUrl, t.Source, t.Duration, t.Requester);
+    }
+
+    public (bool Liked, string Message) ToggleLike(string vid, string title, string url, string source, int duration, string requester)
+    {
+        if (string.IsNullOrEmpty(vid)) throw new UserError("У этого трека нет ссылки — его не получится сохранить");
+        var arr = LikedItems;
+        for (var i = arr.Count - 1; i >= 0; i--)
+            if (arr[i].Str("vid") == vid)
+            {
+                arr.RemoveAt(i);
+                Liked.Save();
+                _fbOrder.Remove(vid);
+                _hub.Log.Add("music", $"♡ Убран из понравившихся: {title}");
+                return (false, $"«{title}» убран из резервного плейлиста");
+            }
+        if (arr.Count >= 2000) throw new UserError("В понравившихся уже 2000 треков — удалите лишние");
+        arr.Add(new JsonObject
+        {
+            ["vid"] = vid, ["title"] = title, ["url"] = url ?? "", ["source"] = source ?? "youtube",
+            ["duration"] = duration, ["requester"] = requester ?? "", ["ts"] = ActionLog.Now,
+        });
+        Liked.Save();
+        _fbBad.Remove(vid);
+        _hub.Log.Add("music", $"♥ Понравился: {title} — добавлен в резервный плейлист");
+        if (Current == null && Queue.Count == 0) Wake();   // тишина — резервный плейлист может начать играть
+        var msg = $"«{title}» добавлен в резервный плейлист";
+        if (!Cfg.Bool("fallback_enabled")) msg += " (сам плейлист сейчас выключен — включите его в «Музыка → Плеер»)";
+        else if (!Cfg.Bool("fallback_liked", true)) msg += " (понравившиеся сейчас не играют — включите это в настройках резервного плейлиста)";
+        return (true, msg);
+    }
+
+    public void Unlike(string vid)
+    {
+        var arr = LikedItems;
+        for (var i = arr.Count - 1; i >= 0; i--) if (arr[i].Str("vid") == vid) arr.RemoveAt(i);
+        Liked.Save();
+        _fbOrder.Remove(vid);
+    }
 
     private JsonObject Cfg => _hub.S.Obj("music");
 
@@ -186,13 +242,19 @@ public sealed class Music
     private int _fbFails;
     public string FallbackStatus { get; private set; } = "выключен";
 
-    private bool FallbackOn => Cfg.Bool("fallback_enabled") && Cfg.Str("fallback_url").Trim() != "";
+    private bool FallbackOn => Cfg.Bool("fallback_enabled") && (Cfg.Str("fallback_url").Trim() != "" || LikedInFallback);
 
     /// <summary>Загружает список треков плейлиста (YouTube) — раз в 6 часов или при смене ссылки.</summary>
     public async Task<int> LoadFallback(bool force = false)
     {
         var url = Cfg.Str("fallback_url").Trim();
-        if (url == "") { FallbackStatus = "ссылка не указана"; return 0; }
+        if (url == "")
+        {
+            // только понравившиеся треки, без плейлиста YouTube
+            _fbList = new(); _fbUrl = "";
+            FallbackStatus = LikedInFallback ? $"{LikedItems.Count} понравившихся" : "ссылка не указана";
+            return LikedInFallback ? LikedItems.Count : 0;
+        }
         if (!force && url == _fbUrl && _fbList.Count > 0 && DateTime.UtcNow - _fbLoaded < TimeSpan.FromHours(6)) return _fbList.Count;
         FallbackStatus = "загружаю плейлист…";
         try
@@ -203,7 +265,8 @@ public sealed class Music
             _fbUrl = url;
             _fbLoaded = DateTime.UtcNow;
             _fbOrder.Clear();
-            FallbackStatus = _fbList.Count > 0 ? $"{_fbList.Count} треков" : "в плейлисте нет треков";
+            FallbackStatus = (_fbList.Count > 0 ? $"{_fbList.Count} треков" : "в плейлисте нет треков")
+                + (LikedInFallback ? $" + {LikedItems.Count} понравившихся" : "");
             _hub.Log.Add("music", $"Резервный плейлист: {FallbackStatus}");
             return _fbList.Count;
         }
@@ -217,19 +280,30 @@ public sealed class Music
 
     private Track NextFallback()
     {
+        // общий пул: плейлист YouTube + понравившиеся треки (без повторов)
+        var pool = new Dictionary<string, Track>();
+        foreach (var t in _fbList) pool.TryAdd(t.Vid, t);
+        if (LikedInFallback)
+            foreach (var x in LikedItems)
+                pool.TryAdd(x.Str("vid"), new Track
+                {
+                    Vid = x.Str("vid"), Title = x.Str("title"), PageUrl = x.Str("url"), Duration = x.Int("duration"),
+                    Source = x.Str("source", "youtube"),
+                });
+        _fbOrder.RemoveAll(v => !pool.ContainsKey(v));
         if (_fbOrder.Count == 0)
         {
-            var ids = _fbList.Where(t => !_fbBad.Contains(t.Vid)).Select(t => t.Vid).ToList();
+            var ids = pool.Keys.Where(v => !_fbBad.Contains(v)).ToList();
             if (Cfg.Bool("fallback_shuffle", true)) ids = ids.OrderBy(_ => Random.Shared.Next()).ToList();
             _fbOrder.AddRange(ids);
         }
         if (_fbOrder.Count == 0) return null;
         var vid = _fbOrder[0];
         _fbOrder.RemoveAt(0);
-        var src = _fbList.First(t => t.Vid == vid);
+        var src = pool[vid];
         return new Track
         {
-            Vid = src.Vid, Title = src.Title, PageUrl = src.PageUrl, Duration = src.Duration, Source = "youtube",
+            Vid = src.Vid, Title = src.Title, PageUrl = src.PageUrl, Duration = src.Duration, Source = src.Source,
             Requester = "", Login = "", Fallback = true,
         };
     }
@@ -268,7 +342,7 @@ public sealed class Music
     {
         if (!FallbackOn)
         {
-            FallbackStatus = Cfg.Bool("fallback_enabled") ? "ссылка не указана" : "выключен";
+            FallbackStatus = Cfg.Bool("fallback_enabled") ? "нет ссылки и понравившихся треков" : "выключен";
             if (Current?.Fallback == true) Skip("резервный плейлист выключен");
             return;
         }
@@ -777,7 +851,7 @@ public sealed class Music
                 requester = cur.Requester, login = cur.Login, priority = cur.Priority, source = cur.Source,
                 paid = cur.Redemption != null, position = Math.Round(Position, 1), paused = IsPaused,
                 gain_db = GainDb(cur.Vid), in_obs = _obsActive,
-                loading = Loading, views = cur.Views,
+                loading = Loading, views = cur.Views, liked = IsLiked(cur.Vid),
             };
         return new
         {
@@ -789,6 +863,7 @@ public sealed class Music
             toast = new { id = ToastId, text = ToastText },
             output = Cfg.Str("output", "app"),
             fallback_status = FallbackStatus,
+            liked_count = LikedItems.Count,
             obs_connected = ObsConnected,
         };
     }

@@ -130,7 +130,7 @@ public static class Config
         "volume": 60, "audio_device": "", "announce": true, "blocked_users": [], "blocked_tracks": [],
         "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true,
         "normalize": true, "normalize_target": -14, "output": "app",
-        "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true
+        "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true, "fallback_liked": true
       },
       "overlay": {
         "theme": "classic", "custom_colors": false, "width": 700, "height": 460,
@@ -155,7 +155,8 @@ public static class Config
         "layout": {"enabled": false}
       },
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
-                  "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n"},
+                  "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
+                  "like_track": "ctrl+alt+l"},
       "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false},
       "pro": {
         "themes": [],
