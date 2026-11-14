@@ -297,6 +297,14 @@
       </div>
     </div>
     <div class="card">
+      <h3>💾 Очередь после вылета</h3>
+      <div class="row" style="align-items:flex-end;flex-wrap:wrap">
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.restore_queue"> Восстанавливать очередь и текущий трек после перезапуска программы или компьютера</label>
+        <label class="f" style="width:200px"><span>если прошло не больше, часов</span><input type="number" min="1" max="168" data-s="music.restore_hours"></label>
+      </div>
+      <div class="muted small">Очередь сохраняется каждые пару секунд. Если программа закрылась или вылетела, после запуска заказы вернутся (вместе с отметкой «за баллы»), а недоигранный трек продолжится с того же места.</div>
+    </div>
+    <div class="card">
       <h3>📻 Резервный плейлист</h3>
       <div class="muted small" style="margin:-4px 0 12px">Когда заказов нет, вместо тишины играет ваш плейлист YouTube. Заказ зрителя всегда важнее.</div>
       <div class="row" style="align-items:flex-end">
@@ -1472,6 +1480,7 @@ async function poll() {
   $("np-title").textContent = c ? c.title : "—";
   $("np-like").textContent = c && c.liked ? "♥ Нравится" : "♡ Лайк";
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
+  if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast("💾 " + m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
     + (c.gain_db ? ` · громкость ${c.gain_db > 0 ? "+" : "−"}${Math.abs(c.gain_db).toFixed(1)} дБ` : "") + (c.in_obs ? " · играет в OBS" : "") : "";

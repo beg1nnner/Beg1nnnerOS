@@ -130,7 +130,8 @@ public static class Config
         "volume": 60, "audio_device": "", "announce": true, "blocked_users": [], "blocked_tracks": [],
         "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true,
         "normalize": true, "normalize_target": -14, "output": "app",
-        "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true, "fallback_liked": true
+        "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true, "fallback_liked": true,
+        "restore_queue": true, "restore_hours": 12
       },
       "overlay": {
         "theme": "classic", "custom_colors": false, "width": 700, "height": 460,

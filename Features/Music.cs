@@ -28,6 +28,7 @@ public sealed class Track
     public long Views = -1;   // просмотры на YouTube (-1 — неизвестно)
     public (string RewardId, string RedemptionId, int Cost)? Redemption;
     public bool Fallback;   // трек из резервного плейлиста (играет, когда заказов нет)
+    public double ResumeAt;   // с какой секунды начать (восстановление после вылета)
 
     public object Public() => new
     {
@@ -223,7 +224,9 @@ public sealed class Music
         Directory.CreateDirectory(Config.CacheDir);
         CleanupCache();
         LoadLoudness();
+        RestoreQueue();
         _ = ObsWatch();
+        _ = PersistLoop();
         while (true)
         {
             await _wake.Task;
@@ -232,6 +235,96 @@ public sealed class Music
             else if (Current == null && Queue.Count == 0 && FallbackOn) await PlayFallback();
         }
     }
+
+    // ---------- сохранение очереди (на случай вылета или перезапуска) ----------
+    private static string QueueFile => Path.Combine(Config.Profile, "queue.json");
+    private string _savedSig = "";
+    private double _savedPos = -1;
+
+    private static JsonObject TrackJson(Track t, double pos = 0) => new()
+    {
+        ["vid"] = t.Vid, ["title"] = t.Title, ["url"] = t.PageUrl, ["duration"] = t.Duration, ["requester"] = t.Requester,
+        ["login"] = t.Login, ["priority"] = t.Priority, ["source"] = t.Source, ["views"] = t.Views,
+        ["reward_id"] = t.Redemption?.RewardId ?? "", ["redemption_id"] = t.Redemption?.RedemptionId ?? "",
+        ["cost"] = t.Redemption?.Cost ?? 0, ["position"] = Math.Round(pos, 1),
+    };
+
+    private static Track TrackFrom(JsonNode n) => new()
+    {
+        Vid = n.Str("vid"), Title = n.Str("title"), PageUrl = n.Str("url"), Duration = n.Int("duration"),
+        Requester = n.Str("requester"), Login = n.Str("login"), Priority = n.Int("priority"), Source = n.Str("source", "youtube"),
+        Views = (long)n.Num("views", -1), ResumeAt = n.Num("position"),
+        Redemption = n.Str("redemption_id") != "" ? (n.Str("reward_id"), n.Str("redemption_id"), n.Int("cost")) : null,
+    };
+
+    /// <summary>Записывает очередь и текущий трек. Заказы резервного плейлиста не сохраняются — они и так вернутся.</summary>
+    public void SaveQueue(bool force = false)
+    {
+        try
+        {
+            var cur = Current != null && !Current.Fallback ? Current : null;
+            var queue = Queue.Where(t => !t.Fallback).ToList();
+            var sig = (cur?.Id ?? "") + "|" + string.Join(",", queue.Select(t => t.Id + ":" + t.Priority));
+            var pos = cur == null ? 0 : Loading ? cur.ResumeAt : Position;   // пока трек грузится, плеер ещё не на нём
+            // очередь не менялась — позицию текущего трека обновляем раз в 10 секунд
+            if (!force && sig == _savedSig && (cur == null || Math.Abs(pos - _savedPos) < 10)) return;
+            var js = new JsonObject
+            {
+                ["saved"] = ActionLog.Now,
+                ["current"] = cur != null ? TrackJson(cur, pos) : null,
+                ["queue"] = new JsonArray(queue.Select(t => (JsonNode)TrackJson(t)).ToArray()),
+            };
+            var tmp = QueueFile + ".tmp";
+            File.WriteAllText(tmp, js.ToJsonString());
+            File.Move(tmp, QueueFile, true);
+            _savedSig = sig; _savedPos = pos;
+        }
+        catch (Exception e) { _hub.Log.Add("skip", "Сохранение очереди: " + e.Message); }
+    }
+
+    private async Task PersistLoop()
+    {
+        while (true)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            SaveQueue();
+        }
+    }
+
+    /// <summary>При запуске: возвращает очередь и недоигранный трек (если сохранены не больше N часов назад).</summary>
+    private void RestoreQueue()
+    {
+        try
+        {
+            if (!File.Exists(QueueFile)) return;
+            var js = JsonNode.Parse(File.ReadAllText(QueueFile));
+            if (!Cfg.Bool("restore_queue", true)) return;
+            var age = ActionLog.Now - js.Num("saved");
+            var maxH = Math.Clamp(Cfg.Int("restore_hours", 12), 1, 168);
+            if (age > maxH * 3600)
+            {
+                if ((js["queue"] as JsonArray)?.Count > 0 || js["current"] != null)
+                    _hub.Log.Add("music", $"Старая очередь (сохранена {(int)(age / 3600)} ч назад) не восстановлена — больше {maxH} ч");
+                return;
+            }
+            var restored = new List<Track>();
+            if (js["current"] is JsonObject c && c.Str("vid") != "") restored.Add(TrackFrom(c));
+            foreach (var n in js["queue"] as JsonArray ?? new JsonArray())
+                if (n.Str("vid") != "") { var t = TrackFrom(n); t.ResumeAt = 0; restored.Add(t); }
+            if (restored.Count == 0) return;
+            Queue.InsertRange(0, restored);
+            var first = restored[0];
+            var resume = first.ResumeAt > 3 ? $", «{first.Title}» продолжится с {(int)first.ResumeAt / 60}:{(int)first.ResumeAt % 60:00}" : "";
+            _hub.Log.Add("music", $"Очередь восстановлена после перезапуска: {restored.Count} {(restored.Count == 1 ? "трек" : restored.Count < 5 ? "трека" : "треков")}{resume}");
+            RestoredInfo = $"Очередь восстановлена: {restored.Count} тр.";
+            RestoredAt = ActionLog.Now;
+            Wake();
+        }
+        catch (Exception e) { _hub.Log.Add("skip", "Восстановление очереди: " + e.Message); }
+    }
+
+    public string RestoredInfo = "";
+    public double RestoredAt;
 
     // ---------- резервный плейлист ----------
     private List<Track> _fbList = new();
@@ -462,7 +555,9 @@ public sealed class Music
         if (Current != t) return;   // пропущен во время загрузки
         try
         {
-            StartPlayback(t, path, 0);
+            var startAt = t.ResumeAt > 3 && (t.Duration <= 0 || t.ResumeAt < t.Duration - 5) ? t.ResumeAt - 2 : 0;
+            t.ResumeAt = 0;
+            StartPlayback(t, path, startAt);
             try
             {
                 var url = t.PageUrl != "" ? t.PageUrl : t.Vid.StartsWith("ym:") ? "" : $"https://www.youtube.com/watch?v={t.Vid}";
@@ -864,6 +959,7 @@ public sealed class Music
             output = Cfg.Str("output", "app"),
             fallback_status = FallbackStatus,
             liked_count = LikedItems.Count,
+            restored = ActionLog.Now - RestoredAt < 60 ? RestoredInfo : "",
             obs_connected = ObsConnected,
         };
     }

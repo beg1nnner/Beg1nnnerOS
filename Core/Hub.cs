@@ -121,7 +121,7 @@ public sealed class Hub
 
     public void Stop()
     {
-        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
+        try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.SaveQueue(true); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
     }
 
     public void OnAccountChanged(string kind)
