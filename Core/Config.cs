@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.6.0";
+    public const string Version = "2.6.1";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -106,7 +106,7 @@ public static class Config
               "symbols": {"enabled": true, "action": "delete", "timeout": 30, "run": 12, "emotes": 10},
               "length": {"enabled": false, "action": "delete", "timeout": 30, "max": 350}},
       "captions": {"enabled": false, "device": "", "engine": "whisper", "model": "base", "lang": "ru", "show": "both",
-                   "censor": true, "hide_sec": 5, "style": "classic", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0},
+                   "censor": true, "hide_sec": 5, "style": "classic", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true},
       "votes": {"chat_results": true, "chat_start": false, "chat_lock": true, "overlay_hide_sec": 20, "overlay_points": true,
                 "poll_templates": [
                   {"title": "Во что играем дальше?", "choices": ["Продолжаем", "Другая игра", "Общение"], "duration": 120},

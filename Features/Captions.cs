@@ -14,6 +14,7 @@ using Beg1nnnerOS.Twitch;
 using NAudio.Wave;
 using Vosk;
 using Whisper.net;
+using Whisper.net.LibraryLoader;
 
 namespace Beg1nnnerOS.Features;
 
@@ -64,7 +65,31 @@ public sealed class Captions : IDisposable
     private BlockingCollection<short[]> _audio;
     private Task _worker;
 
+    // ускорение: библиотека Whisper выбирается один раз за запуск программы
+    private static bool? _runtimeGpu;
+    private string _accel = "";
+    private double _rtf;   // во сколько раз быстрее реального времени
+
     public Captions(Hub hub) => _hub = hub;
+
+    /// <summary>Порядок библиотек Whisper: видеокарта (Vulkan — NVIDIA, AMD, Intel), если не вышло — процессор.</summary>
+    private static void PrepareRuntime(bool gpu)
+    {
+        if (_runtimeGpu.HasValue) return;
+        _runtimeGpu = gpu;
+        RuntimeOptions.RuntimeLibraryOrder = gpu
+            ? new List<RuntimeLibrary> { RuntimeLibrary.Vulkan, RuntimeLibrary.Cpu, RuntimeLibrary.CpuNoAvx }
+            : new List<RuntimeLibrary> { RuntimeLibrary.Cpu, RuntimeLibrary.CpuNoAvx };
+    }
+
+    private static string AccelName(RuntimeLibrary? lib) => lib switch
+    {
+        RuntimeLibrary.Vulkan => "видеокарта (Vulkan)",
+        RuntimeLibrary.Cuda => "видеокарта (CUDA)",
+        RuntimeLibrary.CpuNoAvx => "процессор (без AVX — медленно)",
+        RuntimeLibrary.Cpu => "процессор",
+        _ => "",
+    };
     private JsonObject Cfg => _hub.S.Obj("captions") ?? new JsonObject();
     public static string ModelsDir => Path.Combine(Config.Root, "models");
 
@@ -194,6 +219,7 @@ public sealed class Captions : IDisposable
         var show = c.Str("show", "both");
         var token = _cts.Token;
         var path = ModelPath(model);
+        if (engine == "whisper") PrepareRuntime(c.Bool("gpu", true));
         _worker = engine == "vosk"
             ? Task.Factory.StartNew(() => VoskLoop(path, lang, show, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default)
             : Task.Factory.StartNew(() => WhisperLoop(path, lang, show, token).GetAwaiter().GetResult(), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -266,6 +292,15 @@ public sealed class Captions : IDisposable
         try
         {
             using var factory = WhisperFactory.FromPath(modelPath);
+            var loaded = RuntimeOptions.LoadedLibrary;
+            _accel = AccelName(loaded);
+            var wantGpu = _runtimeGpu == true;
+            _hub.Loop.Post(() =>
+            {
+                _hub.Log.Add("system", $"Субтитры: Whisper работает на устройстве «{_accel}»");
+                if (wantGpu && loaded is RuntimeLibrary.Cpu or RuntimeLibrary.CpuNoAvx)
+                    _hub.Log.Add("skip", "Субтитры: видеокарта недоступна (нет Vulkan или старый драйвер) — распознавание на процессоре. Обновите драйвер видеокарты.");
+            });
             var threads = Math.Clamp(Cfg.Int("threads", 0) > 0 ? Cfg.Int("threads") : Environment.ProcessorCount / 2, 1, 16);
             WhisperProcessor transcribe = null, translate = null;
             if (show != "en" || lang == "en")
@@ -307,8 +342,10 @@ public sealed class Captions : IDisposable
                     if (seconds < 0.5) { phrase.Clear(); continue; }
                     var samples = phrase.Select(x => x / 32768f).ToArray();
                     phrase.Clear();
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
                     var text = transcribe != null ? await Run(transcribe, samples, ct) : "";
                     var en = translate != null ? await Run(translate, samples, ct) : (lang == "en" ? text : "");
+                    _rtf = Math.Round(seconds / Math.Max(0.05, sw.Elapsed.TotalSeconds), 1);
                     if (lang == "en") { en = text; text = show == "en" ? "" : text; }
                     AddLine(text, en);
                 }
@@ -436,6 +473,9 @@ public sealed class Captions : IDisposable
             enabled = c.Bool("enabled"), running = Running, status = Status, lines, partial, speaking = _speaking,
             level = Math.Round(Math.Min(1, _level * 6), 3), now = ActionLog.Now, cfg = style,
             engine, model = model.Key, has_model = HasModel(engine, model.Key),
+            accel = Running ? (engine == "whisper" ? _accel : "процессор") : "",
+            speed = engine == "whisper" && Running ? _rtf : 0,
+            restart_needed = engine == "whisper" && _runtimeGpu.HasValue && _runtimeGpu.Value != c.Bool("gpu", true),
             download = new { active = _dlKey != "", key = _dlKey, progress = Math.Round(_dlProgress, 3), error = _dlError },
             whisper_models = WhisperModels.Select(m => new { key = m.Key, title = m.Title, ready = HasModel("whisper", m.Key) }),
             vosk_models = VoskModels.Select(m => new { key = m.Key, title = m.Title, ready = HasModel("vosk", m.Key) }),

@@ -950,10 +950,13 @@
     <input type="hidden" data-s="captions.engine" id="cap-engine">
     <div class="row" style="margin-top:12px;align-items:flex-end;flex-wrap:wrap">
       <label class="f" style="width:300px" id="cap-model-f"><span>Модель Whisper</span><select data-s="captions.model" id="cap-model"></select></label>
+      <label class="f" style="width:230px" id="cap-gpu-f"><span>Ускорение</span><select data-s="captions.gpu" data-bool>
+        <option value="true">Видеокарта (Vulkan)</option><option value="false">Только процессор</option></select></label>
       <button id="cap-dl" onclick="capDownload()">⬇ Скачать модель</button>
       <div class="grow" id="cap-dl-box" style="min-width:220px"></div>
     </div>
-    <div class="muted small" style="margin-top:6px">Модель скачивается один раз (с GitHub). Распознавание работает на процессоре: если субтитры отстают — выберите модель поменьше или режим Vosk.</div>
+    <div class="small" id="cap-accel" style="margin-top:8px"></div>
+    <div class="muted small" style="margin-top:6px">Модель скачивается один раз (с GitHub). Whisper работает на видеокарте NVIDIA, AMD или Intel через Vulkan — в несколько раз быстрее, и процессор остаётся игре. Если видеокарта не подойдёт, программа сама перейдёт на процессор. Если субтитры отстают — выберите модель поменьше или режим Vosk.</div>
   </div>
   <div class="card">
     <h3 style="margin-top:0">🌐 Что показывать</h3>
@@ -1243,6 +1246,7 @@ function collect() {
     if (el.type === "checkbox") v = el.checked;
     else if (el.type === "number" || el.hasAttribute("data-num")) v = el.value === "" ? 0 : +el.value;
     else if (el.hasAttribute("data-list")) v = el.value.split("\n").map(x => x.trim()).filter(Boolean);
+    else if (el.hasAttribute("data-bool")) v = el.value === "true";
     else v = el.value;
     setPath(out, el.dataset.s, v);
   });
@@ -2669,6 +2673,9 @@ function capRender() {
   $("cap-level").style.width = Math.round((c.level || 0) * 100) + "%";
   const models = eng === "vosk" ? c.vosk_models : c.whisper_models;
   $("cap-model-f").classList.toggle("hidden", eng === "vosk");
+  $("cap-gpu-f").classList.toggle("hidden", eng === "vosk");
+  $("cap-accel").innerHTML = (c.accel ? `Сейчас работает на: <b>${esc(c.accel)}</b>` + (c.speed ? ` · быстрее реального времени в <b>${c.speed}</b> раз` : "") : "")
+    + (c.restart_needed ? `<div style="color:#fbbf24;margin-top:4px">⚠ Смена ускорения заработает после перезапуска программы</div>` : "");
   const sel = $("cap-model"), want = getPath(S, "captions.model") || "base";
   if (sel.dataset.sig !== JSON.stringify(c.whisper_models)) {
     sel.innerHTML = c.whisper_models.map(m => `<option value="${m.key}">${esc(m.title)}${m.ready ? " ✓" : ""}</option>`).join("");
