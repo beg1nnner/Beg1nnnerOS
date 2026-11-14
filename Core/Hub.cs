@@ -41,6 +41,7 @@ public sealed class Hub
     public readonly Features.Announce Announce;
     public readonly Features.Votes Votes;
     public readonly Features.Moderation Moderation;
+    public readonly Features.CommandImport CommandImport;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -93,6 +94,7 @@ public sealed class Hub
         Announce = new Features.Announce(this);
         Votes = new Features.Votes(this);
         Moderation = new Features.Moderation(this);
+        CommandImport = new Features.CommandImport(this);
     }
 
     public void Start()

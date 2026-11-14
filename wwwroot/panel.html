@@ -116,6 +116,17 @@
   .mod-it .tx { font-size:12.5px; color:var(--muted); overflow-wrap:anywhere; margin-top:2px; }
   .mod-tag { font-size:11.5px; padding:1px 7px; border-radius:999px; background:#2a2a36; margin-left:6px; }
   .mod-tag.timeout { background:#7f1d1d; color:#fecaca; } .mod-tag.delete { background:#713f12; color:#fde68a; }
+  .imp-src { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+  .imp-src button.on { border-color:var(--accent); background:#9146ff30; }
+  .imp-list { max-height:52vh; overflow:auto; border:1px solid var(--line); border-radius:8px; margin-top:10px; }
+  .imp-it { display:flex; gap:10px; padding:9px 12px; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .imp-it:last-child { border-bottom:0; }
+  .imp-it.off { opacity:.5; }
+  .imp-it input[type=checkbox] { width:auto; margin-top:3px; }
+  .imp-it .bd { flex:1; min-width:0; }
+  .imp-it .rs { font-size:12.5px; color:var(--muted); overflow-wrap:anywhere; margin-top:2px; }
+  .imp-w { font-size:11.5px; color:#fbbf24; margin-top:3px; }
+  .imp-tag { font-size:11px; padding:1px 7px; border-radius:999px; background:#2a2a36; margin-left:6px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -373,7 +384,7 @@
   </div>
   <div data-tab="cmds">
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
+      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="sm" onclick="openImport()">⇩ Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
       <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Ответ</th><th>Доступ</th><th>Кулдаун</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-custom"></tbody></table>
       <div class="row small muted" style="margin-top:10px">Общий лимит запросов одного зрителя:
         <input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" style="width:80px"> сек</div>
@@ -1499,7 +1510,7 @@ async function loadStats() {
 function modal(html) { $("modal-body").innerHTML = html; $("modal").classList.remove("hidden"); }
 function closeModal() { $("modal").classList.add("hidden"); $("modal-body").innerHTML = ""; }
 const accessOptions = v => Object.entries(ACCESS).map(([k, t]) => `<option value="${k}" ${k === v ? "selected" : ""}>${t}</option>`).join("");
-const VARS = ["{user}", "{login}", "{args}", "{channel}", "{uptime}", "{random}"];
+const VARS = ["{user}", "{touser}", "{login}", "{args}", "{1}", "{channel}", "{uptime}", "{game}", "{title}", "{count}", "{random}"];
 function varsHtml(list, target) {
   return `<div class="vars small muted" style="margin-top:6px">Подстановки: ${list.map(v => `<code onclick="insertVar('${target}','${v}')">${v}</code>`).join("")}</div>`;
 }
@@ -2409,6 +2420,76 @@ async function loadMod() {
         <div class="tx">${esc(i.text)}</div></div>
       ${i.action === "timeout" && i.ok ? `<button class="sm" onclick="modUnban('${esc(i.user_id)}',this)">Снять таймаут</button>` : ""}</div>`;
   }).join("") || '<span class="muted small">Пока пусто — здесь появятся удалённые сообщения, таймауты и предупреждения этого запуска программы.</span>';
+}
+
+// ================= ИМПОРТ КОМАНД =================
+let IMP = {src: "nightbot", items: []};
+const IMP_SRC = {nightbot: "Nightbot", streamelements: "StreamElements", moobot: "moo.bot", text: "Вставить текстом"};
+function openImport() {
+  const login = (ST && ST.ready && ST.ready.streamer && ST.ready.streamer.login) || "";
+  modal(`<h3 style="margin-top:0">⇩ Импорт своих команд из другого бота</h3>
+    <div class="muted small">Программа возьмёт публичный список команд канала (тот, что виден зрителям по !commands), переведёт переменные в формат Beg1nnnerOS и покажет, что добавится. Ничего не добавится без вашего подтверждения.</div>
+    <div class="imp-src">${Object.entries(IMP_SRC).map(([k, t]) => `<button class="sm ${k === IMP.src ? "on" : ""}" onclick="impSrc('${k}')">${t}</button>`).join("")}</div>
+    <div id="imp-in"></div>
+    <div id="imp-out"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button onclick="closeModal()">Закрыть</button>
+      <button class="primary hidden" id="imp-go" onclick="impGo()"></button></div>`);
+  impSrc(IMP.src, login);
+}
+function impSrc(k, login) {
+  IMP.src = k; IMP.items = [];
+  document.querySelectorAll(".imp-src button").forEach(b => b.classList.toggle("on", b.textContent === IMP_SRC[k]));
+  const prev = $("imp-ch") ? $("imp-ch").value : (login || "");
+  $("imp-in").innerHTML = k === "text"
+    ? `<label class="f"><span>По одной команде в строке: «!команда ответ». Подойдёт список из любого бота (Streamlabs, Fossabot и других) — переменные Nightbot и StreamElements переведутся сами.</span>
+        <textarea id="imp-text" rows="7" placeholder="!discord Наш дискорд: https://discord.gg/...&#10;!вк Группа ВК: https://vk.com/...&#10;!обнять $(user) обнимает $(touser) 🤗"></textarea></label>
+       <div class="row" style="margin-top:8px"><button onclick="impFetch()">Разобрать</button></div>`
+    : `<div class="row"><label class="f grow"><span>Ник канала на Twitch (или ссылка на страницу команд)</span><input id="imp-ch" value="${esc(prev)}" placeholder="beg1nnner" onkeydown="if(event.key==='Enter')impFetch()"></label>
+        <button id="imp-load" style="margin-top:16px" onclick="impFetch()">Загрузить команды</button></div>
+       <div class="muted small">${k === "nightbot" ? "Команды, скрытые в Nightbot от публичного списка, не попадут — их можно вставить текстом."
+         : k === "streamelements" ? "Попадут команды, не скрытые от публичной страницы StreamElements. Скрытые можно вставить текстом."
+         : "moo.bot показывает публично только команды для всех зрителей. Динамические теги moo.bot (игра, счётчики) проверьте после импорта."}</div>`;
+  $("imp-out").innerHTML = ""; $("imp-go").classList.add("hidden");
+}
+async function impFetch() {
+  const body = IMP.src === "text" ? {source: "text", text: $("imp-text").value} : {source: IMP.src, channel: $("imp-ch").value};
+  const btn = $("imp-load"); if (btn) { btn.disabled = true; btn.textContent = "Загружаю…"; }
+  try { const r = await api("/commands/import/fetch", body); IMP.items = r.items; impRender(); }
+  catch (e) { $("imp-out").innerHTML = ""; }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "Загрузить команды"; } }
+}
+function impRender() {
+  const it = IMP.items;
+  if (!it.length) { $("imp-out").innerHTML = `<div class="muted" style="margin-top:12px">Публичных команд не найдено.</div>`; $("imp-go").classList.add("hidden"); return; }
+  it.forEach(x => { if (x.sel === undefined) x.sel = x.status === "new"; });
+  const ok = it.filter(x => x.status === "new").length;
+  $("imp-out").innerHTML = `<div class="row" style="margin-top:12px"><span class="grow small">Найдено ${it.length}, можно добавить ${ok}${it.length - ok ? `, пропускаются ${it.length - ok} (уже есть или не подходят)` : ""}</span>
+      <button class="sm" onclick="IMP.items.forEach(x=>x.sel=x.status==='new');impRender()">Выбрать все</button><button class="sm" onclick="IMP.items.forEach(x=>x.sel=false);impRender()">Снять все</button></div>
+    <div class="imp-list">${it.map((x, i) => `<div class="imp-it ${x.status !== "new" ? "off" : ""}">
+      <input type="checkbox" ${x.sel ? "checked" : ""} ${x.status !== "new" ? "disabled" : ""} onchange="IMP.items[${i}].sel=this.checked;impBtn()">
+      <div class="bd"><b>${esc(x.name)}</b>${x.aliases.length ? ` <span class="muted small">${esc(x.aliases.join(" "))}</span>` : ""}
+        <span class="imp-tag">${esc(ACCESS[x.access] || x.access)}</span>${x.cooldown ? `<span class="imp-tag">кулдаун ${x.cooldown} с</span>` : ""}
+        ${x.status !== "new" ? `<span class="imp-tag" style="color:#f87171">${esc(x.reason)}</span>` : ""}
+        <div class="rs">${esc(x.response)}</div>
+        ${x.warnings.map(w => `<div class="imp-w">⚠ ${esc(w)}</div>`).join("")}
+        ${x.original && x.original !== x.response ? `<details class="small muted"><summary style="cursor:pointer">как было</summary><code style="white-space:pre-wrap">${esc(x.original)}</code></details>` : ""}
+      </div></div>`).join("")}</div>`;
+  impBtn();
+}
+function impBtn() {
+  const n = IMP.items.filter(x => x.sel).length, b = $("imp-go");
+  b.classList.toggle("hidden", !IMP.items.length); b.disabled = !n; b.textContent = n ? `Добавить ${n} ${n % 10 === 1 && n % 100 !== 11 ? "команду" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "команды" : "команд"}` : "Ничего не выбрано";
+}
+async function impGo() {
+  const items = IMP.items.filter(x => x.sel);
+  $("imp-go").disabled = true;
+  try {
+    const r = await api("/commands/import", {items});
+    toast(`Добавлено команд: ${r.added}` + (r.errors.length ? `, не получилось: ${r.errors.length}` : ""));
+    if (r.errors.length) $("imp-out").insertAdjacentHTML("afterbegin", `<div class="card hl small" style="margin-top:10px">${r.errors.map(esc).join("<br>")}</div>`);
+    else closeModal();
+    loadCommands();
+  } catch (e) { $("imp-go").disabled = false; }
 }
 </script>
 </body>

@@ -280,6 +280,9 @@ public sealed partial class WebServer
         app.MapDelete("/api/commands/custom/{id}", H((c, b) => { cmds.DeleteCustom(Route(c, "id")); return Ok(); }));
         app.MapPost("/api/commands/standard/{key}", H((c, b) => Ok(cmds.SaveStandard(Route(c, "key"), b))));
         app.MapDelete("/api/commands/standard/{key}", H((c, b) => { cmds.DeleteStandard(Route(c, "key")); return Ok(); }));
+        app.MapPost("/api/commands/import/fetch", H(async (c, b) =>
+            Ok(b.Str("source") == "text" ? _hub.CommandImport.FromText(b.Str("text")) : await _hub.CommandImport.Fetch(b.Str("source"), b.Str("channel")))));
+        app.MapPost("/api/commands/import", H((c, b) => Ok(_hub.CommandImport.Import(b["items"]))));
         app.MapPost("/api/commands/reset", H((c, b) => { cmds.ResetStandard(); return Ok(); }));
         app.MapPost("/api/commands/toggle", H((c, b) => { cmds.SetEnabled(b.Str("kind"), b.Str("id"), b.Bool("enabled")); return Ok(); }));
         app.MapPost("/api/commands/preview", H((c, b) =>

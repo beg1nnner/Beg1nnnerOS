@@ -207,7 +207,8 @@ public sealed class Commands
         clean["response"] = resp.Length > 500 ? resp[..500] : resp;
         var arr = Custom;
         var idx = arr.Select((n, i) => (n, i)).Where(p => p.n.Str("id") == id).Select(p => p.i).DefaultIfEmpty(-1).First();
-        if (idx >= 0) arr[idx] = clean; else arr.Add(clean);
+        if (idx >= 0) { if (arr[idx].Int("count") > 0) clean["count"] = arr[idx].Int("count"); arr[idx] = clean; }
+        else arr.Add(clean);
         Store.Save();
         return clean;
     }
@@ -276,11 +277,25 @@ public sealed class Commands
         return parts.Count > 0 ? string.Join(" ", parts) : "0 сек";
     }
 
-    private Dictionary<string, string> BaseCtx(ChatMsg msg, string args) => new()
+    private Dictionary<string, string> BaseCtx(ChatMsg msg, string args)
     {
-        ["user"] = msg.Name, ["login"] = msg.Login, ["args"] = args,
-        ["channel"] = _hub.Twitch.Streamer.Login, ["uptime"] = _hub.Stream.UptimeText(),
-    };
+        var ctx = new Dictionary<string, string>
+        {
+            ["user"] = msg.Name, ["login"] = msg.Login, ["args"] = args,
+            ["channel"] = _hub.Twitch.Streamer.Login, ["uptime"] = _hub.Stream.UptimeText(),
+            ["game"] = _hub.Stream.Category, ["title"] = _hub.Stream.Title,
+        };
+        AddArgs(ctx, args, msg.Name);
+        return ctx;
+    }
+
+    /// <summary>{touser} — ник из первого слова (без @) или сам зритель; {1}…{9} — отдельные слова.</summary>
+    private static void AddArgs(Dictionary<string, string> ctx, string args, string user)
+    {
+        var words = (args ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+        ctx["touser"] = words.Length > 0 ? words[0].TrimStart('@') : user;
+        for (var i = 1; i <= 9; i++) ctx[i.ToString(CultureInfo.InvariantCulture)] = words.Length >= i ? words[i - 1] : "";
+    }
 
     // ---------- выполнение ----------
     public async Task Handle(ChatMsg msg)
@@ -329,7 +344,17 @@ public sealed class Commands
         var ctx = BaseCtx(msg, args);
         string reply;
         if (found.Kind == "custom")
+        {
+            // {count} — сколько раз вызвали команду (счётчик хранится в самой команде)
+            if (cmd.Str("response").Contains("{count}"))
+            {
+                var n = cmd.Int("count") + 1;
+                cmd["count"] = n;
+                Store.Save();
+                ctx["count"] = n.ToString(CultureInfo.InvariantCulture);
+            }
             reply = Render(cmd.Str("response"), ctx, cmd.Int("random_max", 100));
+        }
         else
         {
             string result;
@@ -351,7 +376,10 @@ public sealed class Commands
             ["user"] = user == "" ? "Зритель" : user, ["login"] = (user == "" ? "viewer" : user).ToLowerInvariant(),
             ["args"] = args, ["channel"] = _hub.Twitch.Streamer.Login == "" ? "channel" : _hub.Twitch.Streamer.Login,
             ["uptime"] = _hub.Stream.UptimeText(), ["result"] = "[результат функции]",
+            ["game"] = _hub.Stream.Category == "" ? "Just Chatting" : _hub.Stream.Category,
+            ["title"] = _hub.Stream.Title == "" ? "Название стрима" : _hub.Stream.Title, ["count"] = "42",
         };
+        AddArgs(ctx, args, ctx["user"]);
         return Render(template, ctx, randomMax);
     }
 
