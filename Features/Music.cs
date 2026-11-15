@@ -866,6 +866,13 @@ public sealed class Music
         return true;
     }
 
+    /// <summary>Поставить на паузу или снять с неё. Возвращает новое состояние паузы.</summary>
+    public bool SetPaused(bool paused)
+    {
+        if (IsPaused != paused) TogglePause();
+        return IsPaused;
+    }
+
     public bool TogglePause()
     {
         if (_obsActive) { _obsPaused = !_obsPaused; return _obsPaused; }

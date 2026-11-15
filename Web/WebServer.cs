@@ -325,6 +325,18 @@ public sealed partial class WebServer
         app.MapGet("/api/captions", H((c, b) => Ok(_hub.Captions.State(c.Request.Query["full"] == "1"))));
         app.MapGet("/api/captions/devices", H((c, b) => Ok(new { items = Features.Captions.Devices() })));
         app.MapPost("/api/captions/toggle", H((c, b) => Ok(new { enabled = _hub.Captions.Toggle() })));
+        app.MapGet("/api/voice", H((c, b) => Ok(_hub.Voice.State())));
+        app.MapPost("/api/voice/test", H((c, b) => {
+            _hub.Voice.StartTest(); _hub.Captions.Apply();
+            _hub.Loop.Start(async () => { await Task.Delay(21000); _hub.Captions.Apply(); });   // по окончании проверки — вернуть как было
+            return Ok(_hub.Voice.State());
+        }));
+        app.MapPost("/api/voice/try", H((c, b) =>
+        {
+            // проверка распознавания фразы без микрофона и без выполнения команды
+            var (wake, cmd) = _hub.Voice.Detect(b.Str("text"));
+            return Ok(new { wake, command = cmd?.Key ?? "", title = cmd?.Title ?? "" });
+        }));
         app.MapPost("/api/captions/download", H((c, b) => Ok(new { message = _hub.Captions.StartDownload(b.Str("engine"), b.Str("model")) })));
 
         // фильтр спама и ссылок
@@ -885,7 +897,7 @@ public sealed partial class WebServer
     private object StateObj() => new
     {
         version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
-        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"),
+        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"), voice = _hub.Voice.Last(),
         alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
         port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
         update = _hub.Updater.State(),

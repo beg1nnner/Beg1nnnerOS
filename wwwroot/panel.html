@@ -298,6 +298,16 @@
   .saved-mark.show { pointer-events:auto; opacity:1; transform:none; }
   /* уведомления */
   .tb-bell-w { position:relative; }
+  /* голосовые команды */
+  .tbl-wrap { overflow-x:auto; }
+  .vc-tbl td { vertical-align:top; }
+  .vc-tbl input[type=text], .vc-tbl input:not([type]) { width:100%; min-width:180px; }
+  .vc-ph { display:flex; flex-wrap:wrap; gap:var(--sp-1); }
+  .vc-ph span { padding:var(--sp-half) var(--sp-2); border-radius:var(--r-pill); background:var(--field); border:1px solid var(--line); font-size:var(--fs-xs); color:var(--muted); }
+  .vc-foot { display:flex; gap:var(--sp-5); flex-wrap:wrap; align-items:flex-start; margin-top:var(--sp-4); padding-top:var(--sp-4); border-top:1px solid var(--line); }
+  .vc-last { min-width:240px; }
+  .vc-last q { font-weight:600; quotes:"«" "»"; }
+  .vc-test { width:280px; max-width:100%; }
   /* «Безопасно для стрима»: секреты размыты и не выделяются, поля — точками */
   .tb-safe .sf-on, html.safe .tb-safe .sf-off { display:none; }
   html.safe .tb-safe .sf-on { display:block; }
@@ -1716,6 +1726,29 @@
     <div id="cap-live" class="small u-minh-40px u-mt-1" data-noi18n></div>
   </div>
   </div>
+  <div class="card vc" id="vc-card">
+    <div class="row u-fw-wrap"><h3 class="grow u-m-0">Голосовые команды</h3>
+      <label class="switch"><input type="checkbox" data-s="captions.voice.enabled" data-autosave> <b>Включены</b></label></div>
+    <div class="muted small u-m-1-0-3">Скажите слово активации и команду: «бот, следующий трек». Используется то же распознавание, что у субтитров, — оно работает на этом компьютере без интернета, а сами субтитры при этом можно не включать.</div>
+    <div id="vc-model"></div>
+    <div class="row u-fw-wrap u-ai-fend">
+      <label class="f u-w-200px"><span>Слово активации</span><input data-s="captions.voice.wake" maxlength="20" placeholder="бот" aria-describedby="vc-wake-h"></label>
+      <label class="switch u-mb-2"><input type="checkbox" data-s="captions.voice.hide"> Не показывать команды в субтитрах</label>
+      <label class="switch u-mb-2"><input type="checkbox" data-s="captions.voice.chime"> Звуковой сигнал при выполнении</label>
+    </div>
+    <div class="small muted u-mt-1" id="vc-wake-h">Без слова активации команды не срабатывают — обычная речь на стриме ничего не включит. Повтор одной команды в течение 3 секунд пропускается.</div>
+    <div class="tbl-wrap u-mt-3"><table class="vc-tbl">
+      <thead><tr><th scope="col">Вкл.</th><th scope="col">Действие</th><th scope="col">Фразы</th><th scope="col">Свои варианты (через запятую)</th></tr></thead>
+      <tbody id="vc-cmds"></tbody></table></div>
+    <div class="vc-foot">
+      <div class="vc-last grow"><div class="micro">Последнее распознанное</div><div id="vc-last" class="u-mt-1" aria-live="polite"></div></div>
+      <div class="vc-test">
+        <button id="vc-test" onclick="vcTest()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Проверить микрофон</span></button>
+        <div class="bar u-h-8px u-mt-2" aria-hidden="true"><i id="vc-level" class="u-bg-linear-gradient-90deg-ok-warn"></i></div>
+        <div class="small muted u-mt-1" id="vc-test-h">20 секунд: скажите команду — она распознается, но не выполнится.</div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ================= ДОПОЛНИТЕЛЬНО ================= -->
@@ -2659,6 +2692,7 @@ async function poll(pushed) {
   else { try { ST = (await api("/state")); } catch (e) { return; } }
   const r = ST.ready, m = ST.music;
   // горячая клавиша меняет режим на сервере — подхватываем, если панель сама ничего не сохраняет
+  if (!DEMO.on) vcToast(ST.voice);
   if (typeof ST.stream_safe === "boolean" && ST.stream_safe !== SAFE && !SAVE_T && !SAVING) { safeSet(ST.stream_safe); if (S && S.ui) S.ui.stream_safe = SAFE; }
   $("demo-cta").classList.toggle("hidden", DEMO.on || !!(r.streamer && r.streamer.ok));
   $("ver").textContent = "v" + ST.version;
@@ -4497,6 +4531,48 @@ function capRender() {
   const ln = (c.lines || []).slice(-3);
   $("cap-live").innerHTML = ln.map(l => `<div>${esc(l.text)}${l.en ? ` <span class="muted">— ${esc(l.en)}</span>` : ""}</div>`).join("")
     + (c.partial ? `<div class="muted"><i>${esc(c.partial)}</i></div>` : "") || '<span class="muted">пока тишина</span>';
+  vcRender(c);
+}
+// ---------- голосовые команды ----------
+const VC_TITLES = {skip: "Следующий трек", pause: "Пауза", resume: "Продолжить", clip: "Сделать клип"};
+function vcRender(c) {
+  const v = c.voice; if (!v) return;
+  $("vc-model").innerHTML = c.has_model ? "" : `<div class="notice warn u-mb-3">${ICON.alert}<div>${tr("Для распознавания нужна модель — она скачивается один раз и дальше работает без интернета.")}
+    <div class="u-mt-2"><button class="sm" onclick="capDownload()">${ICON.download}<span>${tr("Скачать модель")}</span></button></div></div></div>`;
+  const body = $("vc-cmds");
+  if (body.dataset.sig !== JSON.stringify(v.commands.map(x => [x.key, x.on, x.custom]))) {
+    const focused = document.activeElement && body.contains(document.activeElement) ? document.activeElement.id : "";
+    body.innerHTML = v.commands.map(x => `<tr>
+      <td><input type="checkbox" id="vc-on-${x.key}" ${x.on ? "checked" : ""} aria-label="${esc(tr("Включить команду"))} «${esc(tr(VC_TITLES[x.key] || x.title))}»" onchange="vcSet('${x.key}', 'on', this.checked)"></td>
+      <td><b>${esc(tr(VC_TITLES[x.key] || x.title))}</b></td>
+      <td><div class="vc-ph" data-noi18n>${x.phrases.map(p => `<span>${esc(p)}</span>`).join("")}</div></td>
+      <td><input id="vc-cu-${x.key}" value="${esc(x.custom.join(", "))}" placeholder="${esc(tr("например: дальше, некст"))}" aria-label="${esc(tr("Свои фразы для команды"))} «${esc(tr(VC_TITLES[x.key] || x.title))}»" onchange="vcSet('${x.key}', 'custom', this.value)"></td></tr>`).join("");
+    body.dataset.sig = JSON.stringify(v.commands.map(x => [x.key, x.on, x.custom]));
+    if (focused && $(focused)) $(focused).focus();
+  }
+  const l = v.last;
+  $("vc-last").innerHTML = !l ? `<span class="muted">${tr("пока ничего — скажите «бот, пауза»")}</span>`
+    : `<q data-noi18n>${esc(l.text)}</q><div class="small ${l.command && !l.result.startsWith("ошибка") ? "ok" : "muted"} u-mt-1">`
+      + (l.command ? `${esc(tr(VC_TITLES[l.command] || l.command))}${l.result ? " — " + esc(tr(l.result)) : ""}` : esc(tr(l.result))) + `</div>`;
+  $("vc-level").style.width = Math.round((c.level || 0) * 100) + "%";
+  $("vc-test").disabled = !!v.testing;
+  $("vc-test").querySelector("span").textContent = v.testing ? `${tr("Слушаю…")} ${v.test_left}` : tr("Проверить микрофон");
+}
+function vcSet(key, what, val) {
+  const v = S.captions.voice = S.captions.voice || {};
+  if (what === "on") { v.off = v.off || {}; if (val) delete v.off[key]; else v.off[key] = true; }
+  else { v.phrases = v.phrases || {}; v.phrases[key] = String(val).split(/[,;]/).map(x => x.trim()).filter(Boolean).slice(0, 20); }
+  queueSave(null, 300);
+}
+async function vcTest() {
+  try { await api("/voice/test", {}); toast("Проверка микрофона: 20 секунд, команды не выполняются"); capLoad(); } catch (e) {}
+}
+let VC_SEEN = null;
+function vcToast(v) {
+  if (VC_SEEN === null) { VC_SEEN = v ? v.id : 0; return; }
+  if (!v || !v.result || v.id === VC_SEEN) return;
+  VC_SEEN = v.id;
+  toast(`${tr("Голосовая команда")}: ${tr(VC_TITLES[Object.keys(VC_TITLES).find(k => VC_TITLES[k] === v.title)] || v.title)} — ${tr(v.result)}`);
 }
 $("cap-model") && $("cap-model").addEventListener("change", e => { e.target.dataset.touched = "1"; capRender(); });
 async function capDownload() {

@@ -434,8 +434,12 @@ public sealed class Commands
     private Task<string> HTimers(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.ListViewer(msg));
     private Task<string> HCancelTimer(ChatMsg msg, string args) => Task.FromResult(_hub.Timers.CancelViewer(msg, args));
 
-    private async Task<string> HClip(ChatMsg msg, string args)
+    private Task<string> HClip(ChatMsg msg, string args) => ClipAs(msg.Name);
+
+    /// <summary>Действие команды !clip от имени зрителя или стримера (голосовая команда). Возвращает ответ для чата.</summary>
+    public async Task<string> ClipAs(string name)
     {
+        var msg = new { Name = name };
         if (!_hub.Stream.Live) return $"@{msg.Name}, клип можно сделать только во время эфира";
         if (!_hub.Twitch.Streamer.Scopes.Contains("clips:edit"))
             return $"@{msg.Name}, клипы пока не включены: стримеру нужно перезайти в Twitch в программе Beg1nnnerOS";

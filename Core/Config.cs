@@ -110,7 +110,8 @@ public static class Config
               "symbols": {"enabled": true, "action": "delete", "timeout": 30, "run": 12, "emotes": 10},
               "length": {"enabled": false, "action": "delete", "timeout": 30, "max": 350}},
       "captions": {"enabled": false, "device": "", "engine": "whisper", "model": "base", "lang": "ru", "show": "both",
-                   "censor": true, "hide_sec": 5, "style": "studio", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true},
+                   "censor": true, "hide_sec": 5, "style": "studio", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true,
+                   "voice": {"enabled": false, "wake": "бот", "hide": true, "chime": true, "chime_style": "notify", "chime_volume": 40, "phrases": {}, "off": {}}},
       "votes": {"chat_results": true, "chat_start": false, "chat_lock": true, "overlay_hide_sec": 20, "overlay_points": true,
                 "poll_templates": [
                   {"title": "Во что играем дальше?", "choices": ["Продолжаем", "Другая игра", "Общение"], "duration": 120},

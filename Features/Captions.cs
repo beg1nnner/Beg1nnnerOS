@@ -187,12 +187,17 @@ public sealed class Captions : IDisposable
     /// <summary>Применяет настройки: запускает или останавливает распознавание.</summary>
     public void Apply()
     {
-        Stop();
         var c = Cfg;
-        if (!c.Bool("enabled")) { Status = "выключены"; return; }
+        var voice = _hub.Voice.Wants;
         var (engine, model) = Current();
+        // распознаватель один на субтитры и голосовые команды; перезапускаем, только если изменилось что-то для него важное
+        var sig = string.Join("|", c.Bool("enabled") || voice, c.Str("device"), engine, model.Key, c.Str("lang"), c.Str("show"), c.Bool("gpu", true), c.Int("threads"), voice && c.Str("show") == "en");
+        if (Running && sig == _sig) { Status = StatusText(engine); return; }
+        Stop();
+        _sig = "";
+        if (!c.Bool("enabled") && !voice) { Status = "выключены"; return; }
         if (!HasModel(engine, model.Key)) { Status = "нужно скачать модель"; return; }
-        try { Start(engine, model, c); }
+        try { Start(engine, model, c); _sig = sig; }
         catch (Exception e)
         {
             Stop();
@@ -244,8 +249,12 @@ public sealed class Captions : IDisposable
         };
         _wave.StartRecording();
         Running = true;
-        Status = engine == "vosk" ? "слушаю микрофон (Vosk)" : "слушаю микрофон (Whisper)";
+        Status = StatusText(engine);
     }
+
+    private string _sig = "";
+    private string StatusText(string engine) =>
+        (Cfg.Bool("enabled") ? "слушаю микрофон" : "слушаю только голосовые команды") + (engine == "vosk" ? " (Vosk)" : " (Whisper)");
 
     public void Stop()
     {
@@ -303,7 +312,7 @@ public sealed class Captions : IDisposable
             });
             var threads = Math.Clamp(Cfg.Int("threads", 0) > 0 ? Cfg.Int("threads") : Environment.ProcessorCount / 2, 1, 16);
             WhisperProcessor transcribe = null, translate = null;
-            if (show != "en" || lang == "en")
+            if (show != "en" || lang == "en" || _hub.Voice.Wants)
                 transcribe = factory.CreateBuilder().WithLanguage(lang).WithThreads(threads).WithNoContext().Build();
             if (show != "orig" && lang != "en")
                 translate = factory.CreateBuilder().WithLanguage(lang).WithTranslate().WithThreads(threads).WithNoContext().Build();
@@ -346,7 +355,9 @@ public sealed class Captions : IDisposable
                     var text = transcribe != null ? await Run(transcribe, samples, ct) : "";
                     var en = translate != null ? await Run(translate, samples, ct) : (lang == "en" ? text : "");
                     _rtf = Math.Round(seconds / Math.Max(0.05, sw.Elapsed.TotalSeconds), 1);
+                    if (_hub.Voice.OnFinal(text)) continue;   // голосовая команда — в субтитры не попадает
                     if (lang == "en") { en = text; text = show == "en" ? "" : text; }
+                    else if (show == "en") text = "";
                     AddLine(text, en);
                 }
             }
@@ -392,6 +403,7 @@ public sealed class Captions : IDisposable
                     var text = Cap(JsonNode.Parse(rec.Result())?.Str("text") ?? "");
                     SetPartial("");
                     if (text == "") continue;
+                    if (_hub.Voice.OnFinal(text)) continue;   // голосовая команда — в субтитры не попадает
                     if (show == "orig" || lang == "en") { AddLine(lang == "en" && show == "en" ? "" : text, lang == "en" ? text : ""); continue; }
                     // перевод — через локальный переводчик программы (если он настроен)
                     var t = text;
@@ -423,10 +435,15 @@ public sealed class Captions : IDisposable
 
     private static string Cap(string s) => string.IsNullOrEmpty(s) ? "" : char.ToUpper(s[0]) + s[1..];
 
-    private void SetPartial(string p) { lock (_lock) _partial = Censor(p); }
+    private void SetPartial(string p)
+    {
+        if (p.Length > 1 && _hub.Voice.HidePartial(p)) p = "";
+        lock (_lock) _partial = Censor(p);
+    }
 
     private void AddLine(string text, string en)
     {
+        if (!Cfg.Bool("enabled")) return;   // распознавание идёт только ради голосовых команд
         text = Censor(text?.Trim() ?? ""); en = Censor(en?.Trim() ?? "");
         if (text == "" && en == "") return;
         lock (_lock)
@@ -472,7 +489,7 @@ public sealed class Captions : IDisposable
         {
             enabled = c.Bool("enabled"), running = Running, status = Status, lines, partial, speaking = _speaking,
             level = Math.Round(Math.Min(1, _level * 6), 3), now = ActionLog.Now, cfg = style,
-            engine, model = model.Key, has_model = HasModel(engine, model.Key),
+            engine, model = model.Key, has_model = HasModel(engine, model.Key), voice = _hub.Voice.State(),
             accel = Running ? (engine == "whisper" ? _accel : "процессор") : "",
             speed = engine == "whisper" && Running ? _rtf : 0,
             restart_needed = engine == "whisper" && _runtimeGpu.HasValue && _runtimeGpu.Value != c.Bool("gpu", true),
