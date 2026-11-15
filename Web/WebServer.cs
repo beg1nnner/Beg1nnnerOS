@@ -408,6 +408,37 @@ public sealed partial class WebServer
         app.MapDelete("/api/alerts/{id}", H((c, b) => { alerts.Delete(Route(c, "id")); return Ok(); }));
         app.MapPost("/api/alerts/stop", H(async (c, b) => { await alerts.StopAll(); return Ok(); }));
         app.MapPost("/api/alerts/volume", H((c, b) => { alerts.SetVolume(b.Str("id"), b.Int("volume")); return Ok(); }));
+        app.MapGet("/api/changelog", H((c, b) =>
+        {
+            // «Что нового» в «Настройках → О программе»: разделы «## X.Y.Z» из CHANGELOG.md рядом с программой
+            var path = Path.Combine(AppContext.BaseDirectory, "CHANGELOG.md");
+            var items = new List<object>();
+            if (File.Exists(path))
+            {
+                string ver = null; List<string> cur = null;
+                foreach (var raw in File.ReadLines(path))
+                {
+                    var line = raw.Trim();
+                    if (line.StartsWith("## "))
+                    {
+                        if (ver != null) items.Add(new { version = ver, items = cur });
+                        if (items.Count >= 5) { ver = null; break; }
+                        ver = line[3..].Trim(); cur = new List<string>();
+                    }
+                    else if (ver != null && line.StartsWith("- "))
+                    {
+                        var t = L.T(line[2..].Trim());
+                        var dot = t.IndexOf(". ", StringComparison.Ordinal);
+                        if (t.Length > 170 && dot > 40) t = t[..(dot + 1)];
+                        cur.Add(t);
+                    }
+                }
+                if (ver != null && items.Count < 5) items.Add(new { version = ver, items = cur });
+            }
+            return Ok(new { items });
+        }));
+        app.MapPost("/api/alerts/test", H((c, b) => { alerts.Test(b.Str("id")); return Ok(); }));
+        app.MapGet("/api/music/fallback/next", H((c, b) => Ok(new { items = _hub.Music.UpcomingFallback(6), status = _hub.Music.FallbackStatus })));
         app.MapPost("/api/alerts/toggle", H((c, b) => { alerts.SetEnabled(b.Str("id"), b.Bool("enabled")); return Ok(); }));
 
         // инструменты

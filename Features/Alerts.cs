@@ -295,6 +295,18 @@ public sealed class Alerts
         _wake.TrySetResult(true);
     }
 
+    /// <summary>Тестовый показ алерта в OBS (без награды и баллов).</summary>
+    public void Test(string id)
+    {
+        var a = Get(id) ?? throw new Beg1nnnerOS.Twitch.UserError("Алерт не найден");
+        Pending.Add(new JsonObject
+        {
+            ["alert_id"] = id, ["reward_id"] = "", ["redemption_id"] = "", ["user"] = L.T("Тест"), ["login"] = "test", ["ts"] = ActionLog.Now,
+        });
+        _hub.Log.Add("alert", $"Тестовый показ алерта «{a.Str("name")}»");
+        _wake.TrySetResult(true);
+    }
+
     public async Task StopAll()
     {
         var items = Pending.ToList();

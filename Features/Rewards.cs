@@ -184,6 +184,7 @@ public sealed class Rewards
 
     public async Task Complete(string rewardId, string redemptionId, bool ok)
     {
+        if (string.IsNullOrEmpty(rewardId) || string.IsNullOrEmpty(redemptionId)) return;   // тестовый показ
         if (IsForeign(rewardId))
         {
             // Twitch не даёт отмечать выкупы чужих наград — запрос останется в «Очереди запросов» на Twitch

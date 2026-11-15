@@ -40,6 +40,7 @@
     <Resource Include="app.ico" />
     <Content Include="app.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="CHANGELOG.md" CopyToOutputDirectory="PreserveNewest" />
     <!-- словари для исправления раскладки -->
     <EmbeddedResource Include="Data\*.gz" LogicalName="Beg1nnnerOS.Data.%(Filename)%(Extension)" />
   </ItemGroup>

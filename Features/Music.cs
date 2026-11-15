@@ -372,9 +372,18 @@ public sealed class Music
         }
     }
 
-    private Track NextFallback()
+    /// <summary>Ближайшие треки резервного плейлиста (для панели).</summary>
+    public List<object> UpcomingFallback(int n)
     {
-        // общий пул: плейлист YouTube + понравившиеся треки (без повторов)
+        var pool = FallbackPool();
+        var liked = new HashSet<string>(LikedItems.Select(x => x.Str("vid")));
+        var ids = _fbOrder.Where(pool.ContainsKey).Take(n).ToList();
+        if (ids.Count < n) ids.AddRange(pool.Keys.Where(v => !ids.Contains(v) && !_fbBad.Contains(v)).Take(n - ids.Count));
+        return ids.Select(v => (object)new { title = pool[v].Title, duration = pool[v].Duration, liked = liked.Contains(v) && !_fbList.Any(t => t.Vid == v) }).ToList();
+    }
+
+    private Dictionary<string, Track> FallbackPool()
+    {
         var pool = new Dictionary<string, Track>();
         foreach (var t in _fbList) pool.TryAdd(t.Vid, t);
         if (LikedInFallback)
@@ -384,6 +393,13 @@ public sealed class Music
                     Vid = x.Str("vid"), Title = x.Str("title"), PageUrl = x.Str("url"), Duration = x.Int("duration"),
                     Source = x.Str("source", "youtube"),
                 });
+        return pool;
+    }
+
+    private Track NextFallback()
+    {
+        // общий пул: плейлист YouTube + понравившиеся треки (без повторов)
+        var pool = FallbackPool();
         _fbOrder.RemoveAll(v => !pool.ContainsKey(v));
         if (_fbOrder.Count == 0)
         {

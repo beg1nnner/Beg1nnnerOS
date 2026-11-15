@@ -32,7 +32,10 @@ public sealed class Stats
                CREATE TABLE IF NOT EXISTS played(ts REAL, stream TEXT, vid TEXT, title TEXT, url TEXT, source TEXT,
                                                  requester TEXT, login TEXT, duration INTEGER, fallback INTEGER);
                CREATE INDEX IF NOT EXISTS played_ts ON played(ts);
-               CREATE INDEX IF NOT EXISTS played_stream ON played(stream);");
+               CREATE INDEX IF NOT EXISTS played_stream ON played(stream);
+               CREATE TABLE IF NOT EXISTS words(ts REAL, stream TEXT, word TEXT);
+               CREATE INDEX IF NOT EXISTS words_ts ON words(ts);
+               CREATE INDEX IF NOT EXISTS words_stream ON words(stream);");
     }
 
     private void Exec(string sql, params (string, object)[] args)
@@ -72,8 +75,61 @@ public sealed class Stats
         return ("1=1", Array.Empty<(string, object)>());
     }
 
-    public void Chat(string login, string name, string stream) =>
-        Exec("INSERT INTO chat VALUES($ts,$l,$n,$s)", ("$ts", ActionLog.Now), ("$l", login), ("$n", name), ("$s", stream));
+    private static readonly System.Text.RegularExpressions.Regex WordRe = new(@"!?[\p{L}\p{N}_]{2,24}");
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "и","в","во","не","что","он","на","я","с","со","как","а","то","все","она","так","его","но","да","ты","к","у","же","вы","за","бы","по","только",
+        "ее","мне","было","вот","от","меня","еще","нет","о","из","ему","теперь","когда","даже","ну","ли","если","уже","или","ни","быть","был","до","вас",
+        "нибудь","там","потом","себя","ей","может","они","тут","где","есть","надо","ней","для","мы","тебя","их","чем","была","сам","чтоб","без","будто","чего",
+        "раз","тоже","себе","под","будет","ж","тогда","кто","этот","того","потому","этого","какой","ним","здесь","этом","один","мой","тем","чтобы","нее",
+        "это","эти","эта","про","при","the","a","an","to","of","and","is","it","in","you","i","that","on","for","me","my","so","this","be","are","was",
+    };
+    public void Chat(string login, string name, string stream, string text = "")
+    {
+        var now = ActionLog.Now;
+        Exec("INSERT INTO chat VALUES($ts,$l,$n,$s)", ("$ts", now), ("$l", login), ("$n", name), ("$s", stream));
+        if (string.IsNullOrWhiteSpace(text) || text.Contains("://")) return;
+        var seen = new HashSet<string>();
+        foreach (System.Text.RegularExpressions.Match m in WordRe.Matches(text))
+        {
+            var w = m.Value;
+            if (!w.StartsWith("!") && (StopWords.Contains(w) || w.All(char.IsDigit))) continue;
+            // «Привет» → «привет», а смайлы вроде KEKW и PogChamp остаются как есть
+            if (!w.StartsWith("!") && char.IsUpper(w[0]) && w.Skip(1).All(ch => !char.IsUpper(ch))) w = w.ToLowerInvariant();
+            if (!seen.Add(w) || seen.Count > 12) continue;
+            Exec("INSERT INTO words VALUES($ts,$s,$w)", ("$ts", now), ("$s", stream), ("$w", w));
+        }
+    }
+
+    /// <summary>Частые слова и смайлы, популярные команды, активность по часам.</summary>
+    public object ChatDetails(string period, string stream)
+    {
+        var (w, a) = Where(period, stream);
+        var words = new List<object[]>();
+        foreach (var r in Query($"SELECT word, COUNT(*) c FROM words WHERE {w} AND substr(word,1,1) <> '!' GROUP BY word ORDER BY c DESC LIMIT 18", a))
+            words.Add(new object[] { r[0]?.ToString(), Convert.ToInt64(r[1]) });
+        var cmds = new List<object[]>();
+        foreach (var r in Query($"SELECT lower(word), COUNT(*) c FROM words WHERE {w} AND substr(word,1,1) = '!' GROUP BY lower(word) ORDER BY c DESC LIMIT 6", a))
+            cmds.Add(new object[] { r[0]?.ToString(), Convert.ToInt64(r[1]) });
+        var hours = new long[24];
+        foreach (var r in Query($"SELECT ts FROM chat WHERE {w}", a))
+            hours[DateTimeOffset.FromUnixTimeMilliseconds((long)(Convert.ToDouble(r[0]) * 1000)).ToLocalTime().Hour]++;
+        return new { words, commands = cmds, hours };
+    }
+
+    /// <summary>Заказы музыки по дням за последние 7 дней (сегодня — последний).</summary>
+    public long[] OrdersByDay()
+    {
+        var days = new long[7];
+        var today = DateTime.Today;
+        foreach (var r in Query("SELECT ts FROM music WHERE ts >= $p AND kind IN ('order','priority') AND status='ok'", ("$p", ActionLog.Now - 8 * 86400.0)))
+        {
+            var d = DateTimeOffset.FromUnixTimeMilliseconds((long)(Convert.ToDouble(r[0]) * 1000)).ToLocalTime().Date;
+            var i = 6 - (int)(today - d).TotalDays;
+            if (i >= 0 && i < 7) days[i]++;
+        }
+        return days;
+    }
 
     public List<object[]> TopChat(string period, string stream, int limit = 5)
     {
@@ -91,7 +147,7 @@ public sealed class Stats
     {
         var (w, a) = Where(period, stream);
         var row = Query($"SELECT COUNT(*), COUNT(DISTINCT login) FROM chat WHERE {w}", a)[0];
-        return new { messages = Convert.ToInt64(row[0]), users = Convert.ToInt64(row[1]), top = TopChat(period, stream, 10) };
+        return new { messages = Convert.ToInt64(row[0]), users = Convert.ToInt64(row[1]), top = TopChat(period, stream, 10), details = ChatDetails(period, stream) };
     }
 
     public void Music(string stream, string kind, string status, string login, string name, string title, int cost = 0) =>
@@ -123,7 +179,7 @@ public sealed class Stats
         return new
         {
             orders = Get("order:ok") + Get("priority:ok") + Get("manual:ok"),
-            rejected, skips, points = spent, top_tracks = tracks, top_users = users,
+            rejected, skips, points = spent, top_tracks = tracks, top_users = users, by_day = OrdersByDay(),
         };
     }
 

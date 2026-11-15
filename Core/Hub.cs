@@ -197,7 +197,7 @@ public sealed class Hub
             UserId = uid, Login = ev.Str("chatter_user_login"), Name = ev.Str("chatter_user_name"), Text = text,
             MessageId = mid, Badges = badges, ReplyBody = reply.Str("parent_message_body"), ReplyUser = reply.Str("parent_user_name"),
         };
-        Stats.Chat(msg.Login, msg.Name, Stream.Key);
+        Stats.Chat(msg.Login, msg.Name, Stream.Key, msg.Text);
         Timers.OnChatMessage();
         if (await Moderation.OnCommand(msg)) return;   // !разрешить ник
         if (await Pro.OnChat(msg)) return;   // розыгрыш
