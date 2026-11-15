@@ -78,12 +78,15 @@ public static class Config
             "Обновление трансляции: {title}. Играем в {category}", true),
     };
 
+    /// <summary>События, которые по умолчанию показываются и на экране (оверлей событий в OBS).</summary>
+    public static bool ScreenByDefault(string key) => key is "donation" or "follow" or "sub" or "cheer" or "raid" or "hype";
+
     public static JsonObject DefaultSettings()
     {
         var s = (JsonObject)JsonNode.Parse(DefaultsJson);
         var templates = new JsonObject();
         foreach (var e in EventTypes)
-            templates[e.Key] = new JsonObject { ["enabled"] = e.Enabled, ["text"] = e.Template };
+            templates[e.Key] = new JsonObject { ["enabled"] = e.Enabled, ["screen"] = ScreenByDefault(e.Key), ["text"] = e.Template };
         ((JsonObject)s["events"])["templates"] = templates;
         return s;
     }
@@ -148,7 +151,8 @@ public static class Config
         "hidden_users": ["nightbot", "streamelements", "moobot", "streamlabs", "wizebot"],
         "emotes": {"7tv": true, "bttv": false, "ffz": false}
       },
-      "events": {"interval_sec": 3, "gift_merge_sec": 5, "paused": false},
+      "events": {"interval_sec": 3, "gift_merge_sec": 5, "paused": false,
+                 "screen": {"duration": 6, "position": "top", "size": 100, "accent": "#8b5cf6", "sound": true}},
       "yandex": {"token": ""},
       "donationalerts": {"client_id": "", "client_secret": "", "token": "", "refresh_token": "", "expires_at": 0},
       "tools": {

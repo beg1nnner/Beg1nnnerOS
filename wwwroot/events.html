@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<script src="/static/i18n.js"></script>
+<title>Beg1nnnerOS — события на экране</title>
+<style>
+  @font-face { font-family:"Geist"; src:url("/static/fonts/Geist.woff2") format("woff2"); font-weight:100 900; }
+  @font-face { font-family:"Geist Mono"; src:url("/static/fonts/GeistMono.woff2") format("woff2"); font-weight:100 900; }
+  :root { --accent:#8b5cf6; --c:#8b5cf6; --scale:1; }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:"Geist","Segoe UI",system-ui,sans-serif; color:#fff; -webkit-font-smoothing:antialiased; }
+  body.preview { background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px; }
+  #stage { position:absolute; inset:0; display:flex; justify-content:center; padding:40px; box-sizing:border-box; }
+  #stage.top { align-items:flex-start; } #stage.center { align-items:center; } #stage.bottom { align-items:flex-end; }
+  .ev { transform-origin:center; display:flex; align-items:center; gap:22px; min-width:520px; max-width:min(860px, 92vw); box-sizing:border-box;
+    padding:22px 30px 22px 22px; border-radius:24px; background:rgba(14,14,19,.92); border:1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 24px 60px -16px rgba(0,0,0,.75), 0 0 40px -10px color-mix(in srgb, var(--c) 70%, transparent);
+    opacity:0; transform:translateY(-24px) scale(calc(var(--scale) * .94)); transition:opacity .45s, transform .55s cubic-bezier(.2,.9,.25,1.25); position:relative; overflow:hidden; }
+  #stage.bottom .ev { transform:translateY(24px) scale(calc(var(--scale) * .94)); }
+  .ev.show { opacity:1; transform:translateY(0) scale(var(--scale)); }
+  .ev.hide { opacity:0; transform:translateY(-10px) scale(calc(var(--scale) * .97)); transition:opacity .4s, transform .4s; }
+  .ic { width:72px; height:72px; flex:none; border-radius:20px; display:flex; align-items:center; justify-content:center; color:#fff;
+    background:var(--c); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 12px 30px -8px color-mix(in srgb, var(--c) 85%, transparent); }
+  .ic svg { width:36px; height:36px; }
+  .bd { min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .kind { font:500 13px "Geist Mono",monospace; letter-spacing:.16em; text-transform:uppercase; color:color-mix(in srgb, var(--c) 55%, #fff); }
+  .user { font-size:34px; font-weight:700; letter-spacing:-.03em; line-height:1.1; overflow-wrap:anywhere; }
+  .text { font-size:19px; color:#d6d6e0; line-height:1.4; overflow-wrap:anywhere; }
+  .bar { position:absolute; left:0; bottom:0; height:3px; background:var(--c); width:100%; transform-origin:left; }
+  .ev.show .bar { animation:drain var(--dur) linear forwards; }
+  @keyframes drain { to { transform:scaleX(0); } }
+  .spark { position:absolute; width:6px; height:6px; border-radius:50%; background:var(--c); opacity:0; }
+  .ev.show .spark { animation:spark 1.2s ease-out forwards; }
+  @keyframes spark { 0% { opacity:1; transform:translate(0,0) scale(1); } 100% { opacity:0; transform:translate(var(--dx), var(--dy)) scale(.3); } }
+</style>
+</head>
+<body>
+<div id="stage" class="top"></div>
+<script>
+// Источник для OBS: события канала (фолловеры, подписки, донаты, рейды…) красивыми карточками.
+// Параметры: ?preview=1 — демо-показ по кругу.
+const Q = new URLSearchParams(location.search);
+const PREVIEW = Q.get("preview") === "1";
+if (PREVIEW) document.body.classList.add("preview");
+const stage = document.getElementById("stage");
+const ICONS = {
+  follow:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/>',
+  sub:'<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/>',
+  donation:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.5a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3h3.5"/>',
+  cheer:'<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18"/>',
+  raid:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>',
+  hype:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
+  reward:'<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z"/>',
+  poll:'<path d="M18 20V10M12 20V4M6 20v-6"/>',
+  ad:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15l2.5-6 2.5 6M8 13h3M15 9v6h1.5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2z"/>',
+  online:'<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/>',
+  update:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+};
+const COLORS = {follow:"#a78bfa", sub:"#f59e0b", donation:"#ec4899", cheer:"#38bdf8", raid:"#22c55e", hype:"#f97316", reward:"#8b5cf6", poll:"#3b82f6", ad:"#94a3b8", online:"#ef4444", update:"#8b5cf6"};
+let CFG = {duration: 6, position: "top", size: 100, accent: "#8b5cf6", sound: true};
+let SEQ = -1, QUEUE = [], BUSY = false;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let actx = null;
+function chime(color) {
+  if (!CFG.sound || PREVIEW) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime;
+    [[784, 0], [1046.5, .09], [1318.5, .18]].forEach(([f, d]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = f; o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.12, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .7);
+      o.start(t + d); o.stop(t + d + .75);
+    });
+  } catch (e) {}
+}
+function applyCfg() {
+  stage.className = CFG.position || "top";
+  document.documentElement.style.setProperty("--scale", (CFG.size || 100) / 100);
+  document.documentElement.style.setProperty("--accent", CFG.accent || "#8b5cf6");
+}
+async function showNext() {
+  if (BUSY || !QUEUE.length) return;
+  BUSY = true;
+  const it = QUEUE.shift();
+  const c = it.type === "reward" || it.type === "update" ? (CFG.accent || COLORS[it.type]) : (COLORS[it.type] || CFG.accent);
+  const el = document.createElement("div");
+  el.className = "ev"; el.style.setProperty("--c", c); el.style.setProperty("--dur", (CFG.duration || 6) + "s");
+  const head = it.user ? esc(it.user) : esc(it.title);
+  let text = it.text || "";
+  el.innerHTML = `<div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICONS[it.type] || ICONS.online}</svg></div>
+    <div class="bd"><div class="kind">${esc(it.title)}</div><div class="user" data-noi18n>${head}</div>${text ? `<div class="text" data-noi18n>${esc(text)}</div>` : ""}</div><div class="bar"></div>`
+    + [...Array(10)].map((_, i) => { const a = i / 10 * Math.PI * 2; return `<i class="spark" style="left:58px;top:50%;--dx:${Math.cos(a) * 70}px;--dy:${Math.sin(a) * 60}px;animation-delay:${i * 20}ms"></i>`; }).join("");
+  stage.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("show")));
+  chime(c);
+  await new Promise(r => setTimeout(r, (CFG.duration || 6) * 1000));
+  el.classList.add("hide");
+  await new Promise(r => setTimeout(r, 450));
+  el.remove();
+  await new Promise(r => setTimeout(r, 250));
+  BUSY = false; showNext();
+}
+async function poll() {
+  try {
+    const j = await (await fetch("/api/events/feed?after=" + SEQ, {cache: "no-store"})).json();
+    if (j.ok) {
+      const d = j.data;
+      CFG = {duration: d.duration, position: d.position, size: d.size, accent: d.accent, sound: d.sound}; applyCfg();
+      if (SEQ >= 0) for (const it of d.items) QUEUE.push(it);
+      SEQ = d.seq; showNext();
+    }
+  } catch (e) {}
+}
+if (PREVIEW) {
+  const DEMO = [
+    {type:"follow", title:"Новый фолловер", user:"Night_Owl", text:"Спасибо за отслеживание, Night_Owl! 💜"},
+    {type:"donation", title:"Донат DonationAlerts", user:"Щедрый", text:"300 RUB — Отличный стрим!"},
+    {type:"sub", title:"Подписка или подарки", user:"Kappa_fan", text:"продлил(а) подписку: 3 мес."},
+    {type:"raid", title:"Входящий рейд", user:"ДругойКанал", text:"Рейд: 42 зрителя! Добро пожаловать!"},
+  ];
+  let i = 0;
+  const loop = () => { QUEUE.push(DEMO[i++ % DEMO.length]); showNext(); };
+  fetch("/api/events/feed?after=-1", {cache: "no-store"}).then(r => r.json()).then(j => { if (j.ok) { const d = j.data; CFG = {...CFG, position:d.position, size:d.size, accent:d.accent, duration:Math.min(d.duration, 4)}; applyCfg(); } }).catch(() => {});
+  applyCfg(); loop(); setInterval(() => { if (!BUSY) loop(); }, 1000);
+} else {
+  applyCfg(); poll(); setInterval(poll, 800);
+}
+</script>
+</body>
+</html>

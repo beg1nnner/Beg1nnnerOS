@@ -185,6 +185,11 @@
   .ab-mark { width:60px; height:60px; border-radius:18px; font-size:20px; }
   .ab-name { font-size:22px; font-weight:600; letter-spacing:-.02em; }
   .twitch-btn { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; background:#9146ff; color:#fff !important; font-weight:600; text-decoration:none; }
+  .ev-obs-grid { display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:22px; margin-top:16px; }
+  @media (max-width:1100px) { .ev-obs-grid { grid-template-columns:1fr; } }
+  .ev-stage { border-radius:14px; overflow:hidden; border:1px solid var(--hair); aspect-ratio:16/9; background:#0c0d12; }
+  .ev-stage iframe { width:1920px; height:1080px; border:0; transform-origin:0 0; display:block; }
+  .ev-set { display:flex; flex-direction:column; gap:14px; }
   .incl { display:flex; flex-direction:column; gap:10px; }
   .incl span { display:flex; align-items:center; gap:10px; font-size:14px; }
   .incl span::before { content:"✓"; color:var(--ok); font-weight:700; }
@@ -930,8 +935,29 @@
 <section id="p-events" class="hidden">
   <h2>События</h2>
   <div class="card">
-    <table><thead><tr><th>Событие</th><th>Шаблон</th><th>Вкл.</th><th></th></tr></thead><tbody id="ev-list"></tbody></table>
+    <table><thead><tr><th>Событие</th><th>Шаблон</th><th style="text-align:center">В чат</th><th style="text-align:center">На экран</th><th></th></tr></thead><tbody id="ev-list"></tbody></table>
     <div class="muted small" style="margin-top:8px">Предпросмотр использует демонстрационные данные и ничего не отправляет в чат. Доступность событий зависит от прав аккаунта и статуса канала.</div>
+  </div>
+  <div class="card ev-obs">
+    <div class="row"><h3 class="grow" style="margin:0">События на экране (оверлей в OBS)</h3><button class="sm" onclick="evScreenPrev()">Обновить предпросмотр</button></div>
+    <div class="ev-obs-grid">
+      <div class="ev-stage"><iframe id="evs-prev" title="Предпросмотр событий" src="/events?preview=1"></iframe></div>
+      <div class="ev-set">
+        <div class="muted small">Новый фолловер, подписка, донат, рейд — красивой карточкой поверх стрима, с коротким звуком. Какие события показывать — переключатели «На экран» в таблице выше.</div>
+        <div class="row"><code id="evs-url"></code><button class="sm" onclick="copy(base()+'/events')">Скопировать адрес</button></div>
+        <div class="small muted">В OBS: «Источники» → «+» → «Браузер», 1920×1080, поверх сцены. Включите «Управлять аудио через OBS», чтобы звук шёл отдельной дорожкой.</div>
+        <div class="row" style="align-items:flex-end">
+          <label class="f"><span>Где показывать</span><select data-s="events.screen.position" data-seg><option value="top">Сверху</option><option value="center">По центру</option><option value="bottom">Снизу</option></select></label>
+        </div>
+        <div class="row" style="align-items:flex-end">
+          <label class="f" style="width:150px"><span>Сколько показывать, сек</span><input type="number" min="2" max="30" data-s="events.screen.duration"></label>
+          <label class="f" style="width:130px"><span>Размер, %</span><input type="number" min="50" max="200" step="10" data-s="events.screen.size"></label>
+          <label class="f" style="width:110px"><span>Акцент</span><input type="color" data-s="events.screen.accent"></label>
+        </div>
+        <label class="switch"><input type="checkbox" data-s="events.screen.sound"> Короткий звук при показе</label>
+        <div class="row"><select id="evs-type" style="width:auto"></select><button onclick="evScreenTest()">▶ Показать тест в OBS</button></div>
+      </div>
+    </div>
   </div>
   <div class="masonry">
   <div class="card hl">
@@ -1470,7 +1496,7 @@ function go(p, sub) {
   if (sub) { const g = document.querySelector(`#p-${p} .tabs button[data-t="${sub}"]`); if (g) g.click(); }
   if (p === "chat") { loadCommands(); loadTimers(); }
   if (p === "alerts") loadAlerts();
-  if (p === "events") { renderEvents(); loadTools(); }
+  if (p === "events") { renderEvents(); loadTools(); setTimeout(fitEvPrev, 30); }
   if (p === "settings") { loadBackups(); loadTools(); loadChangelog(); }
   if (p === "pro") loadPro();
   if (p === "votes") vtOpen();
@@ -2171,17 +2197,26 @@ function editTimer(id) {
 // ---------- События ----------
 function renderEvents() {
   if (!S || !META.events) return;
+  if ($("evs-type") && !$("evs-type").options.length) $("evs-type").innerHTML = Object.entries(META.events).map(([k, e]) => `<option value="${k}">${e.title}</option>`).join("");
+  if ($("evs-url")) $("evs-url").textContent = base() + "/events";
   $("ev-list").innerHTML = Object.entries(META.events).map(([k, e]) => {
     const t = S.events.templates[k] || {enabled:false, text:""};
     return `<tr><td><b>${e.title}</b><div class="small muted">${e.vars.map(v => "{" + v + "}").join(" ")}</div></td>
       <td class="ellipsis" style="max-width:420px">${esc(t.text)}</td>
-      <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="toggleEvent('${k}',this.checked)"></td>
+      <td style="text-align:center"><input type="checkbox" aria-label="В чат" ${t.enabled ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'enabled')"></td>
+      <td style="text-align:center"><input type="checkbox" aria-label="На экран" ${(t.screen ?? e.screen_default) ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'screen')"></td>
       <td><button class="sm" onclick="editEvent('${k}')">Настроить</button></td></tr>`;
   }).join("");
 }
-async function toggleEvent(k, on) {
-  await api("/settings", {events:{templates:{[k]:{enabled:on}}}}); await loadSettings(); toast(on ? "Включено" : "Выключено");
+async function toggleEvent(k, on, field) {
+  field = field || "enabled";
+  await api("/settings", {events:{templates:{[k]:{[field]:on}}}}); await loadSettings();
+  toast((field === "screen" ? "На экране: " : "В чате: ") + (on ? "включено" : "выключено"));
 }
+function evScreenTest() { api("/events/test", {type: $("evs-type").value}).then(() => toast("Тестовое событие показано в OBS")); }
+function fitEvPrev() { const st = document.querySelector(".ev-stage"), f = $("evs-prev"); if (st && f && st.clientWidth) f.style.transform = `scale(${st.clientWidth / 1920})`; }
+window.addEventListener("resize", fitEvPrev);
+function evScreenPrev() { const f = $("evs-prev"); if (f) f.src = "/events?preview=1&t=" + Date.now(); }
 function editEvent(k) {
   const e = META.events[k], t = S.events.templates[k];
   modal(`<h2>${e.title}</h2><label class="f"><span>Шаблон сообщения</span><textarea id="ev-text">${esc(t.text)}</textarea></label>

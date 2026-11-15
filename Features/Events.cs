@@ -50,6 +50,44 @@ public sealed class Events
 
     public static string Tier(string t) => t switch { "1000" => "1", "2000" => "2", "3000" => "3", _ => t };
 
+    // ---------- оверлей событий в OBS (/events) ----------
+    private readonly List<JsonObject> _feed = new();
+    private long _seq;
+
+    private void Show(string type, string title, Dictionary<string, string> values, string text)
+    {
+        var item = new JsonObject
+        {
+            ["id"] = ++_seq, ["type"] = type, ["title"] = L.T(title), ["user"] = values.TryGetValue("user", out var u) ? u : "",
+            ["text"] = text, ["ts"] = ActionLog.Now,
+        };
+        _feed.Add(item);
+        if (_feed.Count > 50) _feed.RemoveRange(0, _feed.Count - 50);
+    }
+
+    /// <summary>Новые события для экрана (после id). after &lt; 0 — только текущий номер, без старых событий.</summary>
+    public object Feed(long after)
+    {
+        var sc = Cfg.Obj("screen") ?? new JsonObject();
+        var items = after < 0 ? new List<JsonObject>() : _feed.Where(x => x.Int("id") > after).Select(x => (JsonObject)x.DeepClone()).ToList();
+        return new
+        {
+            seq = _seq, items,
+            duration = Math.Max(2, Math.Min(30, sc.Int("duration", 6))), position = sc.Str("position", "top"),
+            size = Math.Max(50, Math.Min(200, sc.Int("size", 100))), accent = sc.Str("accent", "#8b5cf6"), sound = sc.Bool("sound", true),
+        };
+    }
+
+    /// <summary>Тестовый показ события на экране (в чат не пишет).</summary>
+    public void TestScreen(string type)
+    {
+        var et = Config.EventTypes.FirstOrDefault(e => e.Key == type) ?? Config.EventTypes[1];
+        var tpl = Cfg.Obj("templates." + et.Key);
+        var values = Demo.TryGetValue(et.Key, out var d) ? d : new Dictionary<string, string>();
+        var text = Regex.Replace(Commands.Render(tpl?.Str("text") ?? et.Template, values), "[ \t]{2,}", " ").Trim();
+        Show(et.Key, et.Title, values, L.T(text));
+    }
+
     public void Notify(string type, Dictionary<string, string> values)
     {
         _hub.Pro.OnEvent(type, values);   // статистика стримов
@@ -57,10 +95,15 @@ public sealed class Events
         var title = et?.Title ?? type;
         _hub.Log.Add("event", $"{title}: " + string.Join(", ", values.Where(p => !string.IsNullOrEmpty(p.Value)).Select(p => $"{p.Key}={p.Value}")));
         var tpl = Cfg.Obj("templates." + type);
-        if (tpl == null || !tpl.Bool("enabled")) return;
+        if (tpl == null) return;
+        var toChat = tpl.Bool("enabled");
+        var toScreen = tpl.Bool("screen", Config.ScreenByDefault(type));
+        if (!toChat && !toScreen) return;
         if (Paused) { _hub.Log.Add("skip", $"{title}: уведомления на паузе"); return; }
         var text = Regex.Replace(Commands.Render(tpl.Str("text"), values), "[ \t]{2,}", " ").Trim();
         if (text == "") return;
+        if (toScreen) Show(type, title, values, text);
+        if (!toChat) return;
         _queue.Enqueue(text);
         _signal.TrySetResult(true);
     }

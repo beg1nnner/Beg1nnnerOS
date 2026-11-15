@@ -177,6 +177,7 @@ public sealed partial class WebServer
         app.MapGet("/chat", (HttpContext c) => NoStore(c, Page("chat.html")));
         app.MapGet("/music-obs", (HttpContext c) => NoStore(c, Page("music-obs.html")));
         app.MapGet("/votes", (HttpContext c) => NoStore(c, Page("votes.html")));
+        app.MapGet("/events", (HttpContext c) => NoStore(c, Page("events.html")));
         app.MapGet("/captions", (HttpContext c) => NoStore(c, Page("captions.html")));
         app.MapGet("/ws/chat", (RequestDelegate)WsChat);
         app.MapGet("/api/chat/overlay", H((c, b) => Ok(_hub.ChatOverlay.Config())));
@@ -297,6 +298,9 @@ public sealed partial class WebServer
         app.MapDelete("/api/viewer_timers/{id}", H((c, b) => { _hub.Timers.Cancel(Route(c, "id")); return Ok(); }));
 
         // события
+        app.MapGet("/api/events/feed", H((c, b) =>
+            Ok(_hub.Events.Feed(long.TryParse(c.Request.Query["after"], out var a) ? a : -1))));
+        app.MapPost("/api/events/test", H((c, b) => { _hub.Events.TestScreen(b.Str("type", "follow")); return Ok(); }));
         app.MapPost("/api/events/preview", H((c, b) => Ok(_hub.Events.Preview(b.Str("type"), b.Str("text")))));
         app.MapPost("/api/events/pause", H((c, b) =>
         {
@@ -580,7 +584,7 @@ public sealed partial class WebServer
         {
             var vars = new JsonArray();
             foreach (var v in e.Vars) vars.Add(v);
-            events[e.Key] = new JsonObject { ["title"] = e.Title, ["vars"] = vars };
+            events[e.Key] = new JsonObject { ["title"] = e.Title, ["vars"] = vars, ["screen_default"] = Config.ScreenByDefault(e.Key) };
         }
         var actions = new JsonObject();
         foreach (var kv in Hotkeys.Actions) actions[kv.Key] = kv.Value.Title;
@@ -639,6 +643,13 @@ public sealed partial class WebServer
                 case "events":
                     nw["interval_sec"] = Math.Max(1, Math.Min(60, nw.Int("interval_sec", 3)));
                     nw["gift_merge_sec"] = Math.Max(0, Math.Min(30, nw.Int("gift_merge_sec", 5)));
+                    if (nw.Obj("screen") is JsonObject sc)
+                    {
+                        sc["duration"] = Math.Max(2, Math.Min(30, sc.Int("duration", 6)));
+                        sc["size"] = Math.Max(50, Math.Min(200, sc.Int("size", 100)));
+                        if (sc.Str("position") is not ("top" or "center" or "bottom")) sc["position"] = "top";
+                        if (!System.Text.RegularExpressions.Regex.IsMatch(sc.Str("accent"), "^#[0-9a-fA-F]{6}$")) sc["accent"] = "#8b5cf6";
+                    }
                     break;
                 case "server":
                     var port = WholeNumber(nw["port"]);
