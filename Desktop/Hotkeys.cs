@@ -21,6 +21,7 @@ public static class Hotkeys
         ["like_track"] = ("Лайк текущего трека (добавить в резервный плейлист или убрать)", "ctrl+alt+l"),
         ["stop_alerts"] = ("Остановка МедиаАлертов", "ctrl+alt+backspace"),
         ["pause_events"] = ("Пауза или возобновление уведомлений о событиях", "ctrl+alt+n"),
+        ["stream_safe"] = ("Безопасно для стрима: скрыть ключи, адреса и пути в панели", "ctrl+alt+h"),
     };
 
     private static readonly Dictionary<string, uint> Mods = new()

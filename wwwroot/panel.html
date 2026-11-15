@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Beg1nnnerOS</title>
 <link rel="stylesheet" href="/static/style.css">
-<script>try { document.documentElement.dataset.theme = localStorage.getItem("hub-theme") || "studio"; } catch (e) {}</script>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("hub-theme") || "studio"; document.documentElement.classList.toggle("safe", localStorage.getItem("b1-safe") === "1"); } catch (e) {}</script>
 <style>
   body { display:flex; min-height:100vh; }
   /* ---------- боковое меню ---------- */
@@ -298,6 +298,16 @@
   .saved-mark.show { pointer-events:auto; opacity:1; transform:none; }
   /* уведомления */
   .tb-bell-w { position:relative; }
+  /* «Безопасно для стрима»: секреты размыты и не выделяются, поля — точками */
+  .tb-safe .sf-on, html.safe .tb-safe .sf-off { display:none; }
+  html.safe .tb-safe .sf-on { display:block; }
+  html.safe button.tb-safe { color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .tb-safe-b { display:inline-flex; align-items:center; gap:var(--sp-1); padding:var(--sp-1) var(--sp-3); border-radius:var(--r-pill); font-size:var(--fs-sm); font-weight:600;
+    color:var(--accent2); background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); white-space:nowrap; }
+  .tb-safe-b[hidden] { display:none; }
+  html.safe [data-secret]:not(input):not(textarea) { filter:blur(6px); user-select:none; -webkit-user-select:none; }
+  html.safe .rm-qr[data-secret] { filter:blur(14px); }
+  html.safe input[data-secret], html.safe textarea[data-secret] { user-select:none; -webkit-user-select:none; }
   button.tb-bell { position:relative; width:40px; height:40px; padding:0; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; color:var(--muted); }
   #tb-bell-n { position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 var(--sp-1); box-sizing:border-box; border-radius:var(--r-sm); background:var(--accent); color:var(--on-accent); font:600 var(--fs-xs)/18px var(--mono); font-style:normal; text-align:center; }
   #tb-bell-n:empty { display:none; }
@@ -750,6 +760,8 @@
   <div class="tb-title"><span class="micro" id="tb-crumb">Панель управления</span><h1 id="tb-h">Эфир</h1></div>
   <button class="tb-search" onclick="openCmdk()" title="Поиск по разделам и настройкам"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Поиск по разделам и настройкам…</span><kbd>Ctrl K</kbd></button>
   <div class="grow"></div>
+  <span class="tb-safe-b" id="tb-safe-b" hidden><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg><span>Безопасно для стрима</span></span>
+  <button class="tb-bell tb-safe" id="tb-safe" onclick="safeSet(!SAFE, true)" aria-pressed="false" aria-label="Безопасно для стрима" title="Безопасно для стрима: скрыть ключи, токены и адреса"><svg class="ic sf-on" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.1 6.1C3.6 7.8 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.9-2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><svg class="ic sf-off" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <div class="tb-bell-w"><button class="tb-bell" id="tb-bell" onclick="toggleNotifs(event)" aria-label="Уведомления" title="Уведомления"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><i id="tb-bell-n"></i></button>
     <div class="ncenter hidden" id="ncenter"><div class="nc-h"><h3 class="card-t grow">Уведомления</h3><button class="sm" onclick="NOTIFS.length=0;renderNotifs()">Очистить</button></div><div id="nc-list"></div></div></div>
   <button class="tb-pill" id="tb-health" onclick="go('live')" title="Состояние подключений"></button>
@@ -926,7 +938,7 @@
       <div id="out-obs" class="hidden u-mt-3">
         <ol class="small u-m-0-0-2-5 u-p-0 u-lh-1-7">
           <li>В OBS: «Источники» → «+» → <b>«Браузер»</b>, назовите, например, «Музыка».</li>
-          <li>Вставьте адрес: <code id="mobs-url"></code> <button class="sm" onclick="copy(base()+'/music-obs')">Скопировать адрес</button></li>
+          <li>Вставьте адрес: <code id="mobs-url" data-secret></code> <button class="sm" onclick="copy(base()+'/music-obs')">Скопировать адрес</button></li>
           <li>Ширину и высоту поставьте 1, включите <b>«Управлять аудио через OBS»</b> и нажмите «ОК».</li>
         </ol>
         <div class="muted small" data-x="1">Музыка появится отдельной дорожкой «Музыка» в микшере OBS — её громкость, фильтры и запись можно настраивать отдельно от игры и микрофона. Если OBS закрыт, музыка автоматически играет из программы.</div>
@@ -1127,8 +1139,8 @@
       <div class="muted small u-mt-2">В чате: <code>!translate текст</code> или ответьте командой на сообщение зрителя. «auto» определяет язык по алфавиту (латиница считается английским).</div>
       <h3 class="u-mt-4">Сервер перевода (LibreTranslate)</h3>
       <div class="row">
-        <label class="f grow"><span>Адрес сервера</span><input data-s="tools.translate.url" placeholder="http://127.0.0.1:5000"></label>
-        <label class="f grow"><span>API-ключ (если нужен)</span><input type="password" data-s="tools.translate.api_key" data-secret="tools.translate.has_api_key" autocomplete="new-password"></label>
+        <label class="f grow"><span>Адрес сервера</span><input data-s="tools.translate.url" placeholder="http://127.0.0.1:5000" data-secret></label>
+        <label class="f grow"><span>API-ключ (если нужен)</span><input type="password" data-s="tools.translate.api_key" data-has="tools.translate.has_api_key" data-secret autocomplete="new-password"></label>
         <button class="u-mt-4" onclick="trLanguages()">Проверить</button>
       </div>
       <div id="tr-langs" class="small muted u-mt-2"></div>
@@ -1244,7 +1256,7 @@
     <div class="obs-split chat">
       <div class="card">
         <h3 class="card-t u-mb-3">Адрес для OBS</h3>
-        <div class="row"><code id="chat-url"></code><button class="sm" onclick="copy(base()+'/chat')">Скопировать адрес</button></div>
+        <div class="row"><code id="chat-url" data-secret></code><button class="sm" onclick="copy(base()+'/chat')">Скопировать адрес</button></div>
         <div class="muted small u-mt-2">В OBS: «Источник → Браузер», вставьте адрес, размер например 420×640. Новые сообщения появляются снизу (или сверху — см. ниже).
           Для отдельной сцены тему и размер шрифта можно задать в адресе: <code>/chat?theme=bubbles&amp;size=24</code>.</div>
         <h3 class="card-t u-m-5-0-3">Смайлики</h3>
@@ -1294,7 +1306,7 @@
       <span class="small muted">Общая громкость</span><input type="range" min="0" max="100" id="al-master" class="u-w-180px"><span id="al-masterv" class="small"></span>
     </div>
     <div class="row u-mt-3">
-      <span class="small muted">Адрес для OBS:</span><code id="al-url"></code><button class="sm" onclick="copy(base()+'/alerts')">Скопировать адрес OBS</button>
+      <span class="small muted">Адрес для OBS:</span><code id="al-url" data-secret></code><button class="sm" onclick="copy(base()+'/alerts')">Скопировать адрес OBS</button>
       <span class="grow"></span>
       <button class="danger" onclick="api('/alerts/stop',{})">Остановить все МедиаАлерты</button>
       <button class="primary cta" onclick="editAlert()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить алерт</span></button>
@@ -1331,7 +1343,7 @@
     <div class="acc-off acc-full"><p class="small muted u-m-0">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в списке слева).</p>
     <div class="row u-mt-3">
       <label class="f grow"><span>ID приложения</span><input data-s="donationalerts.client_id" autocomplete="off" placeholder="например 12345"></label>
-      <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
+      <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-has="donationalerts.has_client_secret" data-secret autocomplete="new-password"></label>
     </div>
     </div>
     <div class="acc-acts">
@@ -1347,7 +1359,7 @@
       <p class="small muted">Программа сама продлевает доступ. Ключ браузерного виджета («Секретный токен» из настроек виджетов) здесь не нужен.</p></details>
     <details class="u-mt-2 acc-help"><summary class="small muted u-cur-pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
       <label class="f u-mt-2"><span>OAuth access token (права oauth-user-show и oauth-donation-subscribe)</span>
-        <input type="password" data-s="donationalerts.token" data-secret="donationalerts.has_token" autocomplete="new-password"></label></details>
+        <input type="password" data-s="donationalerts.token" data-has="donationalerts.has_token" data-secret autocomplete="new-password"></label></details>
   </div>
     </div>
   </div>
@@ -1357,7 +1369,7 @@
       <div class="ev-stage"><iframe id="evs-prev" title="Предпросмотр событий" src="/events?preview=1"></iframe></div>
       <div class="ev-set">
         <div class="muted small">Новый фолловер, подписка, донат, рейд — красивой карточкой поверх стрима, с коротким звуком. Какие события показывать — переключатели «На экран» в списке выше.</div>
-        <div class="row"><code id="evs-url"></code><button class="sm" onclick="copy(base()+'/events')">Скопировать адрес</button></div>
+        <div class="row"><code id="evs-url" data-secret></code><button class="sm" onclick="copy(base()+'/events')">Скопировать адрес</button></div>
         <div class="small muted">В OBS: «Источники» → «+» → «Браузер», 1920×1080, поверх сцены. Включите «Управлять аудио через OBS», чтобы звук шёл отдельной дорожкой.</div>
         <div class="row u-ai-fend">
           <label class="f"><span>Где показывать</span><select data-s="events.screen.position" data-seg><option value="top">Сверху</option><option value="center">По центру</option><option value="bottom">Снизу</option></select></label>
@@ -1380,7 +1392,7 @@
       <div class="u-flex-1 u-minw-300px">
         <label class="switch"><input type="checkbox" data-s="announce.tg_enabled"> <b>Telegram</b></label>
         <div class="row u-mt-2">
-          <label class="f grow"><span>Токен бота</span><input type="password" data-s="announce.tg_token" data-secret="announce.has_tg_token" autocomplete="new-password" placeholder="123456789:AA…"></label>
+          <label class="f grow"><span>Токен бота</span><input type="password" data-s="announce.tg_token" data-has="announce.has_tg_token" data-secret autocomplete="new-password" placeholder="123456789:AA…"></label>
         </div>
         <div class="row">
           <label class="f grow"><span>Канал или чат</span><input data-s="announce.tg_chat" placeholder="@beg1nnner_channel"></label>
@@ -1395,7 +1407,7 @@
       <div class="u-flex-1 u-minw-300px">
         <label class="switch"><input type="checkbox" data-s="announce.dc_enabled"> <b>Discord</b></label>
         <div class="row u-mt-2">
-          <label class="f grow"><span>Адрес вебхука</span><input type="password" data-s="announce.dc_webhook" data-secret="announce.has_dc_webhook" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…"></label>
+          <label class="f grow"><span>Адрес вебхука</span><input type="password" data-s="announce.dc_webhook" data-has="announce.has_dc_webhook" data-secret autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…"></label>
           <button class="sm u-mt-4" onclick="announceTest('discord')">Проверить</button>
         </div>
         <details class="small muted u-mt-2"><summary>Как получить вебхук</summary><ol class="u-m-2-0-0-5 u-p-0 u-lh-1-6">
@@ -1456,7 +1468,7 @@
     <div class="acc" id="acc-ya">
       <div class="acc-on"><span class="acc-av ya"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M13.5 17V7h-1.3C10.4 7 9.5 8.2 9.5 9.8c0 1.7.9 2.6 2.4 2.6h1.6M11.5 12.4L9 17"/></svg></span><span class="acc-who"><b>Токен добавлен</b><span class="small muted">Треки с Яндекс Музыки доступны для заказа</span></span></div>
       <div class="acc-off acc-full"><p class="small muted u-m-0">Чтобы зрители могли заказывать треки с Яндекс Музыки, вставьте токен — инструкция ниже.</p>
-        <label class="f u-mt-3"><span>Токен</span><input type="password" data-s="yandex.token" data-secret="yandex.has_token" autocomplete="new-password"></label></div>
+        <label class="f u-mt-3"><span>Токен</span><input type="password" data-s="yandex.token" data-has="yandex.has_token" data-secret autocomplete="new-password"></label></div>
       <div class="acc-acts">
         <button onclick="api('/tools/yandex',{}).then(r=>toast(r))">Проверить</button>
         <button class="sm quiet acc-on-only" onclick="confirmDlg({title:'Удалить токен Яндекса?',text:'Треки с Яндекс Музыки перестанут играть, пока вы не добавите токен снова.',okLabel:'Удалить токен',danger:1}).then(ok=>ok&&api('/secret/clear',{name:'yandex'}).then(loadSettings))">Удалить</button>
@@ -1473,8 +1485,8 @@
       Свои ключи нужны только опытным пользователям. <a href="#" onclick="$('keys-body').classList.toggle('hidden');return false">Показать поля ключей</a></div>
     <div id="keys-body">
     <div class="row">
-      <label class="f grow"><span>Client ID</span><input data-s="twitch.client_id" autocomplete="off"></label>
-      <label class="f grow"><span>Client Secret</span><input type="password" data-s="twitch.client_secret" id="secret" autocomplete="new-password"></label>
+      <label class="f grow"><span>Client ID</span><input data-s="twitch.client_id" autocomplete="off" data-secret></label>
+      <label class="f grow"><span>Client Secret</span><input type="password" data-s="twitch.client_secret" id="secret" autocomplete="new-password" data-secret></label>
     </div>
     <details class="u-mt-3"><summary class="small u-cur-pointer">Открыть инструкцию: где получить ключи</summary>
       <ol class="small muted">
@@ -1523,7 +1535,7 @@
   </div>
   <div class="card">
     <h3>Док-панель OBS</h3>
-    <div class="row"><code id="dock-url"></code><button class="sm" onclick="copy(base()+'/dock')">Скопировать адрес</button></div>
+    <div class="row"><code id="dock-url" data-secret></code><button class="sm" onclick="copy(base()+'/dock')">Скопировать адрес</button></div>
     <div class="muted small u-mt-2">OBS → «Док-панели» → «Пользовательские док-панели браузера» → добавьте строку Beg1nnnerOS с этим адресом.</div>
   </div>
   </div>
@@ -1632,7 +1644,7 @@
       <h3 class="card-t u-mb-3">Источник для OBS</h3>
       <div class="vt-prev"><iframe title="Предпросмотр опроса" src="/votes?preview=1" loading="lazy"></iframe></div>
       <div class="muted small">Полоски голосов и ставок прямо на стриме. Появляется сам, когда идёт опрос или прогноз.</div>
-      <div class="row u-mt-2"><code id="vt-url"></code><button class="sm" onclick="copy(base()+'/votes')">Скопировать адрес</button></div>
+      <div class="row u-mt-2"><code id="vt-url" data-secret></code><button class="sm" onclick="copy(base()+'/votes')">Скопировать адрес</button></div>
       <div class="muted small">«Источники» → «+» → «Браузер», ширина 600, высота 500. Фон прозрачный.</div>
       <div class="row u-mt-2">
         <label class="f u-w-160px"><span>Скрывать после итога, сек</span><input type="number" min="0" max="600" data-s="votes.overlay_hide_sec"></label>
@@ -1691,7 +1703,7 @@
   </div>
   <div class="card">
     <h3 class="u-mt-0">Источник для OBS</h3>
-    <div class="row"><code id="cap-url"></code><button class="sm" onclick="copy(base()+'/captions')">Скопировать адрес</button></div>
+    <div class="row"><code id="cap-url" data-secret></code><button class="sm" onclick="copy(base()+'/captions')">Скопировать адрес</button></div>
     <div class="muted small">«Источники» → «+» → «Браузер», 1920×1080, поверх игры. Фон прозрачный.</div>
     <div class="row u-mt-3 u-fw-wrap u-ai-fend">
       <label class="f u-w-200px"><span>Оформление</span><select data-s="captions.style" onchange="capPreview()">
@@ -1817,7 +1829,7 @@
         <label class="switch"><input type="checkbox" data-s="pro.cloud.enabled"> Включена</label></div>
       <div class="small muted u-mt-2">Копия профиля сохраняется в папку облака на этом компьютере — Яндекс Диск, Google Drive, OneDrive или Dropbox сами перенесут её на другой ПК.</div>
       <div class="row u-mt-3">
-        <label class="f grow"><span>Папка облака</span><input data-s="pro.cloud.folder" id="cl-folder" placeholder="Например C:\Users\Имя\YandexDisk"></label>
+        <label class="f grow"><span>Папка облака</span><input data-s="pro.cloud.folder" id="cl-folder" data-secret placeholder="Например C:\Users\Имя\YandexDisk"></label>
       </div>
       <div id="cl-found" class="row small"></div>
       <div class="row u-mt-2">
@@ -1825,7 +1837,7 @@
       </div>
       <div class="row">
         <label class="switch"><input type="checkbox" data-s="pro.cloud.include_secrets"> Добавить ключи и входы (зашифрованы паролем)</label>
-        <label class="f"><span>Пароль копии</span><input type="password" data-s="pro.cloud.password" data-secret="pro.cloud.has_password" autocomplete="new-password"></label>
+        <label class="f"><span>Пароль копии</span><input type="password" data-s="pro.cloud.password" data-has="pro.cloud.has_password" data-secret autocomplete="new-password"></label>
       </div>
       <div class="row u-mt-3">
         <button class="primary" onclick="api('/pro/cloud/save',{}).then(r=>{toast('Копия сохранена');loadPro();})">Сохранить сейчас</button>
@@ -1983,7 +1995,7 @@ function toastClose(t) {
 }
 function toastArm(t) { clearTimeout(t._tm); t._tm = setTimeout(() => toastClose(t), t._life); }
 function toast(text, err, action) {
-  text = String(text ?? "");
+  text = safeMask(text);
   const key = (err ? "e:" : "i:") + text;
   // в центр уведомлений — всегда; повтор того же сообщения в течение минуты склеиваем
   const last = NOTIFS[0];
@@ -2089,7 +2101,7 @@ function promptDlg(o) {
 function renderNotifs() {
   if (!$("nc-list")) return;
   $("tb-bell-n").textContent = NOTIF_UNREAD > 9 ? "9+" : (NOTIF_UNREAD || "");
-  $("nc-list").innerHTML = NOTIFS.map(n => `<div class="nc-it ${n.err ? "err" : ""}"><i></i><span>${esc(n.text)}${n.n > 1 ? ` <b class="nc-n">×${n.n}</b>` : ""}</span><small>${new Date(n.ts).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</small></div>`).join("")
+  $("nc-list").innerHTML = NOTIFS.map(n => `<div class="nc-it ${n.err ? "err" : ""}"><i></i><span>${esc(safeMask(n.text))}${n.n > 1 ? ` <b class="nc-n">×${n.n}</b>` : ""}</span><small>${new Date(n.ts).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</small></div>`).join("")
     || '<div class="muted small u-p-4">Пока ничего — здесь сохраняются все всплывающие сообщения и ошибки.</div>';
 }
 function toggleNotifs(e) {
@@ -2162,6 +2174,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
 async function loadSettings(keepFocus) {
   const j = await api("/settings");
   S = j.data; ACCESS = j.access; META.events = j.event_types;
+  if (!!(S.ui && S.ui.stream_safe) !== SAFE) safeSet(S.ui && S.ui.stream_safe);
   $("dev").innerHTML = '<option value="">Системное по умолчанию</option>' + j.devices.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
   document.querySelectorAll("[data-s]").forEach(el => {
     if (keepFocus && el === document.activeElement) return;   // не сбиваем то, что пользователь сейчас печатает
@@ -2173,7 +2186,7 @@ async function loadSettings(keepFocus) {
   if (!LAY_GRAB && !document.querySelector(".lay-drag")) layApply();
   if ($("xf-v")) { const v = +getPath(S, "music.crossfade") || 0; $("xf-v").textContent = v > 0 ? v + " сек" : "выключен"; }
   $("secret").placeholder = S.twitch.has_secret ? "•••••• сохранён (пусто — оставить прежний)" : "";
-  document.querySelectorAll("[data-secret]").forEach(el => el.placeholder = getPath(S, el.dataset.secret) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
+  document.querySelectorAll("[data-has]").forEach(el => el.placeholder = getPath(S, el.dataset.has) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
   META.hotkeys = j.hotkey_actions;
   $("hk-list").innerHTML = Object.entries(j.hotkey_actions).map(([k, t]) => `<tr><td>${t}</td>
     <td class="u-w-220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
@@ -2406,7 +2419,7 @@ async function deviceLogin(kind, box, onOk) {
   el.innerHTML = `<div class="small">1. В браузере открылась страница Twitch. Если нет — <a href="${esc(d.uri)}" target="_blank" rel="noopener">откройте её</a>
       или <a href="#" onclick="copy('${esc(d.uri)}');return false">скопируйте ссылку</a>.</div>
     <div class="small u-mt-1">2. Проверьте, что на странице этот код, и нажмите «Активировать» и «Разрешить»:</div>
-    <div class="devcode">${esc(d.code)}</div>${botNote}
+    <div class="devcode" data-secret>${esc(d.code)}</div>${botNote}
     <div class="small" id="${box}-st"><span class="muted ic-tx"><i class="spin" aria-hidden="true"></i><span>Жду подтверждения на Twitch…</span></span></div>`;
   DEV_T = setInterval(async () => {
     let s; try { s = await api("/twitch/device"); } catch (e) { return; }
@@ -2453,13 +2466,13 @@ function renderRemote() {
   if (!r.running) { box.innerHTML = `<div class="notice err">${ICON.alert}<div>${tr("Пульт не запустился")}: ${esc(r.error || "")}</div></div>`; return; }
   if (!r.addresses.length) { box.innerHTML = `<div class="notice warn">${ICON.alert}<div>${tr("Компьютер не подключён к домашней сети — телефону не к чему подключиться. Проверьте Wi-Fi или кабель.")}</div></div>`; return; }
   const url = r.addresses[0];
-  box.innerHTML = `<div class="rm-wrap"><div class="rm-qr">${qrSvg(url, 200)}</div>
+  box.innerHTML = `<div class="rm-wrap"><div class="rm-qr" data-secret>${qrSvg(url, 200)}</div>
     <ol class="rm-steps small">
       <li>${tr("Подключите телефон к той же сети Wi-Fi, что и компьютер.")}</li>
       <li>${tr("Наведите камеру телефона на QR-код и откройте ссылку.")}</li>
       <li>${tr("Если Windows спросит про доступ к сети — разрешите для частных сетей.")}</li>
     </ol></div>
-    <div class="rm-url"><code data-noi18n>${esc(url.replace(/k=.*/, "k=••••••"))}</code><button class="sm" onclick="copy(REMOTE.addresses[0])">${tr("Скопировать ссылку")}</button></div>
+    <div class="rm-url"><code data-noi18n data-secret>${esc(url.replace(/k=.*/, "k=••••••"))}</code><button class="sm" onclick="copy(REMOTE.addresses[0])">${tr("Скопировать ссылку")}</button></div>
     ${r.addresses.length > 1 ? `<details class="u-mt-2"><summary class="small">${tr("Другие адреса этого компьютера")}</summary>${r.addresses.slice(1).map(a => `<div class="small mono u-mt-1" data-noi18n>${esc(a.replace(/k=.*/, "k=••••••"))}</div>`).join("")}</details>` : ""}
     <div class="notice u-mt-3">${ICON.lock}<div>${tr("В ссылке секретный ключ: не показывайте QR-код на стриме. Если ссылка попала к кому-то ещё — создайте новый ключ.")}
       <div class="u-mt-2"><button class="sm" onclick="remoteSet(true, true)">${tr("Новый ключ")}</button></div></div></div>`;
@@ -2622,7 +2635,7 @@ function wzRefresh(force) {
       ["МедиаАлерты", "/alerts", "1920×1080, поверх всех", o.alerts > 0],
     ];
     if (S && S.music && S.music.output === "obs") rows.push(["Музыка в OBS", "/music-obs", "1×1, «Управлять аудио через OBS»", o.music]);
-    el.innerHTML = rows.map(([n, path, size, on]) => `<div class="src-row"><div><b>${n}</b><div class="small muted"><code>${esc(base() + path)}</code> · размер ${size}</div></div>
+    el.innerHTML = rows.map(([n, path, size, on]) => `<div class="src-row"><div><b>${n}</b><div class="small muted"><code data-secret>${esc(base() + path)}</code> · размер ${size}</div></div>
       <button class="sm" onclick="copy(base()+'${path}')">Скопировать</button><span class="dot ${on ? "on" : "off"}">${on ? "● подключён" : "○ не найден"}</span></div>`).join("");
   }
 }
@@ -2645,6 +2658,8 @@ async function poll(pushed) {
   if (pushed) ST = pushed;
   else { try { ST = (await api("/state")); } catch (e) { return; } }
   const r = ST.ready, m = ST.music;
+  // горячая клавиша меняет режим на сервере — подхватываем, если панель сама ничего не сохраняет
+  if (typeof ST.stream_safe === "boolean" && ST.stream_safe !== SAFE && !SAVE_T && !SAVING) { safeSet(ST.stream_safe); if (S && S.ui) S.ui.stream_safe = SAFE; }
   $("demo-cta").classList.toggle("hidden", DEMO.on || !!(r.streamer && r.streamer.ok));
   $("ver").textContent = "v" + ST.version;
   $("about-ver").textContent = "версия " + ST.version;
@@ -2747,7 +2762,7 @@ const LOG_KINDS = {error:["Ошибка", "#fb7185"], skip:["Пропуск", "#
 async function loadLog() {
   const items = await api("/log" + ($("log-kind").value ? "?kind=" + $("log-kind").value : ""));
   setHTML("log", items.slice().reverse().map(i => `<div class="kind-${i.kind} lg"><span class="k">${new Date(i.ts * 1000).toLocaleTimeString()}</span>
-    <span class="lg-k"><i style="background:${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][1] : "var(--dim)"}"></i>${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][0] : esc(i.kind)}</span><span class="lg-t">${esc(i.text)}</span></div>`).join("") || emptyBox("Журнал пуст", "Здесь появятся заказы, события, команды и ошибки."));
+    <span class="lg-k"><i style="background:${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][1] : "var(--dim)"}"></i>${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][0] : esc(i.kind)}</span><span class="lg-t">${esc(safeMask(i.text))}</span></div>`).join("") || emptyBox("Журнал пуст", "Здесь появятся заказы, события, команды и ошибки."));
 }
 async function sendChat() {
   const t = $("chat-msg").value.trim(); if (!t) return;
@@ -2967,6 +2982,7 @@ function ckIndex() {
   });
   // действия (не разделы): выполняются сразу
   out.push({t: tr(DEMO.on ? "Выйти из примера" : "Показать на примере"), where: tr("Действие"), run: () => DEMO.on ? demoStop() : demoStart()});
+  out.push({t: tr(SAFE ? "Выключить «Безопасно для стрима»" : "Безопасно для стрима: скрыть ключи и адреса"), where: tr("Действие"), run: () => safeSet(!SAFE, true)});
   const seen = new Set();
   return out.filter(x => { const k = x.t + "|" + x.where; if (seen.has(k)) return false; seen.add(k); return true; });
 }
@@ -3066,6 +3082,49 @@ let CMDS = {custom:[], standard:{}};
 const ART_BAD = new Set();
 const artImg = t => t && t.cover && !ART_BAD.has(t.cover) ? `<img src="${esc(t.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="ART_BAD.add(this.getAttribute('src'));this.remove()">` : "";
 document.addEventListener("DOMContentLoaded", () => { const a = $("np-art"); if (a) a.onerror = () => { ART_BAD.add(a.dataset.src); a.hidden = true; }; });
+// ---------- «Безопасно для стрима» ----------
+// Помеченное data-secret размыто (поля — точками), в тостах, уведомлениях и журнале ключи/адреса/пути заменяются.
+// Кнопки «Скопировать» по-прежнему копируют настоящее значение — маскируется только показ.
+let SAFE = false;
+try { SAFE = localStorage.getItem("b1-safe") === "1"; } catch (e) {}
+document.documentElement.classList.toggle("safe", SAFE);
+const SAFE_RULES = [
+  [/\b(?:https?|wss?):\/\/[^\s"'<>«»()]+/gi, "[ссылка скрыта]"],
+  [/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[почта скрыта]"],
+  [/\b\d{6,12}:[\w-]{25,}\b/g, "••••••"],                       // токен Telegram
+  [/\b(?:oauth:)?[A-Za-z0-9_-]{26,}\b/g, "••••••"],               // ключи и токены
+  [/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, "•.•.•.•"],         // IP-адреса
+  [/([A-Za-z]:\\(?:Users|Пользователи)\\)[^\\\s"'«»]+/gi, "$1•••"],  // пути с именем пользователя
+  [/(\/(?:home|Users)\/)[^\/\s"'«»]+/g, "$1•••"],
+];
+function safeMask(t) {
+  t = String(t ?? "");
+  return SAFE ? SAFE_RULES.reduce((a, [re, to]) => a.replace(re, to), t) : t;
+}
+function safeInputs() {
+  document.querySelectorAll("input[data-secret]").forEach(el => {
+    if (SAFE) { if (el.type !== "password") { el.dataset.otype = el.type; el.type = "password"; } }
+    else if (el.dataset.otype) { el.type = el.dataset.otype; delete el.dataset.otype; }
+  });
+}
+function safeSet(on, save) {
+  SAFE = !!on;
+  document.documentElement.classList.toggle("safe", SAFE);
+  try { localStorage.setItem("b1-safe", SAFE ? "1" : "0"); } catch (e) {}
+  $("tb-safe").setAttribute("aria-pressed", SAFE); $("tb-safe-b").hidden = !SAFE;
+  safeInputs(); renderNotifs();
+  if ($("log")) loadLog().catch(() => {});
+  if (save) {
+    if (S && S.ui) S.ui.stream_safe = SAFE;
+    if (DEMO.on) apiRaw("/settings", collect(), "POST", {quiet: true, real: true}).catch(() => {});
+    else queueSave($("tb-safe"), 100);
+    toast(SAFE ? "Безопасно для стрима: ключи, адреса и пути скрыты" : "Режим «Безопасно для стрима» выключен");
+  }
+}
+// новые поля в модалках и перерисованных блоках тоже переключаем в «пароль»
+document.addEventListener("DOMContentLoaded", () => { $("tb-safe").setAttribute("aria-pressed", SAFE); $("tb-safe-b").hidden = !SAFE; safeInputs(); });
+new MutationObserver(() => { if (SAFE) safeInputs(); }).observe(document.documentElement, {childList: true, subtree: true});
+
 // ---------- настраиваемый «Эфир»: порядок карточек, скрытие, закрепление ----------
 // Раскладка хранится в настройках (ui.live_layout) — попадает в резервные копии, профили и облако.
 // Карточки только переносятся (appendChild), а не пересоздаются: их содержимое и обработчики остаются прежними.
@@ -4071,7 +4130,7 @@ function renderCloud() {
   $("cl-found").innerHTML = (c.folders || []).length
     ? '<span class="muted">Найдено на этом ПК:</span> ' + c.folders.map(x => `<button class="sm" onclick="pickCloud('${esc(x.path.replace(/\\/g, "\\\\"))}')">${esc(x.name)}</button>`).join(" ")
     : '<span class="muted">Папки облачных дисков не найдены — укажите путь вручную</span>';
-  $("cl-file").textContent = f.exists ? `В облаке: копия от ${f.ts ? dt(f.ts) : "?"} с ПК «${f.machine || "?"}»${f.secrets ? ", с ключами" : ""}` : (f.path ? "Копии в облаке пока нет" : "");
+  $("cl-file").dataset.secret = ""; $("cl-file").textContent = f.exists ? `В облаке: копия от ${f.ts ? dt(f.ts) : "?"} с ПК «${f.machine || "?"}»${f.secrets ? ", с ключами" : ""}` : (f.path ? "Копии в облаке пока нет" : "");
   const offer = f.exists && f.offer;
   $("cloud-offer").classList.toggle("hidden", !offer);
   if (offer) $("cloud-offer").innerHTML = `<div class="row"><b class="grow ic-tx">${ICON.cloud}<span>В облаке есть копия профиля с компьютера «${esc(f.machine)}» от ${dt(f.ts)}. Восстановить её здесь?</span></b>

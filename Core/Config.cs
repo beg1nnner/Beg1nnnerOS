@@ -164,7 +164,7 @@ public static class Config
       },
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
-                  "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s"},
+                  "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s", "stream_safe": "ctrl+alt+h"},
       "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru", "cover_tint": true, "live_layout": {}, "stream_safe": false},
       "pro": {
         "themes": [],
