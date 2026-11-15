@@ -362,6 +362,7 @@ public sealed class TwitchClient
             {
                 d.Status = "error";
                 d.Message = "Не удалось завершить вход: " + e.Message;
+                _hub.Log.Error($"Вход Twitch: {e.GetType().Name}: {e.Message} @ {e.StackTrace?.Split('\n').FirstOrDefault()?.Trim()}");
             }
             return;
         }

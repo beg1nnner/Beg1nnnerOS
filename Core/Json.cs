@@ -5,22 +5,28 @@ using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Beg1nnnerOS.Core;
 
 /// <summary>Помощники для работы с JsonNode — настройки хранятся в том же формате, что и в Python-версии.</summary>
 public static class J
 {
+    // TypeInfoResolver задаём явно. Без него .NET 8 падает с ошибкой «JsonSerializerOptions instance must specify
+    // a TypeInfoResolver setting before being marked as read-only», когда в JsonObject есть значения, добавленные
+    // через JsonArray.Add(строка) (например, список прав Twitch при входе) и объект сохраняется с этими настройками.
     public static readonly JsonSerializerOptions Options = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = false,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
     };
 
     public static readonly JsonSerializerOptions Pretty = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         WriteIndented = true,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
     };
 
     public static JsonNode Parse(string text) => JsonNode.Parse(text);
