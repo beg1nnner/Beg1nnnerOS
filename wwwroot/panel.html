@@ -56,6 +56,19 @@
   .nm-t { display:flex; flex-direction:column; min-width:0; line-height:1.3; }
   .nm-t b { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .nm-t small { font-size:12px; color:var(--dim); }
+  .nav-toggle { margin-left:auto; width:30px; height:30px; padding:0; border:none; background:none; color:var(--dim); display:flex; align-items:center; justify-content:center; border-radius:8px; }
+  .nav-toggle:hover { color:var(--fg); background:var(--hover); }
+  body.nav-mini nav { width:78px; padding:18px 10px 14px; align-items:center; }
+  body.nav-mini nav .logo { flex-direction:column; padding:2px 0 8px; gap:8px; }
+  body.nav-mini .logo-txt, body.nav-mini nav button[data-p] span, body.nav-mini .nav-link .nl-t, body.nav-mini .nav-link.contact span, body.nav-mini .nm-t { display:none; }
+  body.nav-mini .nav-toggle { margin:0; }
+  body.nav-mini .nav-group { font-size:0; padding:10px 0 6px; width:28px; border-top:1px solid var(--hair); margin-top:8px; }
+  body.nav-mini nav button[data-p] { width:48px; height:42px; padding:0; justify-content:center; }
+  body.nav-mini nav button[data-p].on::before { left:-10px; }
+  body.nav-mini .nav-badge { position:absolute; top:4px; right:4px; padding:0 5px; font-size:10px; }
+  body.nav-mini .nav-link { padding:7px; border-radius:12px; width:48px; justify-content:center; box-sizing:border-box; }
+  body.nav-mini .nav-link.contact { height:40px; }
+  body.nav-mini .nav-me { padding:6px; justify-content:center; }
   main { flex:1; padding:22px 36px 60px; max-width:1360px; min-width:0; }
   /* ---------- шапка ---------- */
   .topbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
@@ -180,6 +193,61 @@
   .ab-name { font-size:22px; font-weight:600; letter-spacing:-.02em; }
   .twitch-btn { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; background:#9146ff; color:#fff !important; font-weight:600; text-decoration:none; }
   #p-chat.mod-mode > .tabs { display:none; }
+  /* опросы */
+  .vt-main { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) minmax(300px, .9fr) !important; gap:18px; }
+  .vt-main > .card, .vt-side > .card { margin:0; }
+  .vt-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  @media (max-width:1250px) { .vt-main { grid-template-columns:1fr 1fr !important; } .vt-side { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; } }
+  @media (max-width:860px) { .vt-main { grid-template-columns:1fr !important; } .vt-side { grid-template-columns:1fr; } }
+  .vt-side .switch { margin-bottom:12px; }
+  .vt-prev { border-radius:12px; overflow:hidden; border:1px solid var(--hair); aspect-ratio:6/5; margin-bottom:12px; background:repeating-conic-gradient(#1c1c23 0 25%, #16161c 0 50%) 0 0/24px 24px; }
+  .vt-prev iframe { width:600px; height:500px; border:0; transform-origin:0 0; display:block; }
+  .vt-tpl { border-radius:999px; padding:6px 12px; font-size:12.5px; background:var(--field); border:1px solid var(--line); }
+  .vt-live { background:var(--field); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
+  .vt-live h4 { font-size:20px; font-weight:600; letter-spacing:-.02em; margin:0 0 8px; }
+  .vt-bar { height:10px; border-radius:5px; background:color-mix(in srgb, var(--fg) 7%, transparent); }
+  /* OBS-источники */
+  .obs-split { display:grid; grid-template-columns:minmax(320px, 400px) minmax(0, 1fr); gap:18px; align-items:start; }
+  .obs-split.chat { grid-template-columns:minmax(0, 1fr) minmax(320px, 440px); }
+  .obs-split > .card { margin:0; min-width:0; }
+  .obs-split .row > .f { flex:1 1 120px; }
+  @media (max-width:1050px) { .obs-split, .obs-split.chat { grid-template-columns:1fr; } }
+  /* пустые состояния и загрузка */
+  .empty { display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; padding:26px 16px; color:var(--muted); }
+  .empty-ic { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--field); border:1px solid var(--line); color:var(--dim); margin-bottom:6px; }
+  .empty b { color:var(--fg); font-weight:600; font-size:14px; } .empty span { font-size:13px; max-width:420px; } .empty button { margin-top:8px; }
+  tr:hover td .empty { background:none; }
+  .skel { height:40px; border-radius:10px; margin:8px 0; background:linear-gradient(90deg, var(--field) 0%, color-mix(in srgb, var(--fg) 7%, transparent) 50%, var(--field) 100%); background-size:200% 100%; animation:skel 1.3s ease-in-out infinite; }
+  .metrics > .skel { flex:1; margin:18px 22px; }
+  @keyframes skel { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
+  /* автосохранение */
+  .card, .mod-rule, .al-card { position:relative; }
+  .saved-mark { position:absolute; bottom:12px; right:14px; display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:11.5px; font-weight:500;
+    color:#6ee7b7; background:rgba(52,211,153,.12); opacity:0; transform:translateY(-3px); transition:opacity .25s, transform .25s; pointer-events:none; z-index:3; }
+  .saved-mark.show { pointer-events:auto; }
+  .saved-mark .undo { margin-left:6px; padding:0 0 0 8px; height:auto; border:none; border-left:1px solid rgba(110,231,183,.35); border-radius:0; background:none; color:inherit; font-size:11.5px; font-weight:600; }
+  .saved-mark .undo:hover { background:none; text-decoration:underline; }
+  .saved-mark.show { opacity:1; transform:none; }
+  html[data-theme="light"] .saved-mark { color:#047857; }
+  #toasts { position:fixed; right:18px; bottom:18px; z-index:100; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+  #toasts .toast { position:static; display:flex; align-items:center; gap:12px; animation:toastIn .25s ease-out; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(8px); } }
+  /* уведомления */
+  .tb-bell-w { position:relative; }
+  button.tb-bell { position:relative; width:40px; height:40px; padding:0; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  #tb-bell-n { position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 5px; box-sizing:border-box; border-radius:9px; background:var(--accent); color:#fff;
+    font:600 10.5px/18px var(--mono); font-style:normal; text-align:center; }
+  #tb-bell-n:empty { display:none; }
+  .ncenter { position:absolute; right:0; top:48px; width:380px; max-height:420px; overflow:auto; z-index:40; background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.85); }
+  .nc-h { position:sticky; top:0; display:flex; align-items:center; padding:12px 14px; background:var(--panel); border-bottom:1px solid var(--hair); }
+  .nc-it { display:grid; grid-template-columns:8px 1fr auto; gap:10px; align-items:baseline; padding:10px 14px; border-bottom:1px solid var(--hair); font-size:13px; }
+  .nc-it i { width:7px; height:7px; border-radius:50%; background:var(--ok); } .nc-it.err i { background:var(--err); }
+  .nc-it small { font:11px var(--mono); color:var(--dim); }
+  /* плавное переключение */
+  main > section:not(.hidden), [data-tab]:not(.hidden) { animation:fadeUp .18s ease-out; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(4px); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
   .hint { display:none !important; }
   .hint.open { display:block !important; margin-top:6px; }
   button.hint-t { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; width:auto; height:auto; padding:3px 0; margin:2px 0; border:none; background:none;
@@ -461,7 +529,8 @@
 </head>
 <body>
 <nav>
-  <div class="logo"><span class="logo-mark">B1</span><span class="logo-txt"><b>Beg1nnnerOS</b><small id="ver"></small></span></div>
+  <div class="logo"><span class="logo-mark">B1</span><span class="logo-txt"><b>Beg1nnnerOS</b><small id="ver"></small></span>
+    <button class="nav-toggle" onclick="toggleNav()" title="Свернуть или развернуть меню" aria-label="Свернуть или развернуть меню"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button></div>
   <div class="nav-group">Эфир</div>
   <button data-p="live" class="on"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg><span>Эфир</span><i class="nav-badge" id="nb-live"></i></button>
   <button data-p="music"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Музыка</span><i class="nav-badge" id="nb-music"></i></button>
@@ -490,6 +559,8 @@
   <div class="tb-title"><span class="micro" id="tb-crumb">Панель управления</span><h1 id="tb-h">Эфир</h1></div>
   <button class="tb-search" onclick="openCmdk()" title="Поиск по разделам и настройкам"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Поиск по разделам и настройкам…</span><kbd>Ctrl K</kbd></button>
   <div class="grow"></div>
+  <div class="tb-bell-w"><button class="tb-bell" id="tb-bell" onclick="toggleNotifs(event)" aria-label="Уведомления" title="Уведомления"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><i id="tb-bell-n"></i></button>
+    <div class="ncenter hidden" id="ncenter"><div class="nc-h"><span class="micro grow">Уведомления</span><button class="sm" onclick="NOTIFS.length=0;renderNotifs()">Очистить</button></div><div id="nc-list"></div></div></div>
   <button class="tb-pill" id="tb-health" onclick="go('live')" title="Состояние подключений"></button>
   <span class="tb-live hidden" id="tb-live"><i></i><span>В ЭФИРЕ</span><b id="tb-up"></b></span>
 </header>
@@ -691,7 +762,7 @@
     </div>
     <div class="card">
       <div class="row"><h3 class="grow" style="margin:0">Дальше в резерве</h3><span class="small muted" id="fb-next-st"></span></div>
-      <div id="fb-next" style="margin-top:10px"></div>
+      <div id="fb-next" style="margin-top:10px"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
     </div>
     <div class="card">
       <div class="row"><h3 class="grow" style="margin:0">♥ Понравившиеся</h3><button class="sm" onclick="openLiked()">Открыть список <span id="fb-liked-n"></span></button></div>
@@ -710,13 +781,13 @@
   </div>
   <div data-tab="overlay" class="hidden">
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Тема плеера в OBS</h3><span class="small muted">Выбор сохраняется сразу</span></div>
+      <div class="row"><span class="micro grow">Тема плеера в OBS</span><span class="small muted">Выбор сохраняется сразу</span></div>
       <div class="theme-grid" id="ov-themes" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))"></div>
       <div class="muted small" style="margin-top:10px">Для отдельной сцены можно задать тему прямо в адресе источника: <code>/?theme=neon</code>. Положение очереди тоже можно задать в адресе: <code>/?queue=above</code> или <code>/?queue=below</code>. В превью показан демо-трек, если сейчас ничего не играет.</div>
     </div>
-    <div class="row" style="align-items:flex-start">
-      <div class="card" style="width:380px">
-        <h3>Оформление</h3>
+    <div class="obs-split">
+      <div class="card">
+        <div class="micro" style="margin-bottom:12px">Оформление</div>
         <label class="switch" style="margin-bottom:10px"><input type="checkbox" data-s="overlay.custom_colors" id="ov-custom"> Свои цвета вместо палитры темы</label>
         <div class="row">
           <label class="f"><span>Ширина</span><input type="number" data-s="overlay.width"></label>
@@ -741,7 +812,7 @@
         </div>
         <div class="muted small" style="margin-top:8px">Предпросмотр обновляется после сохранения. Карточка звук не передаёт — настройте захват аудио в OBS.</div>
       </div>
-      <div class="card grow"><h3>Предпросмотр</h3><div id="ov-wrap" style="overflow:hidden"><iframe class="ov" id="ov-frame" src="/?demo"></iframe></div></div>
+      <div class="card"><div class="micro" style="margin-bottom:12px">Предпросмотр</div><div id="ov-wrap" style="overflow:hidden"><iframe class="ov" id="ov-frame" src="/?demo"></iframe></div></div>
     </div>
   </div>
   <div data-tab="mhist" class="hidden">
@@ -777,14 +848,14 @@
       <div class="card">
         <div class="row"><span class="micro grow">Свои команды</span><button class="sm" onclick="openImport()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Команда</button></div>
         <div class="cl-h"><span>Команда</span><span>Ответ</span><span>Доступ</span><span>Кулдаун</span><span>Вкл.</span><span></span></div>
-        <div id="c-custom"></div>
+        <div id="c-custom"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
         <div class="cl-vars"><span class="small muted">Переменные:</span><span id="c-vars"></span></div>
         <div class="cl-lim"><span class="small muted">Общий лимит запросов одного зрителя</span><span class="inp-u sm"><input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" aria-label="Общий лимит запросов одного зрителя, сек"><span class="u">с</span></span></div>
       </div>
       <div class="ch-side">
         <div class="card">
           <div class="row"><span class="micro grow">Таймеры</span><button class="sm" onclick="editTimer()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Таймер</button></div>
-          <div id="c-timers-mini" style="margin-top:12px"></div>
+          <div id="c-timers-mini" style="margin-top:12px"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
           <div class="muted small" style="margin-top:10px">Срабатывают в эфире, когда прошёл интервал и набралось нужное число новых сообщений.</div>
         </div>
         <div class="card">
@@ -798,7 +869,7 @@
     <div class="card">
       <div class="row"><span class="micro grow">Стандартные команды</span>
         <button class="sm" onclick="if(confirm('Вернуть весь стандартный набор? Имена, шаблоны и доступ сбросятся. Свои команды не удаляются.')) api('/commands/reset',{}).then(loadCommands)">Восстановить стандартные</button></div>
-      <div class="std-grid" id="c-std"></div>
+      <div class="std-grid" id="c-std"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
     </div>
   </div>
   <div data-tab="vtimers" class="hidden">
@@ -909,7 +980,7 @@
       </div>
       <div class="card mod-log">
         <div class="row"><span class="micro grow">Журнал срабатываний</span><button onclick="loadMod()">Обновить</button></div>
-        <div id="mod-list"></div>
+        <div id="mod-list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
       </div>
     </div>
     <div class="mod-row two">
@@ -933,23 +1004,23 @@
   </div>
   <div data-tab="obschat" class="hidden">
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Тема чата в OBS</h3><span class="small muted">Выбор сохраняется сразу</span></div>
+      <div class="row"><span class="micro grow">Тема чата в OBS</span><span class="small muted">Выбор сохраняется сразу</span></div>
       <div class="theme-grid" id="chat-themes" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))"></div>
     </div>
-    <div class="row" style="align-items:flex-start">
-      <div class="card grow" style="min-width:360px">
-        <h3>Адрес для OBS</h3>
+    <div class="obs-split chat">
+      <div class="card">
+        <div class="micro" style="margin-bottom:12px">Адрес для OBS</div>
         <div class="row"><code id="chat-url"></code><button class="sm" onclick="copy(base()+'/chat')">Скопировать адрес</button></div>
         <div class="muted small" style="margin-top:6px">В OBS: «Источник → Браузер», вставьте адрес, размер например 420×640. Новые сообщения появляются снизу (или сверху — см. ниже).
           Для отдельной сцены тему и размер шрифта можно задать в адресе: <code>/chat?theme=bubbles&amp;size=24</code>.</div>
-        <h3 style="margin-top:16px">Смайлики</h3>
+        <div class="micro" style="margin:20px 0 10px">Смайлики</div>
         <div class="row">
           <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.7tv"> 7TV</label>
           <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.bttv"> BTTV</label>
           <label class="switch"><input type="checkbox" data-s="chat_overlay.emotes.ffz"> FFZ</label>
         </div>
         <div class="muted small" style="margin-top:6px">Смайлики Twitch показываются всегда. 7TV/BTTV/FFZ: глобальные и смайлики вашего канала; обновляются каждые 10 минут.</div>
-        <h3 style="margin-top:16px">Вид</h3>
+        <div class="micro" style="margin:20px 0 10px">Вид</div>
         <div class="row">
           <label class="f"><span>Размер шрифта, px</span><input type="number" min="10" max="72" data-s="chat_overlay.font_size"></label>
           <label class="f"><span>Сообщений на экране</span><input type="number" min="1" max="60" data-s="chat_overlay.max_messages"></label>
@@ -964,7 +1035,7 @@
         <label class="f" style="margin-top:12px"><span>Скрытые ники — боты и т. п. (по одному в строке)</span><textarea data-s="chat_overlay.hidden_users" data-list></textarea></label>
         <div class="muted small" style="margin-top:6px">Сообщения, удалённые модераторами, и очистка чата сразу убираются и с экрана.</div>
       </div>
-      <div class="card" style="width:440px"><h3>Предпросмотр</h3>
+      <div class="card"><div class="micro" style="margin-bottom:12px">Предпросмотр</div>
         <div style="height:560px;border-radius:8px;overflow:hidden;background:repeating-conic-gradient(#2a2a33 0 25%, #22222a 0 50%) 0 0/24px 24px">
           <iframe id="chat-frame" src="about:blank" style="border:0;width:100%;height:100%"></iframe></div>
         <div class="muted small" style="margin-top:6px">Демо-сообщения; обновляется после сохранения.</div></div>
@@ -996,7 +1067,7 @@
     </div>
     <div class="muted small" style="margin-top:8px">В OBS: отдельный источник «Браузер» 1920×1080 (или размер холста), поверх остальных, с управлением аудио через OBS. Запуск в эфире — только через награду за баллы.</div>
   </div>
-  <div class="al-grid" id="al-list"></div>
+  <div class="al-grid" id="al-list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 </section>
 
 <!-- ================= СОБЫТИЯ ================= -->
@@ -1235,9 +1306,9 @@
   <h2 style="margin:0">Опросы и прогнозы Twitch</h2>
   <div class="muted small" style="margin:4px 0 12px">Запускайте прямо отсюда или из док-панели OBS: зрители голосуют в обычном окне Twitch, а здесь и в оверлее видны живые результаты. Работает на каналах компаньонов (affiliate) и партнёров.</div>
   <div id="vt-warn"></div>
-  <div class="vt-grid">
+  <div class="vt-grid vt-main">
     <div class="card">
-      <h3 style="margin-top:0">Опрос</h3>
+      <div class="micro">Опрос</div><h3 style="margin:8px 0 14px">Новый опрос</h3>
       <div id="vt-poll-live"></div>
       <div id="vt-poll-form">
         <div class="small muted">Шаблоны:</div>
@@ -1259,7 +1330,7 @@
       </div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">Прогноз (ставки баллами канала)</h3>
+      <div class="micro">Прогноз</div><h3 style="margin:8px 0 14px">Ставки баллами канала</h3>
       <div id="vt-pred-live"></div>
       <div id="vt-pred-form">
         <div class="small muted">Шаблоны:</div>
@@ -1278,17 +1349,17 @@
         </div>
       </div>
     </div>
-  </div>
-  <div class="vt-grid" style="margin-top:16px">
+    <div class="vt-side">
     <div class="card">
-      <h3 style="margin-top:0">Сообщения в чат</h3>
-      <label class="switch"><input type="checkbox" data-s="votes.chat_start"> Бот сообщает о начале опроса или прогноза</label><br>
+      <div class="micro" style="margin-bottom:12px">Сообщения в чат</div>
+      <label class="switch"><input type="checkbox" data-s="votes.chat_start"> Бот сообщает о начале опроса или прогноза</label>
       <label class="switch"><input type="checkbox" data-s="votes.chat_results"> Бот пишет итоги (проценты, победитель, кто больше всех выиграл)</label><br>
       <label class="switch"><input type="checkbox" data-s="votes.chat_lock"> Сообщать, что ставки закрыты</label>
       <div class="muted small" style="margin-top:8px">Если в «Событиях» включено уведомление «Опрос», итог опроса пишет оно — дубля не будет.</div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">Источник для OBS</h3>
+      <div class="micro" style="margin-bottom:12px">Источник для OBS</div>
+      <div class="vt-prev"><iframe title="Предпросмотр опроса" src="/votes?preview=1" loading="lazy"></iframe></div>
       <div class="muted small">Полоски голосов и ставок прямо на стриме. Появляется сам, когда идёт опрос или прогноз.</div>
       <div class="row" style="margin-top:8px"><code id="vt-url"></code><button class="sm" onclick="copy(base()+'/votes')">Скопировать адрес</button></div>
       <div class="muted small">«Источники» → «+» → «Браузер», ширина 600, высота 500. Фон прозрачный.</div>
@@ -1297,6 +1368,7 @@
         <label class="switch" style="margin-top:18px"><input type="checkbox" data-s="votes.overlay_points"> Показывать баллы в прогнозе</label>
       </div>
     </div>
+  </div>
   </div>
 </section>
 
@@ -1375,7 +1447,7 @@
   <!-- Темы -->
   <div data-tab="themes">
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Свои темы</h3>
+      <div class="row"><span class="micro grow">Свои темы</span>
         <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button>
         <button class="sm" onclick="themeImport()">Импорт по коду</button></div>
       <table style="margin-top:10px"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list"></tbody></table>
@@ -1411,9 +1483,9 @@
 
   <!-- Статистика стримов -->
   <div data-tab="sstats" class="hidden">
-    <div class="row"><span class="grow muted small">Статистика собирается автоматически, пока программа запущена во время эфира.</span>
-      <select id="ss-days" onchange="loadStreams()" style="width:160px"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option><option value="365">Год</option></select></div>
-    <div class="grid" id="ss-total" style="margin-top:12px"></div>
+    <div class="row" style="margin-bottom:16px"><select id="ss-days" onchange="loadStreams()" data-seg><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option><option value="365">Год</option></select><span class="grow"></span><span class="muted small">Статистика собирается автоматически, пока программа запущена во время эфира.</span></div>
+    <div class="metrics" id="ss-total"><div class="skel"></div></div>
+    <div class="card" id="ss-chart-card"><div class="micro">Средний онлайн по стримам</div><div id="ss-chart" style="margin-top:12px"></div></div>
     <div class="card"><table><thead><tr><th>Дата</th><th>Стрим</th><th>Длит.</th><th>Пик</th><th>Сред.</th><th>Сообщ.</th><th>Чаттеров</th><th>Фолловы</th><th>Подписки</th><th>Биты</th><th>Донаты</th><th>Заказы</th></tr></thead>
       <tbody id="ss-list"></tbody></table></div>
     <div class="card hidden" id="ss-detail"></div>
@@ -1493,10 +1565,6 @@
   </div>
 </section>
 
-<div id="savebar" class="savebar hidden" style="position:fixed;left:240px;right:28px;bottom:16px">
-  <span class="grow">Есть несохранённые изменения</span>
-  <button onclick="loadSettings()">Отменить</button><button class="primary" onclick="saveSettings()">Сохранить</button>
-</div>
 </main>
 
 <div id="wizard" class="hidden"><div class="wz" id="wz-body"></div></div>
@@ -1545,14 +1613,47 @@ function showFieldError(field) {
   el.addEventListener("change", clear, {once: true});
   setTimeout(() => { el.scrollIntoView({block: "center", behavior: "smooth"}); el.focus({preventScroll: true}); }, 60);
 }
-function toast(text, err) {
-  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : ""); t.textContent = text;
-  document.body.appendChild(t); setTimeout(() => t.remove(), err ? 6000 : 3000);
+const NOTIFS = []; let NOTIF_UNREAD = 0;
+function toast(text, err, action) {
+  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : "");
+  const sp = document.createElement("span"); sp.textContent = text; t.appendChild(sp);
+  if (action) { const b = document.createElement("button"); b.className = "sm"; b.textContent = action.label; b.onclick = () => { t.remove(); action.run(); }; t.appendChild(b); }
+  let stack = document.getElementById("toasts"); if (!stack) { stack = document.createElement("div"); stack.id = "toasts"; document.body.appendChild(stack); }
+  stack.appendChild(t); setTimeout(() => t.remove(), action ? 8000 : err ? 6000 : 3000);
+  NOTIFS.unshift({text, err: !!err, ts: Date.now()}); if (NOTIFS.length > 40) NOTIFS.pop();
+  if ($("ncenter") && $("ncenter").classList.contains("hidden")) NOTIF_UNREAD++;
+  renderNotifs();
 }
+function renderNotifs() {
+  if (!$("nc-list")) return;
+  $("tb-bell-n").textContent = NOTIF_UNREAD > 9 ? "9+" : (NOTIF_UNREAD || "");
+  $("nc-list").innerHTML = NOTIFS.map(n => `<div class="nc-it ${n.err ? "err" : ""}"><i></i><span>${esc(n.text)}</span><small>${new Date(n.ts).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</small></div>`).join("")
+    || '<div class="muted small" style="padding:14px">Пока ничего — здесь сохраняются все всплывающие сообщения и ошибки.</div>';
+}
+function toggleNotifs(e) {
+  e.stopPropagation();
+  const nc = $("ncenter"); nc.classList.toggle("hidden");
+  if (!nc.classList.contains("hidden")) { NOTIF_UNREAD = 0; renderNotifs(); }
+}
+document.addEventListener("click", e => { const nc = $("ncenter"); if (nc && !nc.classList.contains("hidden") && !e.target.closest(".tb-bell-w")) nc.classList.add("hidden"); });
 function copy(text) { navigator.clipboard.writeText(text).then(() => toast("Скопировано: " + text), () => prompt("Скопируйте:", text)); }
 const getPath = (o, p) => p.split(".").reduce((a, k) => a == null ? a : a[k], o);
 const setPath = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k] ??= {}, o)[last] = v; };
 
+// ---------- сворачиваемое меню ----------
+// Узкое окно (или масштаб Windows 125–150 %) — меню само сворачивается до иконок; кнопка в шапке меню закрепляет выбор.
+function navPref() { try { return localStorage.getItem("nav-mini"); } catch (e) { return null; } }
+function applyNav() {
+  const p = navPref();
+  document.body.classList.toggle("nav-mini", p === "1" || (p === null && window.innerWidth < 1180));
+}
+function toggleNav() {
+  const mini = !document.body.classList.contains("nav-mini");
+  try { localStorage.setItem("nav-mini", mini ? "1" : "0"); } catch (e) {}
+  applyNav();
+}
+window.addEventListener("resize", applyNav); applyNav();
+document.querySelectorAll("nav button[data-p], nav .nav-link").forEach(b => { const t = b.querySelector("span:not(.nl-ic), .nl-t b"); if (t && !b.title) b.title = t.textContent.trim(); });
 // ---------- навигация ----------
 document.querySelectorAll("nav button[data-p]").forEach(b => b.onclick = () => go(b.dataset.p, b.dataset.sub || (b.dataset.p === "chat" ? "cmds" : "")));
 const CRUMBS = {live:"Панель управления", music:"Эфир", chat:"Эфир", alerts:"Эфир", events:"Интерактив", votes:"Интерактив", captions:"Интерактив", settings:"Система", pro:"Система"};
@@ -1574,7 +1675,7 @@ function go(p, sub) {
   if (p === "events") { renderEvents(); loadTools(); setTimeout(fitEvPrev, 30); }
   if (p === "settings") { loadBackups(); loadTools(); loadChangelog(); }
   if (p === "pro") loadPro();
-  if (p === "votes") vtOpen();
+  if (p === "votes") { vtOpen(); setTimeout(fitVtPrev, 30); }
   if (p === "captions") capOpen();
   navMark(); if (p === "live") loadLiveMetrics();
   try { history.replaceState(null, "", "#" + p); } catch (e) {}
@@ -1596,11 +1697,12 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
 }));
 
 // ---------- настройки (data-s) ----------
-async function loadSettings() {
+async function loadSettings(keepFocus) {
   const j = await api("/settings");
   S = j.data; ACCESS = j.access; META.events = j.event_types;
   $("dev").innerHTML = '<option value="">Системное по умолчанию</option>' + j.devices.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
   document.querySelectorAll("[data-s]").forEach(el => {
+    if (keepFocus && el === document.activeElement) return;   // не сбиваем то, что пользователь сейчас печатает
     const v = getPath(S, el.dataset.s);
     if (el.type === "checkbox") el.checked = !!v;
     else if (el.hasAttribute("data-list")) el.value = (v || []).join("\n");
@@ -1612,7 +1714,6 @@ async function loadSettings() {
   META.hotkeys = j.hotkey_actions;
   $("hk-list").innerHTML = Object.entries(j.hotkey_actions).map(([k, t]) => `<tr><td>${t}</td>
     <td style="width:220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
-  $("savebar").classList.add("hidden");
   applyUiTheme(S.ui.theme || "studio"); fillHotkeyHints(); renderUiThemes(); renderChatThemes(true); renderOut();
   if (window.i18nInputs) window.i18nInputs();
   renderEvents(); fitOverlay(); segSync();
@@ -1631,19 +1732,50 @@ function collect() {
   });
   return out;
 }
-async function saveSettings() {
+// Настройки сохраняются сами: после изменения — короткая пауза, затем сохранение и отметка «Сохранено» у карточки.
+let SAVE_T = null, SAVE_EL = null, SAVING = null;
+function queueSave(el, delay) {
+  if (el) SAVE_EL = el;
+  clearTimeout(SAVE_T); SAVE_T = setTimeout(() => saveSettings(true), delay ?? 700);
+}
+async function flushSave() { if (SAVE_T) { clearTimeout(SAVE_T); SAVE_T = null; await saveSettings(true); } else if (SAVING) await SAVING; }
+async function saveSettings(auto) {
+  SAVE_T = null;
+  const before = JSON.parse(JSON.stringify(S));
   const langBefore = S && S.ui ? (S.ui.language || "ru") : "ru";
-  const r = await api("/settings", collect());
-  if ((collect().ui || {}).language && (collect().ui.language || "ru") !== langBefore) { location.reload(); return; }
-  toast(r.restart_required ? "Сохранено. Новый порт заработает после перезапуска." : "Сохранено");
-  await loadSettings(); poll();
+  const data = collect(), el = SAVE_EL; SAVE_EL = null;
+  let r;
+  SAVING = api("/settings", data); try { r = await SAVING; } catch (e) { SAVING = null; return; } SAVING = null;
+  if ((data.ui || {}).language && (data.ui.language || "ru") !== langBefore) { location.reload(); return; }
+  if (r && r.restart_required) toast("Сохранено. Новый порт заработает после перезапуска.");
+  else if (auto) savedMark(el, before); else toast("Сохранено");
+  await loadSettings(true); poll();
   if (!$("p-settings").classList.contains("hidden") || !$("p-chat").classList.contains("hidden")) loadTools();
 }
-document.addEventListener("input", e => { if (e.target.closest("[data-s]") && !e.target.hasAttribute("data-autosave")) $("savebar").classList.remove("hidden"); });
-document.addEventListener("change", e => {
-  if (e.target.hasAttribute("data-autosave")) saveSettings();
-  else if (e.target.closest("[data-s]")) $("savebar").classList.remove("hidden");
+function savedMark(el, before) {
+  const card = el && el.closest(".card, .mod-rule, .al-card");
+  if (card) {
+    let m = card.querySelector(":scope > .saved-mark");
+    if (!m) { m = document.createElement("span"); m.className = "saved-mark"; card.appendChild(m); }
+    m.innerHTML = '<svg class="ic" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' + (window.tr || (x => x))("Сохранено") + `<button type="button" class="undo" onclick="undoSave()">${(window.tr || (x => x))("Отменить")}</button>`;
+    m.classList.remove("show"); void m.offsetWidth; m.classList.add("show");
+    clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove("show"), 4000);
+  }
+  UNDO = before;
+}
+let UNDO = null;
+async function undoSave() {
+  if (!UNDO) return;
+  const prev = UNDO; UNDO = null;
+  await api("/settings", prev); await loadSettings(); toast("Изменение отменено");
+}
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ" && UNDO && !e.target.closest("input, textarea, [contenteditable]")) { e.preventDefault(); undoSave(); } });
+document.addEventListener("input", e => {
+  const el = e.target.closest("[data-s]"); if (!el) return;
+  const typing = el.matches("textarea, input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])");
+  queueSave(el, typing ? 1200 : 500);
 });
+document.addEventListener("change", e => { const el = e.target.closest("[data-s]"); if (el) queueSave(el, 300); });
 
 // ---------- Эфир ----------
 let volBusy = 0;
@@ -1734,7 +1866,7 @@ async function loadHistory(more) {
       <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td>
       <td style="text-align:right;white-space:nowrap">${t.vid ? `<button class="sm ${LIKED.has(t.vid) ? "liked" : ""}" title="Понравился — в резервный плейлист" onclick="likeHist(${i}, this)">${LIKED.has(t.vid) ? "♥" : "♡"}</button>` : ""}
         <button class="sm" title="Добавить в очередь заново" onclick="requeue(${i}, this)">＋ В очередь</button></td></tr>`).join("")
-    || '<tr><td colspan="5" class="muted">За этот период треков нет</td></tr>';
+    || `<tr><td colspan="5">${emptyBox("За этот период треков нет", "Выберите другой период или включите «Резервный плейлист» в фильтре.")}</td></tr>`;
   $("mh-more").classList.toggle("hidden", MH_ITEMS.length >= r.total);
 }
 // ---------- «лайки» ----------
@@ -1961,7 +2093,7 @@ async function poll() {
   cards.push(card("Трансляция", r.stream.live ? "В эфире · " + r.stream.uptime : "Не в эфире", r.stream.live ? "ok" : "muted", null,
     esc([r.stream.title, r.stream.category].filter(Boolean).join(" · "))));
   cards.push(card("Награды за баллы", esc(r.rewards), /ошибк|нет|не /.test(r.rewards) ? "warn" : "ok", null));
-  $("ready").innerHTML = cards.join("");
+  setHTML("ready", cards.join(""));
   const bad = cards.filter(x => /chip (fix )?(warn|err)/.test(x)).length, total = cards.filter(x => !/chip (fix )?muted/.test(x)).length;
   $("tb-health").classList.toggle("bad", bad > 0);
   $("tb-health").innerHTML = bad ? `<i></i>Требует внимания <b>${bad}</b>` : `<i></i>Всё в норме <b>${total}/${total}</b>`;
@@ -1986,21 +2118,21 @@ async function poll() {
   $("np-votes").textContent = c && m.votes ? `пропуск: ${m.votes} из ${m.votes_needed} голосов` : "";
   if (Date.now() - volBusy > 1500) { $("live-vol").value = m.volume; $("live-volv").textContent = m.volume; }
   if (Date.now() - masterBusy > 1500) { $("al-master").value = ST.alerts.volume; $("al-masterv").textContent = ST.alerts.volume; }
-  $("live-q").innerHTML = m.queue.slice(0, 6).map((t, i) => { const col = avColor(t.requester);
+  setHTML("live-q", (m.queue.slice(0, 6).map((t, i) => { const col = avColor(t.requester);
     return `<div class="qrow"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="cv" style="color:${col}">${ICO_MUSIC}</span>
     <span class="tt" data-noi18n title="${esc(t.title)}">${esc(t.title)}${t.priority === 3 ? ' <span class="pill warn">⚡</span>' : ""}</span>
     <span class="who">${t.requester ? `<span class="av" style="background:${col}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span>` : '<span class="muted">вручную</span>'}</span>
-    <span class="d">${fmt(t.duration)}</span></div>`; }).join("") || '<div class="muted small" style="padding:8px">Очередь пуста — закажите трек за баллы или добавьте вручную в «Музыке»</div>';
-  if (m.queue.length > 6) $("live-q").innerHTML += `<div class="muted small" style="padding:8px">…и ещё ${m.queue.length - 6}</div>`;
+    <span class="d">${fmt(t.duration)}</span></div>`; }).join("") || emptyBox("Очередь пуста", "Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную в «Музыке»."))
+    + (m.queue.length > 6 ? `<div class="muted small" style="padding:8px">…и ещё ${m.queue.length - 6}</div>` : ""));
   const qsec = m.queue.reduce((a, t) => a + (t.duration || 0), 0);
   $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
   $("nb-music").textContent = m.queue.length || "";
-  $("m-queue").innerHTML = m.queue.map((t, i) => `<tr><td class="num muted" style="width:56px">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? " ⚡" : t.priority ? " ★" : ""}</td>
+  setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted" style="width:56px">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? " ⚡" : t.priority ? " ★" : ""}</td>
     <td><span style="display:flex;align-items:center;gap:12px"><span class="cv-sm" style="color:${avColor(t.requester)}">${ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
     <td>${t.requester ? `<span style="display:inline-flex;align-items:center;gap:8px"><span class="av" style="background:${avColor(t.requester)}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span></span>` : '<span class="muted">вручную</span>'}</td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:-1})">↑</button><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:1})">↓</button>
     <button class="sm danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">✕${t.paid ? " ↩" : ""}</button></td></tr>`).join("")
-    || '<tr><td colspan="5" class="muted">Очередь пуста</td></tr>';
+    || `<tr><td colspan="5">${emptyBox("Очередь пуста", "Зрители заказывают треки за баллы канала, или добавьте трек вручную выше.")}</td></tr>`);
   const nt = ST.next_timer;
   $("next-timer").innerHTML = nt ? `<span data-noi18n>${esc(nt.name)}</span> · <b class="mono" style="background:none;padding:0;color:var(--fg)">${fmt(nt.seconds)}</b>${nt.messages_left ? ` · ждёт ${nt.messages_left} сообщ.` : ""}` : 'таймеры — во время эфира';
   const pe = ST.paused_events;
@@ -2017,15 +2149,15 @@ const LOG_KINDS = {error:["Ошибка", "#fb7185"], skip:["Пропуск", "#
   timer:["Таймер", "#2dd4bf"], music:["Музыка", "#c4b5fd"], alert:["Алерт", "#fb923c"], system:["Система", "#8a8a99"], youtube:["YouTube", "#f87171"], yandex:["Яндекс", "#facc15"]};
 async function loadLog() {
   const items = await api("/log" + ($("log-kind").value ? "?kind=" + $("log-kind").value : ""));
-  $("log").innerHTML = items.slice().reverse().map(i => `<div class="kind-${i.kind} lg"><span class="k">${new Date(i.ts * 1000).toLocaleTimeString()}</span>
-    <span class="lg-k"><i style="background:${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][1] : "var(--dim)"}"></i>${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][0] : esc(i.kind)}</span><span class="lg-t">${esc(i.text)}</span></div>`).join("") || '<span class="muted">Пусто</span>';
+  setHTML("log", items.slice().reverse().map(i => `<div class="kind-${i.kind} lg"><span class="k">${new Date(i.ts * 1000).toLocaleTimeString()}</span>
+    <span class="lg-k"><i style="background:${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][1] : "var(--dim)"}"></i>${LOG_KINDS[i.kind] ? LOG_KINDS[i.kind][0] : esc(i.kind)}</span><span class="lg-t">${esc(i.text)}</span></div>`).join("") || emptyBox("Журнал пуст", "Здесь появятся заказы, события, команды и ошибки."));
 }
 async function sendChat() {
   const t = $("chat-msg").value.trim(); if (!t) return;
   await api("/chat/send", {text:t}); $("chat-msg").value = ""; toast("Отправлено в чат Twitch");
 }
 async function login(kind) {
-  if (!$("savebar").classList.contains("hidden")) await saveSettings();
+  await flushSave();
   const r = await api("/auth/" + kind, {});
   if (!r.opened) window.open(r.url, "_blank");
   toast("Подтвердите доступ в браузере и вернитесь сюда");
@@ -2067,6 +2199,22 @@ function hintify(root) {
   });
 }
 hintify();
+// ---------- плавные числа ----------
+const COUNT_PREV = {};
+function countUp(root) {
+  root.querySelectorAll("b[data-count]").forEach((b, i) => {
+    const key = root.id + i, to = +b.dataset.count, from = COUNT_PREV[key] ?? 0; COUNT_PREV[key] = to;
+    if (from === to || !isFinite(to)) { b.textContent = to; return; }
+    const t0 = performance.now(), d = 700;
+    const step = t => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); b.textContent = Math.round(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+// ---------- пустые состояния ----------
+function emptyBox(title, text, btn, onclick) {
+  return `<div class="empty"><span class="empty-ic"><svg class="ic" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></span>
+    <b>${title}</b>${text ? `<span>${text}</span>` : ""}${btn ? `<button class="sm primary" onclick="${onclick}">${btn}</button>` : ""}</div>`;
+}
 // ---------- что нового ----------
 let CHL_DONE = false;
 async function loadChangelog() {
@@ -2152,7 +2300,8 @@ async function loadLiveMetrics() {
   const m = st.music || {}, c = st.chat || {};
   $("live-metrics").innerHTML = [["Заказов за стрим", m.orders, m.rejected ? `отклонено: ${m.rejected}` : "музыка за баллы"], ["Потрачено баллов", m.points, "на музыку"],
     ["Сообщений в чате", c.messages, "за этот стрим"], ["Зрителей в чате", c.users, "писали хотя бы раз"]]
-    .map(([t, v, n]) => `<div><span class="micro">${t}</span><b>${v ?? 0}</b><small>${n}</small></div>`).join("");
+    .map(([t, v, n]) => `<div><span class="micro">${t}</span><b data-count="${v ?? 0}">${v ?? 0}</b><small>${n}</small></div>`).join("");
+  countUp($("live-metrics"));
 }
 function lastDays() { const n = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"]; return [...Array(7)].map((_, i) => n[new Date(Date.now() - (6 - i) * 864e5).getDay()]); }
 function vbars(vals, labels) {
@@ -2172,6 +2321,7 @@ async function loadFbNext() {
     <span class="cv" style="color:${t.liked ? "#f472b6" : "var(--accent2)"}">${ICO_MUSIC}</span><span class="tt" data-noi18n>${esc(t.title)}${t.liked ? ' <span class="pill" style="color:#f9a8d4;background:rgba(244,114,182,.12);border-color:transparent">♥</span>' : ""}</span><span class="d">${fmt(t.duration)}</span></div>`).join("")
     || '<span class="muted small">Резервный плейлист выключен или пуст</span>';
 }
+function setHTML(el, html) { if (typeof el === "string") el = $(el); if (el && el._h !== html) { el._h = html; el.innerHTML = html; } }
 function hbars(rows, unit) {
   const max = Math.max(1, ...rows.map(r => r[1]));
   return rows.map(([t, v]) => `<div class="hb"><div class="t"><span data-noi18n>${esc(t)}</span><span>${v}${unit ? " " + unit : ""}</span></div><div class="b"><i style="width:${Math.round(v / max * 100)}%"></i></div></div>`).join("")
@@ -2217,7 +2367,7 @@ async function loadCommands() {
     <span class="cl-n" data-noi18n>${esc(c.name)}${c.aliases.length ? `<small>${esc(c.aliases.join(" "))}</small>` : ""}</span>
     <span class="cl-r" data-noi18n title="${esc(c.response)}">${esc(c.response)}</span>${acc(c.access)}<span class="num muted small">${c.cooldown} с</span>${tog("custom", c.id, c.enabled)}
     <span class="cl-a"><button class="ib" title="Изменить" aria-label="Изменить ${esc(c.name)}" onclick="editCustom('${c.id}')">${EDIT_IC}</button><button class="ib" title="Удалить" aria-label="Удалить ${esc(c.name)}" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">${DEL_IC}</button></span></div>`).join("")
-    || '<div class="muted small" style="padding:14px 0">Своих команд пока нет. Пример: !привет → «Привет, {user}! Добро пожаловать на канал»</div>';
+    || emptyBox("Своих команд пока нет", "Например: !привет → «Привет, {user}! Добро пожаловать на канал»", "+ Создать команду", "editCustom()");
   $("c-vars").innerHTML = VARS.map(v => `<span class="pill">${v}</span>`).join(" ");
   $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<div class="std">
     <button class="std-b" onclick="editStd('${k}')" title="Изменить"><span class="num">${esc(c.name)}</span><small>${esc(c.desc)}</small></button>${tog("standard", k, c.enabled)}</div>`).join("");
@@ -2269,16 +2419,16 @@ async function loadTimers() {
     <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editTimer('${t.id}')">Изменить</button>
     <button class="sm danger" onclick="if(confirm('Удалить таймер?')) api('/timers/${t.id}',undefined,'DELETE').then(loadTimers)">✕</button></td></tr>`).join("")
-    || '<tr><td colspan="6" class="muted">Таймеров нет</td></tr>';
+    || `<tr><td colspan="6">${emptyBox("Таймеров пока нет", "Таймер сам напоминает в чате о правилах, соцсетях или заказе музыки.", "+ Создать таймер", "editTimer()")}</td></tr>`;
   if ($("c-timers-mini")) $("c-timers-mini").innerHTML = TIMERS.repeating.map(t => `<div class="tm-mini">
     <span class="tm-ic"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
     <button class="tm-b" onclick="editTimer('${t.id}')"><b data-noi18n>${esc(t.name)}</b><small>каждые ${t.interval} мин · от ${t.min_messages} сообщ.</small></button>
     <input type="checkbox" aria-label="Включить таймер" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></div>`).join("")
-    || '<div class="muted small">Таймеров нет</div>';
+    || emptyBox("Таймеров пока нет", "Например, «Правила чата» каждые 15 минут.", "+ Создать таймер", "editTimer()");
   const now = Date.now() / 1000;
   $("c-vtimers").innerHTML = TIMERS.viewer.map(t => `<tr><td><code>${t.id}</code></td><td data-noi18n>${esc(t.name)}</td><td data-noi18n>${esc(t.text)}</td>
     <td>${fmt(t.due - now)}</td><td><button class="sm danger" onclick="api('/viewer_timers/${t.id}',undefined,'DELETE').then(loadTimers)">Отменить</button></td></tr>`).join("")
-    || '<tr><td colspan="5" class="muted">Активных разовых таймеров нет</td></tr>';
+    || `<tr><td colspan="5">${emptyBox("Разовых таймеров нет", "Зрители создают их командой !timer 15м текст.")}</td></tr>`;
 }
 function editTimer(id) {
   const t = TIMERS.repeating.find(x => x.id === id) || {name:"", text:"", interval:15, min_messages:10, enabled:true};
@@ -2330,6 +2480,8 @@ async function toggleEvent(k, on, field) {
   toast((field === "screen" ? "На экране: " : "В чате: ") + (on ? "включено" : "выключено"));
 }
 function evScreenTest() { api("/events/test", {type: $("evs-type").value}).then(() => toast("Тестовое событие показано в OBS")); }
+function fitVtPrev() { const w = document.querySelector(".vt-prev"), f = w && w.querySelector("iframe"); if (w && f && w.clientWidth) f.style.transform = `scale(${w.clientWidth / 600})`; }
+window.addEventListener("resize", fitVtPrev);
 function fitEvPrev() { const st = document.querySelector(".ev-stage"), f = $("evs-prev"); if (st && f && st.clientWidth) f.style.transform = `scale(${st.clientWidth / 1920})`; }
 window.addEventListener("resize", fitEvPrev);
 function evScreenPrev() { const f = $("evs-prev"); if (f) f.src = "/events?preview=1&t=" + Date.now(); }
@@ -2557,7 +2709,7 @@ async function trTest() {
   $("tr-out").textContent = `[${r.source}] ${r.text}`;
 }
 async function trLanguages() {
-  if (!$("savebar").classList.contains("hidden")) await saveSettings();
+  await flushSave();
   $("tr-langs").textContent = "Проверяю…";
   try {
     const langs = await api("/tools/translate/languages", {});
@@ -2820,7 +2972,7 @@ async function saveTheme(apply) {
 // ---------- статистика стримов ----------
 const dt = ts => new Date(ts * 1000).toLocaleString("ru-RU", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
 const money = d => Object.entries(d || {}).filter(([, v]) => v).map(([c, v]) => `${Math.round(v).toLocaleString("ru-RU")} ${c}`).join(", ") || "—";
-const statCard = (t, v, note) => `<div class="card ready"><span class="t">${t}</span><span class="v" style="font-size:22px">${v}</span>${note ? `<span class="small muted">${note}</span>` : ""}</div>`;
+const statCard = (t, v, note) => `<div><span class="micro">${t}</span><b>${v}</b>${note ? `<small>${note}</small>` : ""}</div>`;
 async function loadStreams() {
   let r;
   try { r = await api("/pro/streams?days=" + $("ss-days").value); }
@@ -2833,7 +2985,10 @@ async function loadStreams() {
     <td>${dt(s.started)}</td><td class="ellipsis" style="max-width:260px" title="${esc(s.title)}" data-noi18n>${esc(s.title || "—")}<div class="small muted">${esc(s.category)}</div></td>
     <td>${fmt(s.duration)}</td><td>${s.peak}</td><td>${s.avg}</td><td>${s.messages}</td><td>${s.chatters}</td><td>${s.follows}</td>
     <td>${s.subs}</td><td>${s.bits}</td><td>${money(s.donations)}</td><td>${s.orders}</td></tr>`).join("")
-    || '<tr><td colspan="12" class="muted">За этот период стримов нет. Статистика появится после первого эфира с запущенной программой.</td></tr>';
+    || `<tr><td colspan="12">${emptyBox("За этот период стримов нет", "Статистика появится после первого эфира с запущенной программой.")}</td></tr>`;
+  const ls = r.streams.slice(0, 14).reverse();
+  $("ss-chart-card").classList.toggle("hidden", ls.length < 2);
+  if (ls.length >= 2) $("ss-chart").innerHTML = vbars(ls.map(x => x.avg), ls.map(x => new Date(x.started * 1000).toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit"})));
 }
 function viewersChart(points) {
   if (points.length < 2) return '<div class="muted small">Замеров зрителей пока мало для графика</div>';
@@ -2948,7 +3103,7 @@ function renderCloud() {
   if (offer) $("cloud-offer").innerHTML = `<div class="row"><b class="grow">☁️ В облаке есть копия профиля с компьютера «${esc(f.machine)}» от ${dt(f.ts)}. Восстановить её здесь?</b>
     <button class="primary sm" onclick="cloudRestore()">Восстановить</button><button class="sm" onclick="$('cloud-offer').classList.add('hidden')">Не сейчас</button></div>`;
 }
-function pickCloud(path) { $("cl-folder").value = path; $("savebar").classList.remove("hidden"); toast("Папка выбрана — нажмите «Сохранить» внизу"); }
+function pickCloud(path) { $("cl-folder").value = path; queueSave($("cl-folder"), 100); }
 async function cloudRestore() {
   const f = (PRO && PRO.cloud.file) || {};
   if (!f.exists) { toast("Копии в облаке нет", true); return; }
@@ -3144,7 +3299,7 @@ async function loadMod() {
         ${i.ok ? "" : `<span class="small" style="color:#f87171;margin-left:6px">не получилось: ${esc(i.error)}</span>`}</div>
         <div class="tx" data-noi18n>${esc(i.text)}</div></div>
       <div class="mod-act"><span class="mod-tag ${i.action}">${esc(i.action_title)}</span>${i.action === "timeout" && i.ok ? `<button class="sm" onclick="modUnban('${esc(i.user_id)}',this)">Снять</button>` : ""}</div></div>`;
-  }).join("") || '<span class="muted small">Пока пусто — здесь появятся удалённые сообщения, таймауты и предупреждения этого запуска программы.</span>';
+  }).join("") || emptyBox("Нарушений пока нет", "Здесь появятся удалённые сообщения, таймауты и предупреждения этого запуска программы.");
 }
 
 // ================= ИМПОРТ КОМАНД =================
@@ -3234,7 +3389,7 @@ async function capOpen() {
   clearInterval(CAP_T);
   CAP_T = setInterval(() => { if ($("p-captions").classList.contains("hidden")) { clearInterval(CAP_T); CAP_T = null; return; } capLoad(); }, 700);
 }
-function capEngine(v) { $("cap-engine").value = v; $("savebar").classList.remove("hidden"); capRender(); }
+function capEngine(v) { $("cap-engine").value = v; queueSave($("cap-engine"), 100); capRender(); }
 function capPreview() {
   const st = document.querySelector('[data-s="captions.style"]').value || "classic";
   const fs = document.querySelector('[data-s="captions.font_size"]').value || 30;
