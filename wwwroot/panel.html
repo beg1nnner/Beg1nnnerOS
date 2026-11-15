@@ -135,8 +135,14 @@
   .live-grid + .card { margin-top:var(--sp-5); }
   @media (max-width:1100px) { .live-grid { grid-template-columns:1fr; } }
   .np { padding:var(--sp-7); display:flex; flex-direction:column; gap:var(--sp-6); }
+  /* цвет карточки от обложки: --np-tint вычисляет панель; без обложки — акцентный */
+  @property --np-tint { syntax:"<color>"; inherits:true; initial-value:#8b5cf6; }
+  .card.np { --np-tint:var(--accent); --np-k:18%; transition:--np-tint var(--t) var(--ease); }
+  html[data-theme="light"] .card.np { --np-k:6%; }
+  .card.np.tinted { background:linear-gradient(160deg, color-mix(in srgb, var(--np-tint) var(--np-k), var(--panel)), var(--panel) 62%); }
   .np-top { display:flex; gap:var(--sp-7); align-items:center; flex-wrap:wrap; }
-  .np-cover { position:relative; width:168px; height:168px; flex:none; border-radius:var(--r-lg); overflow:hidden; background:color-mix(in srgb, var(--accent) 14%, var(--bg)); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); box-shadow:inset 0 1px 0 var(--inset-hi), 0 30px 60px -24px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .np-cover { position:relative; width:168px; height:168px; flex:none; border-radius:var(--r-lg); overflow:hidden; background:color-mix(in srgb, var(--np-tint) 14%, var(--bg)); border:1px solid color-mix(in srgb, var(--np-tint) 30%, transparent); box-shadow:inset 0 1px 0 var(--inset-hi), 0 30px 60px -24px color-mix(in srgb, var(--np-tint) 45%, transparent); }
+  html[data-theme="light"] .np-cover { box-shadow:inset 0 1px 0 var(--inset-hi), 0 24px 48px -26px color-mix(in srgb, var(--np-tint) 35%, transparent); }
   .np-cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
   .cv img, .cv-sm img { width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
   .qrow .cv:has(img), .cv-sm:has(img) { overflow:hidden; padding:0; }
@@ -1456,6 +1462,7 @@
     <h3>Тема программы</h3>
     <div class="theme-grid" id="ui-themes"></div>
     <div class="muted small u-mt-2">Применяется сразу к панели и док-панели OBS.</div>
+    <label class="switch u-mt-4"><input type="checkbox" data-s="ui.cover_tint" onchange="TINT_FOR=null"> Цвет карточки «Сейчас играет» от обложки трека</label>
   </div>
   <div class="card">
     <h3>Язык / Language</h3>
@@ -2653,6 +2660,7 @@ async function poll(pushed) {
   const art = c && c.cover && !ART_BAD.has(c.cover) ? c.cover : "";
   if ($("np-art").dataset.src !== art) { $("np-art").dataset.src = art; if (art) $("np-art").src = art; }
   $("np-art").hidden = !art;
+  npTint(art);
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
@@ -3028,6 +3036,52 @@ let CMDS = {custom:[], standard:{}};
 const ART_BAD = new Set();
 const artImg = t => t && t.cover && !ART_BAD.has(t.cover) ? `<img src="${esc(t.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="ART_BAD.add(this.getAttribute('src'));this.remove()">` : "";
 document.addEventListener("DOMContentLoaded", () => { const a = $("np-art"); if (a) a.onerror = () => { ART_BAD.add(a.dataset.src); a.hidden = true; }; });
+// ---------- цвет карточки «Сейчас играет» от обложки ----------
+// Уменьшенная копия обложки на canvas → средний цвет без почти чёрных, почти белых и серых пикселей,
+// насыщенность и яркость ограничены, чтобы цвет был спокойным. Результат кешируется по адресу обложки.
+const TINT_CACHE = new Map();
+let TINT_FOR = null;
+function npTint(src) {
+  const card = document.querySelector("#p-live .card.np");
+  const on = !(S && S.ui && S.ui.cover_tint === false);
+  if (!on || !src) { TINT_FOR = null; card.classList.remove("tinted"); card.style.removeProperty("--np-tint"); return; }
+  if (TINT_FOR === src) return;
+  TINT_FOR = src;
+  const apply = c => { if (TINT_FOR !== src) return; if (!c) { card.classList.remove("tinted"); card.style.removeProperty("--np-tint"); return; }
+    card.style.setProperty("--np-tint", c); card.classList.add("tinted"); };
+  if (TINT_CACHE.has(src)) return apply(TINT_CACHE.get(src));
+  const img = new Image();
+  img.onload = () => { let c = null; try { c = dominantColor(img); } catch (e) {} TINT_CACHE.set(src, c); apply(c); };
+  img.onerror = () => { TINT_CACHE.set(src, null); apply(null); };
+  // чужие адреса (превью YouTube, Яндекс) — через сервер программы, иначе canvas нельзя прочитать
+  img.src = /^(data:|blob:|\/)/.test(src) ? src : "/api/cover?u=" + encodeURIComponent(src);
+}
+function dominantColor(img) {
+  const n = 24, cv = document.createElement("canvas"); cv.width = n; cv.height = n;
+  const g = cv.getContext("2d", {willReadFrequently: true}); g.drawImage(img, 0, 0, n, n);
+  const d = g.getImageData(0, 0, n, n).data;
+  let r = 0, gr = 0, b = 0, w = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const R = d[i], G = d[i + 1], B = d[i + 2], A = d[i + 3];
+    if (A < 128) continue;
+    const mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn) / 510, sat = mx === mn ? 0 : (mx - mn) / (255 - Math.abs(mx + mn - 255));
+    if (l < 0.12 || l > 0.92 || sat < 0.18) continue;   // почти чёрные, почти белые и серые не считаем
+    const k = sat;                                     // насыщенные пиксели весят больше
+    r += R * k; gr += G * k; b += B * k; w += k;
+  }
+  if (w < 3) return null;
+  let [h, s, l] = rgbToHsl(r / w, gr / w, b / w);
+  s = Math.min(s, 0.55); l = Math.min(Math.max(l, 0.42), 0.6);
+  return `hsl(${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
+}
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
 function blockNow() {
   const c = window.LAST_CUR; if (!c) return;
   const opt = (what, title, sub, dis) => `<button class="blk-opt" ${dis ? "disabled" : ""} onclick="blockDo('${what}')"><b>${title}</b><span>${sub}</span></button>`;

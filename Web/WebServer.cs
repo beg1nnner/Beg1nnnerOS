@@ -499,6 +499,8 @@ public sealed partial class WebServer
         app.MapPost("/api/tools/youtube-check", H(async (c, b) => Ok(await YouTubeCheck.Run(_hub))));
         // «Проверка перед эфиром»: то, чего нет в общем состоянии (место на диске, звук, источники музыки)
         app.MapGet("/api/precheck", H((c, b) => Ok(Precheck())));
+        // обложка трека с того же адреса, что и панель: только превью YouTube и обложки Яндекса (для цвета карточки)
+        app.MapGet("/api/cover", CoverProxy);
         // пульт с телефона
         app.MapGet("/api/remote", H((c, b) => Ok(RemoteInfo())));
         app.MapPost("/api/remote", H(async (c, b) => Ok(await RemoteSet(b.Bool("enabled"), b.Bool("new_key")))));
@@ -819,6 +821,41 @@ public sealed partial class WebServer
         }
         catch (UserError e) { return Fail(e.Message); }
         catch (Exception e) { return Fail($"Не удалось загрузить файл: {e.Message}", 500); }
+    }
+
+    private readonly Dictionary<string, (byte[] Data, string Type)> _covers = new();
+    private readonly Queue<string> _coverOrder = new();
+
+    private async Task<IResult> CoverProxy(HttpContext c)
+    {
+        var u = c.Request.Query["u"].ToString();
+        if (!Uri.TryCreate(u, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
+            !(uri.Host == "i.ytimg.com" || uri.Host.EndsWith(".yandex.net") || uri.Host == "avatars.yandex.net"))
+            return Results.BadRequest();
+        (byte[] Data, string Type) hit;
+        lock (_covers) _covers.TryGetValue(u, out hit);
+        if (hit.Data == null)
+        {
+            try
+            {
+                using var resp = await _hub.Http.GetAsync(uri, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, c.RequestAborted);
+                if (!resp.IsSuccessStatusCode) return Results.NotFound();
+                var type = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+                if (!type.StartsWith("image/")) return Results.NotFound();
+                if ((resp.Content.Headers.ContentLength ?? 0) > 2_000_000) return Results.NotFound();
+                var data = await resp.Content.ReadAsByteArrayAsync(c.RequestAborted);
+                if (data.Length > 2_000_000) return Results.NotFound();
+                hit = (data, type);
+                lock (_covers)
+                {
+                    if (!_covers.ContainsKey(u)) { _covers[u] = hit; _coverOrder.Enqueue(u); }
+                    while (_coverOrder.Count > 60) _covers.Remove(_coverOrder.Dequeue());
+                }
+            }
+            catch { return Results.NotFound(); }
+        }
+        c.Response.Headers["Cache-Control"] = "private, max-age=86400";
+        return Results.Bytes(hit.Data, hit.Type);
     }
 
     private object Precheck()

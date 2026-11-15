@@ -165,7 +165,7 @@ public static class Config
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
                   "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s"},
-      "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru"},
+      "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru", "cover_tint": true, "live_layout": {}, "stream_safe": false},
       "pro": {
         "themes": [],
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},
