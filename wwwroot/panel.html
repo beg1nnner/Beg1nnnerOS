@@ -60,16 +60,33 @@
   main { flex:1; padding:var(--sp-6) var(--sp-9) var(--sp-15); max-width:1360px; min-width:0; }
   /* ---------- шапка ---------- */
   .topbar { display:flex; align-items:center; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-6); }
-  .tb-title { display:flex; flex-direction:column; gap:var(--sp-1); }
-  .tb-title h1 { margin:0; font-size:var(--fs-2xl); font-weight:600; letter-spacing:-.03em; line-height:1.1; }
+  .tb-title { display:flex; flex-direction:column; gap:var(--sp-1); flex:0 0 280px; min-width:0; }
+  .tb-title h1 { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:0; font-size:var(--fs-2xl); font-weight:600; letter-spacing:-.03em; line-height:1.1; }
   .micro { font:500 var(--fs-xs) var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
   .micro.acc { color:var(--accent2); }
   /* единый заголовок карточки (моноширинные заглавные — только для надстрочников над заголовком и подписей метрик) */
+  /* аккаунты */
+  .acc { display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-3) var(--sp-4); }
+  .acc-on, .acc-on-only { display:none !important; }
+  .acc.is-on .acc-on { display:flex !important; } .acc.is-on .acc-on-only { display:inline-flex !important; }
+  .acc.is-on .acc-off, .acc.is-on .acc-off-only { display:none !important; }
+  .acc-off { flex:1 1 260px; } .acc-full { flex-basis:100%; }
+  .acc-on { flex:1; align-items:center; gap:var(--sp-3); min-width:0; }
+  .acc-av { width:40px; height:40px; flex:none; border-radius:var(--r-full); display:grid; place-items:center; font-weight:600; font-size:var(--fs-base); text-transform:uppercase;
+    color:var(--accent2); background:color-mix(in srgb, var(--accent) 16%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+  .acc-av.ya { color:var(--warn); background:color-mix(in srgb, var(--warn) 12%, var(--panel)); border-color:color-mix(in srgb, var(--warn) 25%, transparent); }
+  .acc-av.da { color:var(--love); background:color-mix(in srgb, var(--love) 12%, var(--panel)); border-color:color-mix(in srgb, var(--love) 25%, transparent); }
+  .acc-who { display:flex; flex-direction:column; align-items:flex-start; gap:var(--sp-1); min-width:0; }
+  .acc-who > b { font-size:var(--fs-base); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  .acc-acts { display:flex; gap:var(--sp-2); align-items:center; flex-wrap:wrap; }
+  button.quiet { background:none; border-color:transparent; color:var(--muted); }
+  button.quiet:hover { color:var(--err); background:color-mix(in srgb, var(--err) 8%, transparent); border-color:transparent; }
   .card-t { font:600 var(--fs-lg)/1.3 var(--font); letter-spacing:-.01em; color:var(--fg); margin:0 0 var(--sp-3); }
   .row > .card-t, .card-t.grow { margin:0; }
   .tb-pill { display:inline-flex; align-items:center; gap:var(--sp-2); height:36px; padding:0 var(--sp-4); border-radius:var(--r-full); font-size:var(--fs-md); color:var(--muted); background:none; }
   .tb-pill i { width:7px; height:7px; border-radius:var(--r-full); background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); }
   .tb-pill.bad i { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent); }
+  .tb-pill:empty { display:none; }
   .tb-pill b { font-family:var(--mono); font-weight:500; color:var(--fg); }
   .tb-live { display:inline-flex; align-items:center; gap:var(--sp-3); height:36px; padding:0 var(--sp-4); border-radius:var(--r-full); background:color-mix(in srgb, var(--live) 10%, transparent); border:1px solid color-mix(in srgb, var(--live) 30%, transparent); font-size:var(--fs-md); font-weight:600; color:color-mix(in srgb, var(--live) 65%, var(--fg)); }
   .tb-live i { width:7px; height:7px; border-radius:var(--r-full); background:var(--live); box-shadow:0 0 0 3px color-mix(in srgb, var(--live) 20%, transparent); animation:livePulse 2s ease-in-out infinite; }
@@ -98,6 +115,13 @@
   .np.playing .np-cover { animation:none; }
   .np-meta { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:var(--sp-2); }
   .np-meta .micro .pill { margin-left:var(--sp-2); letter-spacing:.04em; color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
+  .np-empty { display:none; flex-direction:column; align-items:flex-start; gap:var(--sp-2); }
+  .np-empty b { font-size:var(--fs-xl); font-weight:600; letter-spacing:-.02em; }
+  .np-empty > span { color:var(--muted); font-size:var(--fs-md); max-width:420px; }
+  .np-empty button { margin-top:var(--sp-1); }
+  .np.idle .np-empty { display:flex; }
+  .np.idle .np-title, .np.idle .np-who, .np.idle .np-bar, .np.idle .np-times, .np.idle .micro.acc { display:none; }
+  .np.idle .np-cover > i { animation:none; opacity:.4; }
   .np-title { font-size:var(--fs-3xl); font-weight:600; letter-spacing:-.035em; line-height:1.1; overflow-wrap:anywhere; }
   .np-who { font-size:var(--fs-lg); color:var(--muted); }
   .np-bar { position:relative; height:4px; border-radius:var(--r-sm); background:color-mix(in srgb, var(--fg) 9%, transparent); margin-top:var(--sp-3); }
@@ -198,6 +222,11 @@
   .empty-ic { width:44px; height:44px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; background:var(--field); border:1px solid var(--line); color:var(--dim); margin-bottom:var(--sp-2); }
   .empty b { color:var(--fg); font-weight:600; font-size:var(--fs-base); } .empty span { font-size:var(--fs-md); max-width:420px; } .empty button { margin-top:var(--sp-2); }
   tr:hover td .empty { background:none; }
+  table:has(> tbody .empty) > thead, table:has(> tbody > tr > td > .empty) th { display:none; }
+  #live-q .empty { padding:var(--sp-5) var(--sp-4); }
+  .load-err { display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--sp-2); padding:var(--sp-6) var(--sp-4); color:var(--muted); grid-column:1 / -1; flex:1; }
+  .load-err .empty-ic { color:var(--err); background:color-mix(in srgb, var(--err) 10%, transparent); border-color:color-mix(in srgb, var(--err) 25%, transparent); }
+  .load-err b { color:var(--fg); font-weight:600; font-size:var(--fs-base); } .load-err span { font-size:var(--fs-md); max-width:420px; }
   .skel { height:40px; border-radius:var(--r-md); margin:var(--sp-2) 0; background:linear-gradient(90deg, var(--field) 0%, color-mix(in srgb, var(--fg) 7%, transparent) 50%, var(--field) 100%); background-size:200% 100%; animation:skel 1.3s ease-in-out infinite; }
   .metrics > .skel { flex:1; margin:var(--sp-5) var(--sp-6); }
   @keyframes skel { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
@@ -380,7 +409,8 @@
   .al-new:hover { border-color:color-mix(in srgb, var(--accent) 60%, transparent); color:var(--fg); }
   .al-new .pl { width:44px; height:44px; border-radius:var(--r-full); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:var(--fs-xl); color:var(--fg); }
   .tb-search { display:flex; align-items:center; gap:var(--sp-3); height:42px; padding:0 var(--sp-3); min-width:240px; max-width:380px; flex:1 1 240px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--field); color:var(--dim); font-size:var(--fs-base); font-weight:400; text-align:left; }
-  .tb-search span { flex:1; }
+  .tb-search { justify-content:flex-start; overflow:hidden; }
+  .tb-search span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #cmdk { position:fixed; inset:0; z-index:70; background:var(--scrim); backdrop-filter:blur(6px); display:flex; justify-content:center; align-items:flex-start; padding:12vh var(--sp-5) var(--sp-5); }
   #cmdk.hidden { display:none; }
   .ck { width:min(640px, 100%); background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-lg); overflow:hidden; }
@@ -420,11 +450,9 @@
   .th-pal i { display:inline-block; width:34px; height:18px; border-radius:var(--r-sm); }
   .th-sec { border:1px solid var(--line); border-radius:var(--r-md); padding:0 var(--sp-4); margin:var(--sp-2) 0; background:color-mix(in srgb, var(--panel) 60%, transparent); }
   .th-sec > summary { cursor:pointer; padding:var(--sp-3) 0; font-weight:700; list-style:none; }
-  .th-sec > summary::before { content:"▸ "; color:var(--muted); } .th-sec[open] > summary::before { content:"▾ "; }
   .th-sec[open] { padding-bottom:var(--sp-3); }
   .th-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:var(--sp-3) var(--sp-4); }
   .th-grid .f { margin:0; } .th-grid .switch { margin-top:var(--sp-5); }
-  .th-grid input[type=color] { width:100%; height:34px; padding:var(--sp-half); }
   .devcode { font:500 var(--fs-3xl)/1.1 var(--mono); letter-spacing:.12em; padding:var(--sp-4) var(--sp-5); border-radius:var(--r-md); background:var(--panel); border:1px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); display:inline-block; margin:var(--sp-2) 0 var(--sp-3); }
   .chk { display:flex; gap:var(--sp-3); align-items:flex-start; padding:var(--sp-2) 0; border-bottom:1px solid var(--line); }
   .chk:last-child { border-bottom:0; }
@@ -451,7 +479,6 @@
   .vars code { cursor:pointer; margin:0 3px 3px 0; display:inline-block; }
   .drop { border:2px dashed var(--line); border-radius:var(--r-md); padding:var(--sp-4); text-align:center; color:var(--muted); cursor:pointer; }
   .drop.over { border-color:var(--accent); color:var(--fg); }
-  #p-pro input[type=color] { width:64px; height:36px; padding:3px; cursor:pointer; }
   iframe.ov { border:1px solid var(--line); border-radius:var(--r-sm); background:repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/30px 30px; transform-origin:0 0; }
   /* опросы и прогнозы */
   .vt-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:var(--sp-4); align-items:start; }
@@ -503,7 +530,7 @@
   .u-bg-linear-gradient-90deg-ok-warn:not(#_#_) { background:linear-gradient(90deg,var(--ok),var(--warn)); }
   .u-bg-none:not(#_#_) { background:none; }
   .u-bg-panel2:not(#_#_) { background:var(--panel2); }
-  .u-bg-repeating-conic-gradient-checker-a-0-25-checker-b-0-50-0-0-24px-24px:not(#_#_) { background:repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/24px 24px; }
+  .u-checker:not(#_#_) { background:repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/24px 24px; }
   .u-br-r-md:not(#_#_) { border-radius:var(--r-md); }
   .u-br-r-sm:not(#_#_) { border-radius:var(--r-sm); }
   .u-c-err:not(#_#_) { color:var(--err); }
@@ -677,16 +704,18 @@
         <div class="np-meta">
           <div class="micro acc">Сейчас играет <span class="pill hidden" id="np-paid">за баллы</span></div>
           <div class="np-title" id="np-title" data-noi18n>—</div>
+          <div class="np-empty" id="np-empty"><b>Сейчас ничего не играет</b><span>Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную.</span>
+            <button class="sm primary" onclick="go('music','queue');setTimeout(()=>$('m-add').focus(),60)"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить трек</span></button></div>
           <div class="np-who" id="np-who"></div>
           <div class="np-bar"><i id="np-bar"></i></div>
           <div class="np-times"><span id="np-pos"></span><span id="np-votes"></span><span id="np-left"></span></div>
         </div>
       </div>
       <div class="np-ctl">
-        <button class="rnd big" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
-        <button class="rnd" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
+        <button class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
         <button id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
-        <button class="pillbtn" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+        <button class="pillbtn" id="np-block" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
         <div class="grow"></div>
         <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
       </div>
@@ -735,7 +764,7 @@
     <div class="card">
       <h3>Ручной заказ</h3>
       <div class="row"><input id="m-add" class="grow" placeholder="Ссылка YouTube / Spotify или «исполнитель — название»">
-        <button class="primary" id="m-add-btn" onclick="manualAdd()">+ Добавить</button></div>
+        <button class="primary cta" id="m-add-btn" onclick="manualAdd()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить</span></button></div>
       <div class="muted small u-mt-2">Ручное добавление не списывает баллы и не применяет лимиты заказов.</div>
     </div>
     <div class="card"><div class="row"><h3 class="grow u-m-0">Очередь</h3>
@@ -972,7 +1001,7 @@
   </div>
   <div data-tab="vtimers" class="hidden">
     <div class="card">
-      <div class="row"><h3 class="grow u-m-0">Таймеры</h3><button class="primary sm" onclick="editTimer()">+ Добавить таймер</button></div>
+      <div class="row"><h3 class="grow u-m-0">Таймеры</h3><button class="primary sm" onclick="editTimer()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить таймер</span></button></div>
       <div class="muted small u-mt-1">Срабатывают во время эфира, когда выполнены оба условия: прошёл интервал и набралось нужное число новых сообщений (0 — без условия активности).</div>
       <table class="u-mt-2"><thead><tr><th>Название</th><th>Текст</th><th>Интервал</th><th>Мин. сообщений</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-timers"></tbody></table>
     </div>
@@ -1134,7 +1163,7 @@
         <div class="muted small u-mt-2">Сообщения, удалённые модераторами, и очистка чата сразу убираются и с экрана.</div>
       </div>
       <div class="card"><h3 class="card-t u-mb-3">Предпросмотр</h3>
-        <div class="u-h-560px u-br-r-sm u-ov-hidden u-bg-repeating-conic-gradient-checker-a-0-25-checker-b-0-50-0-0-24px-24px">
+        <div class="u-h-560px u-br-r-sm u-ov-hidden u-checker">
           <iframe id="chat-frame" src="about:blank" class="u-b-0 u-w-100 u-h-100"></iframe></div>
         <div class="muted small u-mt-2">Демо-сообщения; обновляется после сохранения.</div></div>
     </div>
@@ -1161,7 +1190,7 @@
       <span class="small muted">Адрес для OBS:</span><code id="al-url"></code><button class="sm" onclick="copy(base()+'/alerts')">Скопировать адрес OBS</button>
       <span class="grow"></span>
       <button class="danger" onclick="api('/alerts/stop',{})">Остановить все МедиаАлерты</button>
-      <button class="primary" onclick="editAlert()">+ Добавить алерт</button>
+      <button class="primary cta" onclick="editAlert()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить алерт</span></button>
     </div>
     <div class="muted small u-mt-2">В OBS: отдельный источник «Браузер» 1920×1080 (или размер холста), поверх остальных, с управлением аудио через OBS. Запуск в эфире — только через награду за баллы.</div>
   </div>
@@ -1189,23 +1218,27 @@
         <button id="btn-pause-ev2" class="hidden" onclick="api('/events/pause',{}).then(poll)"></button>
       </div>
   <div class="card">
-    <div class="row"><h3 class="card-t grow">DonationAlerts</h3><span id="da-status" class="pill"></span></div>
-    <p class="small muted u-m-2-0-3">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в списке слева).</p>
-    <div class="row">
+    <div class="row"><h3 class="card-t grow">DonationAlerts</h3></div>
+    <div class="acc u-mt-3" id="acc-da">
+    <div class="acc-on"><span class="acc-av da"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></span><span class="acc-who"><b>DonationAlerts</b><span id="da-status" class="pill"></span></span></div>
+    <div class="acc-off acc-full"><p class="small muted u-m-0">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в списке слева).</p>
+    <div class="row u-mt-3">
       <label class="f grow"><span>ID приложения</span><input data-s="donationalerts.client_id" autocomplete="off" placeholder="например 12345"></label>
       <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
     </div>
-    <div class="row u-mt-3">
-      <button class="primary" onclick="login('da')">Войти через DonationAlerts</button>
-      <button class="sm danger" onclick="confirmDlg({title:'Отключить DonationAlerts?',text:'Донаты перестанут приходить в программу, пока вы не подключите аккаунт снова.',okLabel:'Отключить',danger:1}).then(ok=>ok&&api('/logout/da',{}).then(loadSettings))">Выйти</button>
     </div>
-    <details class="u-mt-3" id="da-help"><summary class="small u-cur-pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
+    <div class="acc-acts">
+      <button class="primary acc-off-only" onclick="login('da')">Войти через DonationAlerts</button>
+      <button class="sm quiet acc-on-only" onclick="confirmDlg({title:'Отключить DonationAlerts?',text:'Донаты перестанут приходить в программу, пока вы не подключите аккаунт снова.',okLabel:'Отключить',danger:1}).then(ok=>ok&&api('/logout/da',{}).then(loadSettings))">Отключить</button>
+    </div>
+    </div>
+    <details class="u-mt-3 acc-help" id="da-help"><summary class="small u-cur-pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
       <li>Откройте <a href="https://www.donationalerts.com/application/clients" target="_blank">страницу приложений DonationAlerts</a> (войдите в свой аккаунт) и нажмите «Создать приложение».
         Название — любое, например <code>Beg1nnnerOS</code>. URL перенаправления: <code>http://localhost:4343/da</code> <button class="sm" onclick="copy('http://localhost:4343/da')">Копировать</button></li>
       <li>Скопируйте из созданного приложения <b>ID приложения</b> и <b>API-ключ</b> в поля выше.</li>
       <li>Нажмите «Войти через DonationAlerts» и в открывшемся окне браузера разрешите доступ. Статус справа сверху сменится на «подключено».</li></ol>
       <p class="small muted">Программа сама продлевает доступ. Ключ браузерного виджета («Секретный токен» из настроек виджетов) здесь не нужен.</p></details>
-    <details class="u-mt-2"><summary class="small muted u-cur-pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
+    <details class="u-mt-2 acc-help"><summary class="small muted u-cur-pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
       <label class="f u-mt-2"><span>OAuth access token (права oauth-user-show и oauth-donation-subscribe)</span>
         <input type="password" data-s="donationalerts.token" data-secret="donationalerts.has_token" autocomplete="new-password"></label></details>
   </div>
@@ -1285,9 +1318,14 @@
   <div data-tab="s-acc" class="masonry">
   <div class="card">
     <h3>Аккаунт Twitch</h3>
-    <div class="row"><div class="grow" id="acc-streamer"></div>
-      <button class="primary" onclick="twLogin('streamer')" id="tw-login-btn">Войти через Twitch</button>
-      <button class="sm danger" onclick="confirmDlg({title:'Выйти из аккаунта стримера?',text:'Программа перестанет работать с вашим каналом, пока вы не войдёте снова.',okLabel:'Выйти',danger:1}).then(ok=>ok&&api('/logout/streamer',{}).then(poll))">Выйти</button></div>
+    <div class="acc" id="acc-tw">
+      <div class="acc-off"><p class="small muted u-m-0">Войдите своим аккаунтом стримера: программа будет читать чат, создавать награды за баллы и показывать события канала.</p></div>
+      <div class="acc-on"><span class="acc-av" id="acc-tw-av"></span><span class="acc-who"><b id="acc-tw-nick"></b><span id="acc-streamer"></span></span></div>
+      <div class="acc-acts">
+        <button class="primary" onclick="twLogin('streamer')" id="tw-login-btn">Войти через Twitch</button>
+        <button id="tw-logout" class="sm quiet" onclick="confirmDlg({title:'Выйти из аккаунта стримера?',text:'Программа перестанет работать с вашим каналом, пока вы не войдёте снова.',okLabel:'Выйти',danger:1}).then(ok=>ok&&api('/logout/streamer',{}).then(poll))">Выйти</button>
+      </div>
+    </div>
   </div>
   <div class="card">
     <h3>Чат-бот</h3>
@@ -1297,19 +1335,27 @@
       <label class="f"><span>Ник аккаунта бота</span><input data-s="twitch.bot_login" placeholder="my_bot"></label>
       <label class="switch u-mt-4"><input type="checkbox" data-s="twitch.allow_send"> Разрешить отправку сообщений в чат Twitch</label>
     </div>
-    <div class="row u-mt-3"><div class="grow" id="acc-bot"></div>
-      <button onclick="twLogin('bot')">Войти в аккаунт бота</button>
-      <button class="sm danger" onclick="api('/logout/bot',{}).then(poll)">Выйти</button></div>
-    <div class="muted small u-mt-2">Перед входом бота переключитесь в браузере на его аккаунт. Приложение проверяет соответствие ника.</div>
+    <div class="acc u-mt-4" id="acc-botbox">
+      <div class="acc-off"><p class="small muted u-m-0">Чтобы писать от имени отдельного бота, войдите его аккаунтом. Перед входом переключитесь в браузере на аккаунт бота — программа проверит, что ник совпадает.</p></div>
+      <div class="acc-on"><span class="acc-av" id="acc-bot-av"></span><span class="acc-who"><b id="acc-bot-nick"></b><span id="acc-bot"></span></span></div>
+      <div class="acc-acts">
+        <button class="acc-off-only" onclick="twLogin('bot')">Войти в аккаунт бота</button>
+        <button class="sm quiet acc-on-only" onclick="api('/logout/bot',{}).then(poll)">Выйти</button>
+      </div>
+    </div>
   </div>
   <div class="card">
     <h3>Яндекс Музыка</h3>
-    <div class="row">
-      <label class="f grow"><span>Токен</span><input type="password" data-s="yandex.token" data-secret="yandex.has_token" autocomplete="new-password"></label>
-      <button class="u-mt-4" onclick="api('/tools/yandex',{}).then(r=>toast(r))">Проверить</button>
-      <button class="sm danger u-mt-4" onclick="confirmDlg({title:'Удалить токен Яндекса?',text:'Треки с Яндекс Музыки перестанут играть, пока вы не добавите токен снова.',okLabel:'Удалить токен',danger:1}).then(ok=>ok&&api('/secret/clear',{name:'yandex'}).then(loadSettings))">Удалить</button>
+    <div class="acc" id="acc-ya">
+      <div class="acc-on"><span class="acc-av ya"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M13.5 17V7h-1.3C10.4 7 9.5 8.2 9.5 9.8c0 1.7.9 2.6 2.4 2.6h1.6M11.5 12.4L9 17"/></svg></span><span class="acc-who"><b>Токен добавлен</b><span class="small muted">Треки с Яндекс Музыки доступны для заказа</span></span></div>
+      <div class="acc-off acc-full"><p class="small muted u-m-0">Чтобы зрители могли заказывать треки с Яндекс Музыки, вставьте токен — инструкция ниже.</p>
+        <label class="f u-mt-3"><span>Токен</span><input type="password" data-s="yandex.token" data-secret="yandex.has_token" autocomplete="new-password"></label></div>
+      <div class="acc-acts">
+        <button onclick="api('/tools/yandex',{}).then(r=>toast(r))">Проверить</button>
+        <button class="sm quiet acc-on-only" onclick="confirmDlg({title:'Удалить токен Яндекса?',text:'Треки с Яндекс Музыки перестанут играть, пока вы не добавите токен снова.',okLabel:'Удалить токен',danger:1}).then(ok=>ok&&api('/secret/clear',{name:'yandex'}).then(loadSettings))">Удалить</button>
+      </div>
     </div>
-    <details class="u-mt-2"><summary class="small u-cur-pointer">Открыть инструкцию: как получить токен</summary><ol class="small muted">
+    <details class="u-mt-2 acc-help" id="ya-help"><summary class="small u-cur-pointer">Открыть инструкцию: как получить токен</summary><ol class="small muted">
       <li>Откройте <a href="https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d" target="_blank">страницу авторизации Яндекса</a> и войдите.</li>
       <li>После перехода скопируйте из адресной строки только значение <code>access_token</code> — между <code>access_token=</code> и <code>&amp;</code>, без остального адреса.</li>
       <li>Вставьте сюда и сохраните. Полные треки доступны с подпиской Плюс.</li></ol></details>
@@ -1436,7 +1482,7 @@
           <label class="f u-w-110px"><span>Баллов за голос</span><input id="vt-pptsn" type="number" min="1" value="100" disabled></label>
         </div>
         <div class="vt-acts">
-          <button class="primary" id="vt-pstart" onclick="vtStartPoll()">Запустить опрос</button>
+          <button class="primary cta" id="vt-pstart" onclick="vtStartPoll()">Запустить опрос</button>
           <button class="sm" onclick="vtSaveTpl('poll')">Сохранить как шаблон</button>
         </div>
       </div>
@@ -1650,7 +1696,7 @@
       <div class="row u-mt-3">
         <input id="pf-name" class="grow" placeholder="Название нового профиля, например название канала" maxlength="40">
         <label class="switch"><input type="checkbox" id="pf-copy" checked> Скопировать команды, таймеры и алерты из текущего</label>
-        <button class="primary" onclick="pfCreate()">+ Создать</button>
+        <button class="primary" onclick="pfCreate()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Создать</span></button>
       </div>
     </div>
     <div class="card">
@@ -1747,7 +1793,17 @@ const fmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/3
   return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
 const base = () => location.origin.replace("localhost", "127.0.0.1");
 let S = null, META = {}, ST = null, ACCESS = {};
+let LAST_BTN = null, LAST_BTN_T = 0;
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("button"); if (b) { LAST_BTN = b; LAST_BTN_T = performance.now(); } }, true);
 async function api(path, body, method) {
+  // запрос из нажатия кнопки: показываем на ней индикатор загрузки, если ответ задерживается
+  const btn = body !== undefined && LAST_BTN && performance.now() - LAST_BTN_T < 400 ? LAST_BTN : null;
+  if (btn) LAST_BTN = null;
+  const bt = btn && setTimeout(() => { if (btn.isConnected) { btn.classList.add("busy"); btn.setAttribute("aria-busy", "true"); } }, 250);
+  try { return await apiRaw(path, body, method); }
+  finally { if (btn) { clearTimeout(bt); btn.classList.remove("busy"); btn.removeAttribute("aria-busy"); } }
+}
+async function apiRaw(path, body, method) {
   const opt = {method: method || (body === undefined ? "GET" : "POST"), headers:{}};
   if (body instanceof FormData) opt.body = body;
   else if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
@@ -1998,6 +2054,14 @@ async function loadSettings(keepFocus) {
   applyUiTheme(S.ui.theme || "studio"); fillHotkeyHints(); renderUiThemes(); renderChatThemes(true); renderOut();
   if (window.i18nInputs) window.i18nInputs();
   renderEvents(); fitOverlay(); segSync();
+  accState("acc-ya", !!(S.yandex && S.yandex.has_token));
+}
+function accState(id, on, nick) {
+  const box = $(id); if (!box) return;
+  box.classList.toggle("is-on", !!on);
+  box.closest(".card").querySelectorAll(".acc-help").forEach(d => d.classList.toggle("hidden", !!on));
+  const av = box.querySelector(".acc-av:not(.ya):not(.da)"); if (av) av.textContent = nick ? nick[0] : "?";
+  const nk = box.querySelector(".acc-who > b[id]"); if (nk) nk.textContent = nick || "";
 }
 function collect() {
   const out = JSON.parse(JSON.stringify(S));
@@ -2237,7 +2301,7 @@ async function ytCheck(box) {
   try { r = await api("/tools/youtube-check", {}); } catch (e) { el.innerHTML = '<div class="err">Проверка не удалась</div>'; return; }
   el.innerHTML = r.steps.map(s => `<div class="chk"><span class="ic ${s.ok ? "ok" : "bad"}">${s.ok ? ICON.check : ICON.x}</span>
       <div><b>${esc(s.name)}</b> — ${esc(s.detail)}${s.advice ? `<div class="small muted u-mt-1">${esc(s.advice)}</div>` : ""}</div></div>`).join("")
-    + `<div class="small" style="margin-top:8px;font-weight:600;color:${r.ok ? "#22c55e" : "var(--warn,#f59e0b)"}">${esc(r.summary)}</div>`;
+    + `<div class="small u-mt-2 u-fw-600 ${r.ok ? "ok" : "warn"}">${esc(r.summary)}</div>`;
 }
 
 // ---------- отчёт об ошибке ----------
@@ -2291,7 +2355,7 @@ function wzRender() {
     <div class="wz-foot"><span class="small muted grow">Шаг ${WZ.step + 1} из ${WZ_STEPS.length}</span>
       <button class="sm" onclick="closeWizard(false)">Позже</button>
       ${WZ.step ? `<button onclick="wzGo(-1)">${ICON.back}<span>Назад</span></button>` : ""}
-      ${last ? '<button class="primary" onclick="closeWizard(true)">Готово</button>' : `<button class="primary" onclick="wzGo(1)"><span>Далее</span>${ICON.next}</button>`}</div>`;
+      ${last ? '<button class="primary cta" onclick="closeWizard(true)">Готово</button>' : `<button class="primary cta" onclick="wzGo(1)"><span>Далее</span>${ICON.next}</button>`}</div>`;
   if (k === "bot") {
     const cur = WZ.sender || (S && S.twitch ? S.twitch.sender : "streamer") || "streamer";
     const inp = document.querySelector(`input[name=wz-s][value=${cur}]`); if (inp) inp.checked = true;
@@ -2391,6 +2455,9 @@ async function poll(pushed) {
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
+  // ничего не играет: вместо прочерка — пустое состояние, полоса прогресса скрыта, кнопки управления треком неактивны
+  document.querySelector("#p-live .np").classList.toggle("idle", !c);
+  ["np-pause", "np-skip", "np-block"].forEach(id => $(id).disabled = !c);
   if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast(m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
@@ -2424,9 +2491,15 @@ async function poll(pushed) {
   $("btn-pause-ev").querySelector("span").textContent = pe ? "Возобновить уведомления" : "Пауза уведомлений"; $("btn-pause-ev").classList.toggle("primary", pe);
   if ($("ev-pause-sw")) $("ev-pause-sw").checked = !!pe;
   $("alerts-q").textContent = `Алертов в очереди: ${ST.alerts.pending}` + (ST.alerts.current ? ` · показ: ${ST.alerts.current.name}` : "");
-  $("acc-streamer").innerHTML = r.streamer.ok ? `<span class="pill ok">Подключён</span> <b>${esc(r.streamer.login)}</b>` +
-    (r.streamer.missing_scopes.length ? ` <span class="pill warn">не хватает прав: ${r.streamer.missing_scopes.length}</span>` : "") : '<span class="pill err">Не подключён</span>';
-  $("acc-bot").innerHTML = r.bot.ok ? `Бот: <span class="pill ok">Подключён</span> <b>${esc(r.bot.login)}</b>` : 'Бот: <span class="pill">не подключён</span>';
+  // аккаунты в «Настройках»: без входа — только «Войти» и пояснение; со входом — аватар, ник, статус и тихое «Выйти»
+  const miss = r.streamer.ok ? r.streamer.missing_scopes.length : 0;
+  accState("acc-tw", r.streamer.ok, r.streamer.login);
+  $("acc-streamer").innerHTML = miss ? `<span class="pill warn">не хватает прав: ${miss}</span>` : '<span class="pill ok">Подключён</span>';
+  $("tw-login-btn").classList.toggle("hidden", r.streamer.ok && !miss);
+  $("tw-login-btn").classList.toggle("primary", !r.streamer.ok || !!miss);
+  $("tw-logout").classList.toggle("hidden", !r.streamer.ok);
+  accState("acc-botbox", r.bot.ok, r.bot.login);
+  $("acc-bot").innerHTML = '<span class="pill ok">Подключён</span>';
   const port = ST.port;
   $("al-url").textContent = base() + "/alerts"; $("dock-url").textContent = base() + "/dock";
 }
@@ -2452,9 +2525,9 @@ async function login(kind) {
 // ---------- Музыка ----------
 async function manualAdd() {
   const q = $("m-add").value.trim(); if (!q) return;
-  $("m-add-btn").disabled = true; $("m-add-btn").textContent = "Ищу…";
+  $("m-add-btn").disabled = true; $("m-add-btn").classList.add("busy");
   try { const r = await api("/music/add", {query:q}); toast(r.message); $("m-add").value = ""; }
-  finally { $("m-add-btn").disabled = false; $("m-add-btn").textContent = "+ Добавить"; poll(); }
+  finally { $("m-add-btn").disabled = false; $("m-add-btn").classList.remove("busy"); poll(); }
 }
 $("m-add").onkeydown = e => { if (e.key === "Enter") manualAdd(); };
 function fitOverlay() {
@@ -2511,6 +2584,52 @@ function emptyBox(title, text, btn, onclick) {
   return `<div class="empty"><span class="empty-ic"><svg class="ic" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></span>
     <b>${title}</b>${text ? `<span>${text}</span>` : ""}${btn ? `<button class="sm primary" onclick="${onclick}">${btn}</button>` : ""}</div>`;
 }
+// ---------- нативные элементы: заполненная дорожка ползунка, образец цвета с hex ----------
+function rangeFill(el) {
+  const min = +el.min || 0, max = +el.max || 100, v = +el.value;
+  el.style.setProperty("--p", ((v - min) / ((max - min) || 1) * 100) + "%");
+}
+function colorHex(el) {
+  let h = el.nextElementSibling;
+  if (!h || !h.classList.contains("hex")) { h = document.createElement("span"); h.className = "hex"; h.setAttribute("aria-hidden", "true"); el.after(h); }
+  h.textContent = (el.value || "").toUpperCase();
+}
+function decorateInputs(root) {
+  (root || document).querySelectorAll('input[type=range]').forEach(rangeFill);
+  (root || document).querySelectorAll('input[type=color]:not(.no-hex)').forEach(colorHex);
+}
+document.addEventListener("input", e => {
+  if (e.target.matches?.("input[type=range]")) rangeFill(e.target);
+  else if (e.target.matches?.("input[type=color]:not(.no-hex)")) colorHex(e.target);
+}, true);
+// значения часто ставит скрипт (опрос состояния, загрузка настроек) — подравниваем после каждой отрисовки
+new MutationObserver(() => { clearTimeout(window.DECO_T); window.DECO_T = setTimeout(() => decorateInputs(), 80); }).observe(document.body, {childList: true, subtree: true});
+setInterval(() => document.querySelectorAll("input[type=range]").forEach(rangeFill), 1000);
+// ---------- скелетоны → состояние ошибки ----------
+// Если блок так и остался «скелетом» (сервер не ответил), через 8 секунд показываем понятную ошибку с кнопкой «Повторить».
+const SKEL_LOAD = {"fb-next": () => loadFbNext(), "c-custom": () => loadCommands(), "c-std": () => loadCommands(), "c-timers-mini": () => loadTimers(),
+  "mod-list": () => loadMod(), "al-list": () => loadAlerts(), "ss-total": () => loadStreams()};
+const SKEL_HTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+function skelError(id) {
+  const el = $(id); if (!el || !el.querySelector(":scope > .skel")) return;
+  el.innerHTML = `<div class="load-err" role="alert"><span class="empty-ic">${ICON.alert}</span><b>${tr("Не удалось загрузить")}</b>
+    <span>${tr("Программа не ответила. Проверьте, что Beg1nnnerOS запущена, и попробуйте ещё раз.")}</span>
+    <button class="sm" onclick="skelRetry('${id}')">${tr("Повторить")}</button></div>`;
+}
+function skelRetry(id) {
+  const el = $(id); if (!el) return;
+  el.innerHTML = SKEL_HTML; el.dataset.skelSince = Date.now();
+  Promise.resolve().then(SKEL_LOAD[id]).catch(() => skelError(id));
+}
+function skelWatch() {
+  Object.keys(SKEL_LOAD).forEach(id => {
+    const el = $(id); if (!el) return;
+    if (!el.offsetParent || !el.querySelector(":scope > .skel")) { delete el.dataset.skelSince; return; }
+    const since = +el.dataset.skelSince || (el.dataset.skelSince = Date.now());
+    if (Date.now() - since > 8000) { delete el.dataset.skelSince; skelError(id); }
+  });
+}
+setInterval(skelWatch, 2000);
 // ---------- подсказки по интерфейсу (тур) ----------
 const TOUR = [
   {sel: "nav", title: "Все разделы — здесь", text: "Эфир, музыка, чат, алерты, события и настройки. Кнопкой вверху меню его можно свернуть до иконок."},
@@ -3036,7 +3155,7 @@ async function loadTools(devicesOnly) {
   $("tr-avail").innerHTML = tr.status ? `Сервер перевода: ${esc(tr.status)}` : "";
   for (const [k, st] of Object.entries(TOOLS.hotkeys || {})) if ($("hk-" + k)) $("hk-" + k).innerHTML = `<span class="${st === "работает" ? "ok" : "muted"}">${esc(st)}</span>`;
   $("tray-status").textContent = "Состояние значка: " + TOOLS.tray;
-  const da = TOOLS.donationalerts; $("da-status").textContent = da.status; $("da-status").className = "pill " + (da.connected ? "ok" : "");
+  const da = TOOLS.donationalerts; $("da-status").textContent = da.status; $("da-status").className = "pill " + (da.connected ? "ok" : ""); accState("acc-da", !!da.connected);
 }
 async function shazamNow() {
   $("sh-btn").disabled = true; $("sh-out").textContent = "Запись 10 секунд и распознавание…";
