@@ -235,6 +235,9 @@ public sealed class YtDlp
         {
             Vid = id, Title = info.Str("title", fallbackTitle), PageUrl = url,
             Duration = (int)info.Num("duration"), Source = source, Views = (long)info.Num("view_count", -1),
+            Artist = info.Str("artist", info.Str("creator")),
+            Channel = info.Str("channel", info.Str("uploader")),
+            ChannelId = (info.Str("channel_id") + " " + info.Str("uploader_id")).Trim(),
         };
     }
 

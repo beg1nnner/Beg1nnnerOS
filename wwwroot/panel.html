@@ -81,6 +81,24 @@
   .acc-acts { display:flex; gap:var(--sp-2); align-items:center; flex-wrap:wrap; }
   button.quiet { background:none; border-color:transparent; color:var(--muted); }
   button.quiet:hover { color:var(--err); background:color-mix(in srgb, var(--err) 8%, transparent); border-color:transparent; }
+  .blk-list { display:flex; flex-direction:column; gap:var(--sp-2); }
+  .blk-opt { display:flex; flex-direction:column; align-items:flex-start; gap:var(--sp-1); text-align:left; padding:var(--sp-3) var(--sp-4); }
+  .blk-opt b { font-weight:600; } .blk-opt span { font-size:var(--fs-md); color:var(--muted); font-weight:400; }
+  .rm-wrap { display:flex; gap:var(--sp-5); align-items:center; flex-wrap:wrap; }
+  .rm-qr { padding:var(--sp-2); border-radius:var(--r-md); background:var(--white); line-height:0; flex:none; }
+  .rm-steps { flex:1 1 220px; margin:0; padding-left:var(--sp-5); display:flex; flex-direction:column; gap:var(--sp-2); color:var(--muted); }
+  .rm-url { display:flex; align-items:center; gap:var(--sp-2); margin-top:var(--sp-4); flex-wrap:wrap; }
+  .rm-url code { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pc-list { display:flex; flex-direction:column; gap:var(--sp-1); }
+  .pc-it { display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-2) var(--sp-3); border-radius:var(--r-md); background:var(--field); }
+  .pc-ic { width:28px; height:28px; flex:none; display:grid; place-items:center; border-radius:var(--r-sm); }
+  .pc-it[data-st="ok"] .pc-ic { color:var(--ok); background:color-mix(in srgb, var(--ok) 12%, transparent); }
+  .pc-it[data-st="warn"] .pc-ic { color:var(--warn); background:color-mix(in srgb, var(--warn) 12%, transparent); }
+  .pc-it[data-st="err"] .pc-ic { color:var(--err); background:color-mix(in srgb, var(--err) 12%, transparent); }
+  .pc-it[data-st="wait"] .pc-ic { color:var(--muted); }
+  .pc-tx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .pc-tx b { font-weight:600; font-size:var(--fs-base); } .pc-tx span { font-size:var(--fs-md); color:var(--muted); }
+  .pc-info { display:flex; flex-direction:column; gap:var(--sp-1); margin-top:var(--sp-3); padding-top:var(--sp-3); border-top:1px solid var(--hair); font-size:var(--fs-md); color:var(--muted); }
   .card-t { font:600 var(--fs-lg)/1.3 var(--font); letter-spacing:-.01em; color:var(--fg); margin:0 0 var(--sp-3); }
   .row > .card-t, .card-t.grow { margin:0; }
   .tb-pill { display:inline-flex; align-items:center; gap:var(--sp-2); height:36px; padding:0 var(--sp-4); border-radius:var(--r-full); font-size:var(--fs-md); color:var(--muted); background:none; }
@@ -348,6 +366,10 @@
   .mr-f .f { min-width:0; } .mr-f .dim { opacity:.4; }
   .mod-row { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 2fr); gap:var(--sp-5); margin-bottom:var(--sp-5); align-items:start; }
   .mod-row.two { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  #ur-list, #sus-list { max-height:420px; overflow:auto; }
+  .sus-days { display:flex; align-items:center; gap:var(--sp-2); margin:var(--sp-2) 0 var(--sp-3); }
+  .p-chat .sus-days .inp-u, .sus-days .inp-u { width:auto; }
+  .mod-act button.ib { width:30px; height:30px; }
   .mod-row > .card { margin:0; }
   @media (max-width:1000px) { .mod-row, .mod-row.two { grid-template-columns:1fr; } }
   .mod-test { display:flex; flex-direction:column; gap:var(--sp-3); }
@@ -723,7 +745,7 @@
         <button disabled class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
         <button disabled class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
         <button disabled id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
-        <button disabled class="pillbtn" id="np-block" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+        <button disabled class="pillbtn" id="np-block" onclick="blockNow()" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
         <div class="grow"></div>
         <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
       </div>
@@ -735,6 +757,8 @@
     <div class="live-side">
       <div class="card qa">
         <div class="qa-h"><h3 class="card-t">Быстрые действия</h3><span class="qa-timer" id="next-timer">—</span></div>
+        <button onclick="openRemote()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span>Пульт с телефона</span></button>
+        <button onclick="openPrecheck()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg><span>Проверка перед эфиром</span></button>
         <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Пауза уведомлений</span><kbd data-hk="pause_events"></kbd></button>
         <button onclick="api('/captions/toggle',{}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
         <button onclick="go('votes')"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опрос или прогноз</span></button>
@@ -911,6 +935,14 @@
       <div class="row u-ai-stretch">
         <label class="f grow"><span>Ники зрителей (по одному в строке)</span><textarea data-s="music.blocked_users" data-list class="u-minh-160px"></textarea></label>
         <label class="f grow"><span>Треки: ID видео YouTube, ссылка или точное название</span><textarea data-s="music.blocked_tracks" data-list class="u-minh-160px"></textarea></label>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Чёрный список исполнителей и каналов</h3>
+      <div class="muted small u-mb-3">Заказ отклоняется, если исполнитель есть в сведениях трека или в его названии («Исполнитель — Песня»), либо если видео выложено с канала из списка. Добавлять можно и из «Эфира»: кнопка «Заблокировать» → «Исполнителя» или «Канал».</div>
+      <div class="row u-ai-stretch">
+        <label class="f grow"><span>Исполнители (по одному в строке)</span><textarea data-s="music.blocked_artists" data-list class="u-minh-160px" placeholder="Например: Imagine Dragons"></textarea></label>
+        <label class="f grow"><span>Каналы YouTube: название, @псевдоним, ID или ссылка</span><textarea data-s="music.blocked_channels" data-list class="u-minh-160px" placeholder="@channelname"></textarea></label>
       </div>
     </div>
   </div>
@@ -1116,6 +1148,21 @@
       <div class="card mod-log">
         <div class="row"><h3 class="card-t grow">Журнал срабатываний</h3><button onclick="loadMod()">Обновить</button></div>
         <div id="mod-list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+      </div>
+    </div>
+    <div class="mod-row two">
+      <div class="card">
+        <div class="row"><h3 class="card-t grow">Заявки на разбан <span class="nav-badge" id="ur-n"></span></h3><button class="sm" onclick="loadUnbanReq(true)">Обновить</button></div>
+        <div id="ur-warn"></div>
+        <div id="ur-list" data-skel></div>
+      </div>
+      <div class="card">
+        <div class="row"><h3 class="card-t grow">Подозрительные аккаунты <span class="nav-badge" id="sus-n"></span></h3>
+          <label class="switch rev small" title="Совсем новые аккаунты, впервые написавшие в чат за этот сеанс">Новые аккаунты <input type="checkbox" data-s="mod.new_accounts"></label></div>
+        <div class="muted small">Отметки Twitch (возможный обход бана, баны на других каналах) и совсем новые аккаунты, впервые написавшие в чат.</div>
+        <div class="sus-days small muted"><span>Новым считать аккаунт моложе</span><span class="inp-u sm"><input type="number" min="1" max="90" data-s="mod.new_account_days" aria-label="Сколько дней считать аккаунт новым"><span class="u">дн.</span></span></div>
+        <div id="sus-warn"></div>
+        <div id="sus-list" data-skel></div>
       </div>
     </div>
     <div class="mod-row two">
@@ -1737,6 +1784,7 @@
 <div id="modal" class="modal-bg hidden" onclick="if(event.target===this) closeModal()"><div class="modal" id="modal-body"></div></div>
 
 <script src="/static/alert-render.js"></script>
+<script src="/static/qr.js"></script>
 <script>
 // ---------- утилиты ----------
 const $ = id => document.getElementById(id);
@@ -2320,6 +2368,109 @@ async function ytCheck(box) {
     + `<div class="small u-mt-2 u-fw-600 ${r.ok ? "ok" : "warn"}">${esc(r.summary)}</div>`;
 }
 
+// ---------- пульт с телефона ----------
+// Отдельный маленький сервер в домашней сети: телефон сканирует QR-код и управляет музыкой, алертами и чатом.
+let REMOTE = null;
+async function openRemote() {
+  modal(`<div class="row"><h3 class="u-m-0 grow">Пульт с телефона</h3><label class="switch">Включён <input type="checkbox" id="rm-on" onchange="remoteSet(this.checked)"></label></div>
+    <p class="muted small">Управляйте музыкой, громкостью, паузой уведомлений, алертами и чатом с телефона — например, когда отошли от компьютера. Настройки и входы с телефона недоступны.</p>
+    <div id="rm-body">${SKEL_HTML}</div>
+    <div class="row u-mt-4 u-jc-fend"><button onclick="closeModal()">Готово</button></div>`);
+  try { REMOTE = await api("/remote"); } catch (e) { $("rm-body") && ($("rm-body").innerHTML = ""); return; }
+  renderRemote();
+}
+async function remoteSet(on, newKey) {
+  try { REMOTE = await api("/remote", {enabled: on, new_key: !!newKey}); } catch (e) {}
+  renderRemote();
+  if (newKey) toast("Новый ключ создан — старые ссылки больше не работают");
+}
+function renderRemote() {
+  const r = REMOTE, box = $("rm-body"); if (!r || !box) return;
+  $("rm-on").checked = r.enabled;
+  if (!r.enabled) { box.innerHTML = `<div class="notice">${ICON.info}<div>${tr("Пульт выключен. Включите его — появится QR-код для телефона.")}</div></div>`; return; }
+  if (!r.running) { box.innerHTML = `<div class="notice err">${ICON.alert}<div>${tr("Пульт не запустился")}: ${esc(r.error || "")}</div></div>`; return; }
+  if (!r.addresses.length) { box.innerHTML = `<div class="notice warn">${ICON.alert}<div>${tr("Компьютер не подключён к домашней сети — телефону не к чему подключиться. Проверьте Wi-Fi или кабель.")}</div></div>`; return; }
+  const url = r.addresses[0];
+  box.innerHTML = `<div class="rm-wrap"><div class="rm-qr">${qrSvg(url, 200)}</div>
+    <ol class="rm-steps small">
+      <li>${tr("Подключите телефон к той же сети Wi-Fi, что и компьютер.")}</li>
+      <li>${tr("Наведите камеру телефона на QR-код и откройте ссылку.")}</li>
+      <li>${tr("Если Windows спросит про доступ к сети — разрешите для частных сетей.")}</li>
+    </ol></div>
+    <div class="rm-url"><code data-noi18n>${esc(url.replace(/k=.*/, "k=••••••"))}</code><button class="sm" onclick="copy(REMOTE.addresses[0])">${tr("Скопировать ссылку")}</button></div>
+    ${r.addresses.length > 1 ? `<details class="u-mt-2"><summary class="small">${tr("Другие адреса этого компьютера")}</summary>${r.addresses.slice(1).map(a => `<div class="small mono u-mt-1" data-noi18n>${esc(a.replace(/k=.*/, "k=••••••"))}</div>`).join("")}</details>` : ""}
+    <div class="notice u-mt-3">${ICON.lock}<div>${tr("В ссылке секретный ключ: не показывайте QR-код на стриме. Если ссылка попала к кому-то ещё — создайте новый ключ.")}
+      <div class="u-mt-2"><button class="sm" onclick="remoteSet(true, true)">${tr("Новый ключ")}</button></div></div></div>`;
+}
+
+// ---------- проверка перед эфиром ----------
+// Сводка всего, что нужно для стрима: вход, чат, события, источники OBS, звук, YouTube, донаты, место на диске.
+// Ничего не меняет сама — у каждой проблемы кнопка, которая открывает нужное место.
+async function openPrecheck() {
+  modal(`<div class="row"><h3 class="u-m-0 grow">Проверка перед эфиром</h3><span id="pc-sum" class="pill"></span></div>
+    <p class="muted small">Проверяем вход в Twitch, чат, события, источники в OBS, звук и YouTube. Ничего не меняется — только подсказки.</p>
+    <div id="pc-list" class="pc-list">${SKEL_HTML}</div>
+    <div class="row u-mt-4 u-jc-fend"><button onclick="openPrecheck()">Проверить снова</button><button class="primary" onclick="closeModal()">Готово</button></div>`);
+  let x = {};
+  try { await poll(); x = await api("/precheck"); } catch (e) {}
+  const r = (ST && ST.ready) || {}, items = [];
+  const add = (st, title, detail, fix) => items.push({st, title, detail, fix});
+  const fx = (label, js) => ({label, js});
+  // Twitch
+  if (!r.streamer || !r.streamer.ok) add("err", "Вход в Twitch", "Аккаунт стримера не подключён — без него не работают чат, награды и события.", fx("Войти", "closeModal();go('settings')"));
+  else if (r.streamer.missing_scopes && r.streamer.missing_scopes.length) add("warn", "Права Twitch", `Не хватает прав: ${r.streamer.missing_scopes.length}. Часть функций не заработает.`, fx("Войти заново", "closeModal();twLogin('streamer')"));
+  else add("ok", "Вход в Twitch", r.streamer.login);
+  // чат
+  if (!r.sender || !r.sender.allow) add("warn", "Сообщения в чат", "Отправка сообщений выключена — бот будет молчать.", fx("Включить", "closeModal();go('settings')"));
+  else if (!r.sender.ok) add("err", "Сообщения в чат", r.sender.error || "Отправитель не подключён.", fx("Настроить", "closeModal();go('settings')"));
+  else add("ok", "Сообщения в чат", (r.sender.mode === "bot" ? tr("от бота") : tr("от стримера")) + (r.sender.login ? " · " + r.sender.login : ""));
+  // события
+  const failed = r.eventsub ? Object.keys(r.eventsub.failed || {}).length : 0;
+  if (!r.eventsub || !r.eventsub.ok) add("err", "События Twitch", "Нет связи с EventSub: не придут сообщения чата, фолловы и награды.", fx("Журнал", "closeModal();go('live')"));
+  else if (failed) add("warn", "События Twitch", `Не подключились: ${failed}. Обычно помогает повторный вход в Twitch.`, fx("Войти заново", "closeModal();twLogin('streamer')"));
+  else add("ok", "События Twitch", "подключено");
+  // награды
+  if (r.rewards) add(/ошибк|нет|не /.test(r.rewards) ? "warn" : "ok", "Награды за баллы", r.rewards, /ошибк|нет|не /.test(r.rewards) ? fx("Музыка", "closeModal();go('music','orders')") : null);
+  // OBS
+  const obs = r.obs || {};
+  add(obs.player ? "ok" : "warn", "Плеер «Сейчас играет» в OBS", obs.player ? "источник открыт" : "Источник не открыт в OBS — зрители не увидят трек.", obs.player ? null : fx("Адрес", "closeModal();go('music','overlay')"));
+  if (x.alerts_on !== false) add(obs.alerts ? "ok" : "warn", "МедиаАлерты в OBS", obs.alerts ? "источник открыт" : "Источник /alerts не открыт в OBS — алерты не покажутся.", obs.alerts ? null : fx("Адрес", "closeModal();go('alerts')"));
+  if (x.audio && x.audio.output === "obs") add(obs.music ? "ok" : "err", "Музыка в OBS", obs.music ? "источник открыт" : "Музыка выводится в OBS, но источник не открыт — будет тишина.", obs.music ? null : fx("Настроить", "closeModal();go('music','overlay')"));
+  // звук
+  if (x.audio) add(x.audio.found ? "ok" : "err", "Устройство вывода звука", x.audio.found ? (x.audio.custom ? "выбранное устройство на месте" : "системное по умолчанию") : "Выбранное устройство не найдено (отключены наушники?) — музыка пойдёт не туда.", x.audio.found ? null : fx("Выбрать", "closeModal();go('settings');document.querySelector('[data-t=s-snd]').click()"));
+  // источники музыки
+  if (x.yandex && x.yandex.enabled && !x.yandex.token) add("warn", "Яндекс Музыка", "Ссылки Яндекса включены, но токен не добавлен — такие заказы не сыграют.", fx("Добавить токен", "closeModal();go('settings')"));
+  // донаты
+  if (r.donationalerts && r.donationalerts.configured) add(r.donationalerts.ok ? "ok" : "warn", "DonationAlerts", r.donationalerts.ok ? "подключено" : (r.donationalerts.status || "нет связи"), r.donationalerts.ok ? null : fx("Открыть", "closeModal();go('events')"));
+  // диск
+  if (x.disk_free_gb >= 0) add(x.disk_free_gb < 1 ? "err" : x.disk_free_gb < 5 ? "warn" : "ok", "Место на диске", `${x.disk_free_gb} ${tr("ГБ свободно")}` + (x.disk_free_gb < 5 ? " — " + tr("музыка и запись могут не поместиться") : ""));
+  // для справки
+  const info = [];
+  if (r.stream && r.stream.title) info.push(`${tr("Название")}: «${esc(r.stream.title)}»${r.stream.category ? " · " + esc(r.stream.category) : ""}`);
+  if (x.timers_on !== undefined) info.push(`${tr("Таймеров включено")}: ${x.timers_on}`);
+  if (x.mod_on !== undefined) info.push(`${tr("Фильтр спама")}: ${x.mod_on ? tr("включён") : tr("выключен")}`);
+  if (ST && ST.update && ST.update.available) info.push(tr("Есть обновление программы — лучше поставить его после эфира"));
+  // YouTube — дольше всего, добавляем строку-ожидание
+  items.push({st: "wait", title: "Связь с YouTube", detail: "проверяю… (до 30 секунд)", id: "pc-yt"});
+  const render = () => {
+    const bad = items.filter(i => i.st === "err").length, warn = items.filter(i => i.st === "warn").length;
+    $("pc-sum") && ($("pc-sum").className = "pill " + (bad ? "err" : warn ? "warn" : "ok"), $("pc-sum").textContent = bad ? `${tr("Проблем")}: ${bad}` : warn ? `${tr("Предупреждений")}: ${warn}` : tr("Всё готово"));
+    if (!$("pc-list")) return;
+    $("pc-list").innerHTML = items.map(i => `<div class="pc-it" data-st="${i.st}"><span class="pc-ic">${i.st === "wait" ? '<i class="spin" aria-hidden="true"></i>' : i.st === "ok" ? ICON.check : ICON.alert}</span>
+        <div class="pc-tx"><b>${tr(i.title)}</b><span>${i.st === "ok" ? esc(i.detail || "") : tr(i.detail || "")}</span></div>
+        ${i.fix ? `<button class="sm" onclick="${i.fix.js}">${tr(i.fix.label)}</button>` : ""}</div>`).join("")
+      + (info.length ? `<div class="pc-info">${info.map(t => `<span>${t}</span>`).join("")}</div>` : "");
+  };
+  render();
+  const yt = items.find(i => i.id === "pc-yt");
+  try {
+    const y = await api("/tools/youtube-check", {});
+    yt.st = y.ok ? "ok" : "err"; yt.detail = y.summary;
+    if (!y.ok) yt.fix = fx("Подробнее", "closeModal();go('music','orders');setTimeout(()=>ytCheck('yt-check'),300)");
+  } catch (e) { yt.st = "warn"; yt.detail = "Проверка не удалась"; }
+  render();
+}
+
 // ---------- отчёт об ошибке ----------
 async function saveReport() {
   try { const r = await api("/report", {}); toast("Отчёт сохранён на рабочий стол: " + r.name + ". Отправьте его в Telegram @Beg1nnner"); } catch (e) {}
@@ -2469,7 +2620,7 @@ async function poll(pushed) {
   $("nm-login").textContent = r.streamer.ok ? r.streamer.login : "Нет входа";
   $("nm-av").textContent = r.streamer.ok ? r.streamer.login[0] : "?"; $("nm-av").classList.toggle("live", !!r.stream.live);
   $("nm-sub").textContent = r.streamer.ok ? (r.stream.live ? "Twitch · в эфире" : "Twitch · не в эфире") : "Войдите в «Настройках»";
-  const c = m.current;
+  const c = m.current; window.LAST_CUR = c;
   $("np-title").textContent = c ? c.title : "—";
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
@@ -2628,7 +2779,7 @@ setInterval(() => document.querySelectorAll("input[type=range]").forEach(rangeFi
 // Пока данных нет — «скелет». Упала загрузка — сразу «Не удалось загрузить» + «Повторить» (а не всплывающее сообщение).
 // Сторож через 8 секунд — запасной вариант для списков, которые приходят из общего состояния.
 const SKEL_LOAD = {"fb-next": () => loadFbNext(), "c-custom": () => loadCommands(), "c-std": () => loadCommands(), "c-timers-mini": () => loadTimers(), "c-timers": () => loadTimers(),
-  "mod-list": () => loadMod(true), "al-list": () => loadAlerts(), "ss-total": () => loadStreams(), "ss-list": () => loadStreams(), "log": () => loadLog(), "mh-list": () => loadHistory(),
+  "mod-list": () => loadMod(true), "ur-list": () => loadUnbanReq(true), "sus-list": () => loadSuspicious(), "al-list": () => loadAlerts(), "ss-total": () => loadStreams(), "ss-list": () => loadStreams(), "log": () => loadLog(), "mh-list": () => loadHistory(),
   "ms-body": () => loadStats(), "ev-list": () => loadSettings(), "th-list": () => loadSettings(), "m-queue": () => poll(), "gv-entries": () => loadGiveaway()};
 const SKEL_HTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
 const skelFill = el => el.tagName === "TBODY" ? `<tr class="skel-tr"><td colspan="12">${SKEL_HTML}</td></tr>` : SKEL_HTML;
@@ -2838,6 +2989,22 @@ function insertVar(id, v) {
 
 // ---------- Команды ----------
 let CMDS = {custom:[], standard:{}};
+// «Заблокировать» в «Эфире»: трек, его исполнителя или канал YouTube
+function blockNow() {
+  const c = window.LAST_CUR; if (!c) return;
+  const opt = (what, title, sub, dis) => `<button class="blk-opt" ${dis ? "disabled" : ""} onclick="blockDo('${what}')"><b>${title}</b><span>${sub}</span></button>`;
+  modal(`<h3 class="u-mt-0">Заблокировать</h3><p class="muted small">Трек сразу пропускается. Снять блокировку можно в «Музыка → Блокировки».</p>
+    <div class="blk-list">
+      ${opt("track", tr("Только этот трек"), `<span data-noi18n>${esc(c.title)}</span>`)}
+      ${opt("artist", tr("Исполнителя"), c.artist ? `<span data-noi18n>${esc(c.artist.split(", ")[0])}</span> — ${tr("все его треки")}` : tr("исполнитель не определён"), !c.artist)}
+      ${opt("channel", tr("Канал YouTube"), c.channel ? `<span data-noi18n>${esc(c.channel)}</span> — ${tr("все видео с канала")}` : tr("у трека нет канала YouTube"), !c.channel)}
+    </div>
+    <div class="row u-mt-4 u-jc-fend"><button onclick="closeModal()">Отмена</button></div>`);
+}
+async function blockDo(what) {
+  closeModal();
+  try { const r = await api("/music/block", {what}); if (r && r.message) toast(r.message); } catch (e) {}
+}
 async function delCustom(id, name) {
   if (!await confirmDlg({title: `Удалить команду ${name}?`, text: "Команда перестанет работать в чате. Это нельзя отменить.", okLabel: "Удалить", danger: true})) return;
   await api(`/commands/custom/${id}`, undefined, "DELETE"); loadCommands();
@@ -3792,7 +3959,45 @@ async function modUnban(id, btn) {
   btn.disabled = true;
   try { const r = await api("/mod/unban", {user_id: id}); toast(r.message); btn.innerHTML = icTx("check", tr("снят")); } catch (e) { btn.disabled = false; }
 }
+// ---------- заявки на разбан и подозрительные аккаунты ----------
+const ago = ts => { const s = Math.max(0, Date.now() / 1000 - ts); return s < 60 ? tr("только что") : s < 3600 ? `${Math.round(s / 60)} ${tr("мин назад")}` : `${Math.round(s / 3600)} ${tr("ч назад")}`; };
+async function loadUnbanReq(refresh) {
+  let r; try { r = await api("/mod/unban-requests" + (refresh ? "?refresh=1" : "")); } catch (e) { skelError("ur-list"); return; }
+  $("ur-warn").innerHTML = !r.ready ? `<div class="notice warn">${ICON.alert}<div>${tr("Сначала войдите в Twitch.")}</div></div>`
+    : !r.scope ? `<div class="notice warn">${ICON.alert}<div>${tr("Чтобы видеть и рассматривать заявки, нужны новые права Twitch.")} <button class="sm" onclick="twLogin('streamer')">${tr("Войти в Twitch заново")}</button></div></div>`
+    : r.error ? `<div class="notice err">${ICON.alert}<div>${esc(r.error)}</div></div>` : "";
+  $("ur-n").textContent = r.items.length || "";
+  $("ur-list").innerHTML = r.items.map(i => `<div class="mod-it ur-it" data-id="${esc(i.id)}">
+      <span class="tm">${new Date(i.created_at).toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit"})}</span>
+      <div class="bd"><div><b data-noi18n>${esc(i.name)}</b></div><div class="tx" data-noi18n>${esc(i.text) || `<span class="muted">${tr("без текста")}</span>`}</div></div>
+      <div class="mod-act"><button class="sm" onclick="resolveUnban('${esc(i.id)}',true)">${tr("Разбанить")}</button><button class="sm quiet" onclick="resolveUnban('${esc(i.id)}',false)">${tr("Отклонить")}</button></div></div>`).join("")
+    || (r.ready && r.scope && !r.error ? emptyBox(tr("Заявок нет"), tr("Когда забаненный зритель попросит разбан на Twitch, заявка появится здесь.")) : "");
+}
+async function resolveUnban(id, approve) {
+  const ok = approve ? true : await confirmDlg({title: "Отклонить заявку?", text: "Зритель останется забаненным. Twitch сообщит ему об отказе.", okLabel: "Отклонить", danger: true});
+  if (!ok) return;
+  const r = await api("/mod/unban-requests/resolve", {id, approve}); toast(r.message); loadUnbanReq();
+}
+async function loadSuspicious() {
+  let r; try { r = await api("/mod/suspicious"); } catch (e) { skelError("sus-list"); return; }
+  $("sus-warn").innerHTML = ST && ST.ready && ST.ready.streamer && ST.ready.streamer.ok && !r.scope
+    ? `<div class="notice warn">${ICON.alert}<div>${tr("Отметки Twitch о подозрительных аккаунтах приходят только с новыми правами.")} <button class="sm" onclick="twLogin('streamer')">${tr("Войти в Twitch заново")}</button></div></div>` : "";
+  $("sus-n").textContent = r.items.length || "";
+  $("sus-list").innerHTML = r.items.map(i => `<div class="mod-it">
+      <span class="tm">${ago(i.ts)}</span>
+      <div class="bd"><div><b data-noi18n>${esc(i.name)}</b> <span class="pill ${i.source === "twitch" ? "err" : "warn"}">${esc(i.reason)}</span>${i.count > 1 ? ` <span class="muted small">×${i.count}</span>` : ""}</div>
+        <div class="tx" data-noi18n>${esc(i.text)}</div></div>
+      <div class="mod-act"><button class="sm" onclick="susAct('${esc(i.user_id)}','timeout')">${tr("Таймаут 10 мин")}</button><button class="sm danger" onclick="susAct('${esc(i.user_id)}','ban')">${tr("Бан")}</button><button class="ib" title="${tr("Всё в порядке — убрать")}" aria-label="${tr("Всё в порядке — убрать из списка")}" onclick="susAct('${esc(i.user_id)}','dismiss')">${ICON.check}</button></div></div>`).join("")
+    || emptyBox(tr("Подозрительных аккаунтов нет"), tr("Здесь появятся отмеченные Twitch зрители и совсем новые аккаунты, когда они напишут в чат."));
+}
+async function susAct(user_id, action) {
+  if (action === "ban" && !await confirmDlg({title: "Забанить зрителя?", text: "Бан навсегда на вашем канале. Снять его можно на Twitch или здесь, если зритель подаст заявку на разбан.", okLabel: "Забанить", danger: true})) return;
+  const r = await api("/mod/suspicious/act", {user_id, action}); toast(r.message); loadSuspicious();
+}
+// пока открыта «Модерация» — подтягиваем новые заявки и подозрительные аккаунты
+setInterval(() => { const t = document.querySelector('#p-chat [data-tab="mod"]'); if (t && !t.classList.contains("hidden") && t.offsetParent) { loadUnbanReq(); loadSuspicious(); } }, 15000);
 async function loadMod() {
+  loadUnbanReq(); loadSuspicious();
   let m; try { m = await api("/mod"); } catch (e) { skelError("mod-list"); return; }
   $("mod-warn").innerHTML = !m.ready ? `<div class="notice warn">${ICON.alert}<div>Сначала войдите в Twitch.</div></div>`
     : !m.scopes ? `<div class="notice warn">${ICON.alert}<div>Чтобы удалять сообщения и давать таймауты, программе нужны права модератора. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button></div></div>` : "";

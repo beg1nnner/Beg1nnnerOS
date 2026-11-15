@@ -17,7 +17,7 @@ public sealed class YandexException : Exception
     public YandexException(string message) : base(message) { }
 }
 
-public sealed record YandexTrack(string Id, string Title, int Duration, string Url, bool Available);
+public sealed record YandexTrack(string Id, string Title, int Duration, string Url, bool Available, string Artists = "");
 
 /// <summary>Яндекс Музыка: поиск и прямые ссылки на аудио через API api.music.yandex.net.</summary>
 public sealed class YandexMusic
@@ -58,7 +58,7 @@ public sealed class YandexMusic
         var title = artists != "" ? $"{artists} — {t.Str("title")}" : t.Str("title");
         var id = t.Str("id");
         return new YandexTrack(id, title, (int)(t.Num("durationMs") / 1000), $"https://music.yandex.ru/track/{id}",
-            t.Bool("available", true));
+            t.Bool("available", true), artists);
     }
 
     public async Task<YandexTrack> Track(string id)

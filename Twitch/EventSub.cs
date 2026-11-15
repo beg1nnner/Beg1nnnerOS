@@ -61,6 +61,10 @@ public sealed class EventSub
             ("channel.poll.begin", "1", B()),
             ("channel.poll.end", "1", B()),
             ("channel.ad_break.begin", "1", B()),
+            ("channel.suspicious_user.message", "1", With("moderator_user_id", bid)),
+            ("channel.suspicious_user.update", "1", With("moderator_user_id", bid)),
+            ("channel.unban_request.create", "1", With("moderator_user_id", bid)),
+            ("channel.unban_request.resolve", "1", With("moderator_user_id", bid)),
         };
     }
 

@@ -153,10 +153,12 @@ public sealed partial class WebServer
         Map(app);
         _app = app;
         await app.StartAsync();
+        await StartRemote();
     }
 
     public async Task Stop()
     {
+        await StopRemote();
         if (_app == null) return;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         await _app.StopAsync(cts.Token);
@@ -329,6 +331,13 @@ public sealed partial class WebServer
         app.MapGet("/api/mod", H((c, b) => Ok(_hub.Moderation.State())));
         app.MapPost("/api/mod/test", H((c, b) => Ok(_hub.Moderation.Test(b.Str("text")))));
         app.MapPost("/api/mod/unban", H(async (c, b) => Ok(new { message = await _hub.Moderation.Unban(b.Str("user_id")) })));
+        // заявки на разбан и подозрительные аккаунты
+        app.MapGet("/api/mod/unban-requests", H(async (c, b) => Ok(await _hub.ModExtra.Requests(c.Request.Query["refresh"] == "1"))));
+        app.MapPost("/api/mod/unban-requests/resolve", H(async (c, b) =>
+            Ok(new { message = await _hub.ModExtra.Resolve(b.Str("id"), b.Bool("approve"), b.Str("text")) })));
+        app.MapGet("/api/mod/suspicious", H((c, b) => Ok(new { items = _hub.ModExtra.Suspicious(),
+            scope = _hub.Twitch.Streamer.Scopes.Contains(Features.ModerationExtra.ScopeSuspicious) })));
+        app.MapPost("/api/mod/suspicious/act", H(async (c, b) => Ok(new { message = await _hub.ModExtra.Act(b.Str("user_id"), b.Str("action")) })));
 
         // опросы и прогнозы Twitch
         app.MapGet("/api/votes", H((c, b) => Ok(_hub.Votes.State())));
@@ -488,6 +497,11 @@ public sealed partial class WebServer
             return Ok(new { path, name = Path.GetFileName(path) });
         }));
         app.MapPost("/api/tools/youtube-check", H(async (c, b) => Ok(await YouTubeCheck.Run(_hub))));
+        // «Проверка перед эфиром»: то, чего нет в общем состоянии (место на диске, звук, источники музыки)
+        app.MapGet("/api/precheck", H((c, b) => Ok(Precheck())));
+        // пульт с телефона
+        app.MapGet("/api/remote", H((c, b) => Ok(RemoteInfo())));
+        app.MapPost("/api/remote", H(async (c, b) => Ok(await RemoteSet(b.Bool("enabled"), b.Bool("new_key")))));
         app.MapPost("/api/tools/layout", H((c, b) => Ok(Layout.Fix(b.Str("text")) ?? "")));
         app.MapPost("/api/tools/yandex", H(async (c, b) =>
         {
@@ -734,7 +748,7 @@ public sealed partial class WebServer
             if (v == null || v < lo || v > hi) throw RangeError($"music.{k}", label, lo, hi, m[k]);
             m[k] = v.Value;
         }
-        foreach (var k in new[] { "banned_words", "blocked_users", "blocked_tracks" })
+        foreach (var k in new[] { "banned_words", "blocked_users", "blocked_tracks", "blocked_artists", "blocked_channels" })
             if (m[k] is JsonValue)
             {
                 var arr = new JsonArray();
@@ -779,16 +793,9 @@ public sealed partial class WebServer
             case "toast":
                 m.ShowToast(b.Str("text") != "" ? b.Str("text") : "Тестовое уведомление Beg1nnnerOS");
                 break;
-            case "block":
-                var cur = m.Current;
-                if (cur != null)
-                {
-                    var blocked = _hub.S.Arr("music.blocked_tracks");
-                    blocked.Add(cur.Vid != "" ? cur.Vid : cur.Title);
-                    _hub.Settings.Save();
-                    m.Skip("заблокирован");
-                }
-                break;
+            case "block":   // what: track (по умолчанию) | artist | channel
+                if (m.Current == null) break;
+                return Ok(new { message = m.BlockCurrent(b.Str("what") is "artist" or "channel" ? b.Str("what") : "track") });
             default:
                 return Fail("Неизвестное действие", 404);
         }
@@ -812,6 +819,30 @@ public sealed partial class WebServer
         }
         catch (UserError e) { return Fail(e.Message); }
         catch (Exception e) { return Fail($"Не удалось загрузить файл: {e.Message}", 500); }
+    }
+
+    private object Precheck()
+    {
+        double freeGb = -1;
+        try { freeGb = Math.Round(new System.IO.DriveInfo(System.IO.Path.GetPathRoot(Config.Profile) ?? "C:\\").AvailableFreeSpace / 1073741824.0, 1); } catch { }
+        var dev = _hub.S.Str("music.audio_device");
+        var devFound = true;
+        if (dev != "")
+        {
+            try { devFound = J.From(Player.Devices()).AsArray().Any(d => d.Str("id") == dev); } catch { }
+        }
+        var src = _hub.S.Obj("music.sources") ?? new JsonObject();
+        return new
+        {
+            disk_free_gb = freeGb,
+            audio = new { custom = dev != "", found = devFound, output = _hub.S.Str("music.output", "app") },
+            yandex = new { enabled = src.Bool("yandex"), token = _hub.S.Str("yandex.token") != "" },
+            timers_on = _hub.Timers.Repeating.OfType<JsonObject>().Count(t => t.Bool("enabled", true)),
+            mod_on = _hub.S.Bool("mod.enabled"),
+            alerts_on = _hub.S.Bool("alerts.enabled", true),
+            captions_on = _hub.S.Bool("captions.enabled"),
+            music_points = _hub.S.Bool("music.rewards_enabled", true),
+        };
     }
 
     private object StateObj() => new

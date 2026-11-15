@@ -41,6 +41,7 @@ public sealed class Hub
     public readonly Features.Announce Announce;
     public readonly Features.Votes Votes;
     public readonly Features.Moderation Moderation;
+    public readonly Features.ModerationExtra ModExtra;
     public readonly Features.CommandImport CommandImport;
     public readonly Features.Captions Captions;
 
@@ -110,6 +111,7 @@ public sealed class Hub
         Announce = new Features.Announce(this);
         Votes = new Features.Votes(this);
         Moderation = new Features.Moderation(this);
+        ModExtra = new Features.ModerationExtra(this);
         CommandImport = new Features.CommandImport(this);
         Captions = new Features.Captions(this);
     }
@@ -163,6 +165,7 @@ public sealed class Hub
             await ChatOverlay.Handle(stype, ev);
         else if (stype.StartsWith("stream.") || stype == "channel.update") await Stream.Handle(stype, ev);
         else if (stype == "channel.channel_points_custom_reward_redemption.add") await Rewards.OnRedemption(ev);
+        else if (stype.StartsWith("channel.suspicious_user.") || stype.StartsWith("channel.unban_request.")) ModExtra.OnEvent(stype, ev);
         else await Events.Handle(stype, ev);
     }
 
@@ -187,6 +190,7 @@ public sealed class Hub
             }
         }
         ChatOverlay.OnMessage(ev, own);
+        if (!own && uid != Twitch.Streamer.UserId) ModExtra.OnChat(uid, ev.Str("chatter_user_login"), ev.Str("chatter_user_name"), ev.Str("message.text"));
         // Ответы приложения не запускают команды повторно; в режиме бота его сообщения игнорируются
         if (Twitch.SentIds.Contains(mid)) return;
         if (S.Str("twitch.sender") == "bot" && Twitch.Bot.Ready && uid == Twitch.Bot.UserId) return;

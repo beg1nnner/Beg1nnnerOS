@@ -25,6 +25,9 @@ public sealed class Track
     public string Login = "";
     public int Priority;
     public string Source = "youtube";
+    public string Artist = "";        // исполнитель(и), если источник его знает (YouTube Music, Яндекс)
+    public string Channel = "";       // канал YouTube
+    public string ChannelId = "";     // UC… и @псевдоним канала — для чёрного списка
     public long Views = -1;   // просмотры на YouTube (-1 — неизвестно)
     public (string RewardId, string RedemptionId, int Cost)? Redemption;
     public bool Fallback;   // трек из резервного плейлиста (играет, когда заказов нет)
@@ -34,6 +37,7 @@ public sealed class Track
     {
         id = Id, vid = Vid, title = Title, page_url = PageUrl, duration = Duration, requester = Requester,
         login = Login, priority = Priority, source = Source, paid = Redemption != null, views = Views, fallback = Fallback,
+        artist = string.Join(", ", Music.ArtistsOf(this)), channel = Channel,
     };
 }
 
@@ -940,7 +944,7 @@ public sealed class Music
     private static Track FromYandex(YandexTrack y, string source)
     {
         if (!y.Available) throw new ResolveException("трек недоступен в Яндекс Музыке");
-        return new Track { Vid = "ym:" + y.Id, Title = y.Title, PageUrl = y.Url, Duration = y.Duration, Source = source };
+        return new Track { Vid = "ym:" + y.Id, Title = y.Title, PageUrl = y.Url, Duration = y.Duration, Source = source, Artist = y.Artists };
     }
 
     private Task<Track> YtByUrl(string url, string source) => _hub.YtDlp.ByUrl(url, source);
@@ -1041,6 +1045,8 @@ public sealed class Music
             if (bt.Contains(track.Vid.ToLowerInvariant()) || bt.Contains(track.Title.ToLowerInvariant()) ||
                 bt.Contains(track.PageUrl.ToLowerInvariant()))
                 return (false, "этот трек заблокирован", null);
+            var why = BlockedBy(track);
+            if (why != null) return (false, why, null);
         }
         track.Requester = name;
         track.Login = login;
@@ -1058,6 +1064,86 @@ public sealed class Music
         return (true, $"«{track.Title}» добавлен в очередь (позиция {idx + 1})", track);
     }
 
+    // ---------- чёрный список исполнителей и каналов ----------
+    private static readonly Regex ArtistSplit = new(@"\s*(?:,|&|/|;|\bfeat\.?|\bft\.?|\bx\b|\bи\b)\s*", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex TitleArtist = new(@"^(.+?)\s+[-–—]\s+.+$", RegexOptions.Compiled);
+
+    /// <summary>Исполнители трека: из сведений источника и из названия вида «Исполнитель — Песня».</summary>
+    public static List<string> ArtistsOf(Track t)
+    {
+        var raw = new List<string>();
+        if (!string.IsNullOrWhiteSpace(t.Artist)) raw.Add(t.Artist);
+        var m = TitleArtist.Match(t.Title ?? "");
+        if (m.Success) raw.Add(m.Groups[1].Value);
+        return raw.SelectMany(r => ArtistSplit.Split(r)).Select(a => a.Trim().Trim('"', '«', '»')).Where(a => a.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private JsonArray CfgList(string k)
+    {
+        if (Cfg[k] is not JsonArray a) Cfg[k] = a = new JsonArray();
+        return a;
+    }
+
+    private static string Norm(string s) => (s ?? "").Trim().TrimStart('@').ToLowerInvariant();
+
+    /// <summary>Причина отказа, если исполнитель или канал трека в чёрном списке; иначе null.</summary>
+    public string BlockedBy(Track t)
+    {
+        var artists = Cfg.StrList("blocked_artists").Select(Norm).Where(a => a != "").ToList();
+        if (artists.Count > 0)
+        {
+            var have = ArtistsOf(t).Select(Norm).ToList();
+            var title = " " + Regex.Replace(Norm(t.Title), @"[^\p{L}\p{N}]+", " ") + " ";
+            foreach (var a in artists)
+            {
+                var words = " " + Regex.Replace(a, @"[^\p{L}\p{N}]+", " ").Trim() + " ";
+                if (have.Contains(a) || (words.Trim().Length >= 3 && title.Contains(words)))
+                    return "исполнитель в чёрном списке";
+            }
+        }
+        var channels = Cfg.StrList("blocked_channels").Select(Norm).Where(c => c != "").ToList();
+        if (channels.Count > 0 && (t.Channel != "" || t.ChannelId != ""))
+        {
+            var keys = new[] { Norm(t.Channel) }.Concat(t.ChannelId.Split(' ').Select(Norm)).Where(k => k != "").ToList();
+            foreach (var c in channels)
+            {
+                // в списке может быть название, @псевдоним, ID канала или ссылка на него
+                var key = c.Contains("youtube.com/") ? Norm(c.Split('/').Last(x => x != "")) : c;
+                if (keys.Contains(key)) return "канал YouTube в чёрном списке";
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Добавляет исполнителя или канал текущего трека в чёрный список и пропускает трек.</summary>
+    public string BlockCurrent(string what)
+    {
+        var cur = Current ?? throw new UserError("Сейчас ничего не играет");
+        string item;
+        if (what == "artist")
+        {
+            item = ArtistsOf(cur).FirstOrDefault() ?? throw new UserError("Не удалось определить исполнителя этого трека");
+            CfgList("blocked_artists").Add(item);
+        }
+        else if (what == "channel")
+        {
+            if (cur.Channel == "") throw new UserError("У этого трека нет канала YouTube");
+            item = cur.Channel;
+            CfgList("blocked_channels").Add(item);
+        }
+        else
+        {
+            item = cur.Title;
+            CfgList("blocked_tracks").Add(cur.Vid != "" ? cur.Vid : cur.Title);
+        }
+        _hub.Settings.Save();
+        // заказы того же исполнителя или канала, уже стоящие в очереди, тоже убираем
+        var removed = what == "track" ? 0 : Queue.RemoveAll(q => !q.Fallback && BlockedBy(q) != null);
+        Skip("заблокирован");
+        return $"«{item}» в чёрном списке" + (removed > 0 ? $", из очереди убрано: {removed}" : "");
+    }
+
     public object State()
     {
         var cur = Current;
@@ -1070,6 +1156,7 @@ public sealed class Music
                 paid = cur.Redemption != null, position = Math.Round(Position, 1), paused = IsPaused,
                 gain_db = GainDb(cur.Vid), in_obs = _obsActive,
                 loading = Loading, views = cur.Views, liked = IsLiked(cur.Vid),
+                artist = string.Join(", ", ArtistsOf(cur)), channel = cur.Channel,
             };
         return new
         {
