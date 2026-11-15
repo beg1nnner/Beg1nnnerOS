@@ -129,11 +129,30 @@
   .chip.fix { cursor:pointer; border-color:color-mix(in srgb, var(--warn) 45%, transparent); }
   .chip.fix.err { border-color:color-mix(in srgb, var(--err) 50%, transparent); }
   .chip .fx { font-size:var(--fs-sm); color:var(--accent2); }
-  .live-grid { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:var(--sp-5); align-items:stretch; }
-  .live-grid > .card, .live-side > .card { margin-bottom:0; }
-  .live-side { display:flex; flex-direction:column; gap:var(--sp-5); min-width:0; }
-  .live-grid + .card { margin-top:var(--sp-5); }
+  .live-grid { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:var(--sp-5); align-items:start; }
+  .live-col { display:flex; flex-direction:column; gap:var(--sp-5); min-width:0; }
+  .live-col > .card { margin-bottom:0; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  /* настройка «Эфира»: ручки, скрыть/закрепить, место вставки */
+  .live-tools { display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-3); flex-wrap:wrap; }
+  .lay-bar { display:none; }
+  .live-grid.editing .lay-bar { display:flex; align-items:center; gap:var(--sp-1); margin:calc(-1 * var(--sp-2)) 0 var(--sp-3); padding-bottom:var(--sp-2); border-bottom:1px dashed var(--line); }
+  .live-grid.editing .live-col { padding:var(--sp-2); margin:calc(-1 * var(--sp-2)); border-radius:var(--r-lg); outline:1px dashed color-mix(in srgb, var(--accent) 35%, transparent); outline-offset:-1px; }
+  .live-grid.editing .live-col > .card { box-shadow:var(--shadow); }
+  .lay-bar .lay-name { flex:1; min-width:0; font:500 var(--fs-xs) var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lay-handle { cursor:grab; touch-action:none; }
+  .lay-handle[aria-pressed="true"] { color:var(--accent2); background:color-mix(in srgb, var(--accent) 16%, transparent); border-color:color-mix(in srgb, var(--accent) 45%, transparent); }
+  .lay-pin[aria-pressed="true"] { color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .live-grid.editing .live-col { min-height:calc(var(--sp-8) * 2); }
+  .card.lay-drag { position:fixed; z-index:200; pointer-events:none; box-shadow:var(--pop-shadow); opacity:.92; }
+  .card.lay-grab { outline:2px solid var(--accent2); outline-offset:2px; }
+  .lay-ph { border:2px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius:var(--r-lg); background:color-mix(in srgb, var(--accent) 6%, transparent); }
+  .lay-hidden { display:flex; align-items:center; gap:var(--sp-2); flex-wrap:wrap; padding:var(--sp-3) var(--sp-4); margin-bottom:var(--sp-4); border-radius:var(--r-md);
+    border:1px dashed var(--line); background:var(--field); font-size:var(--fs-md); }
+  .lay-hidden[hidden] { display:none; }
+  .lay-hidden b { font-weight:600; margin-right:var(--sp-2); }
   @media (max-width:1100px) { .live-grid { grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion: no-preference) { .live-col > .card { transition:transform var(--t) var(--ease); } }
   .np { padding:var(--sp-7); display:flex; flex-direction:column; gap:var(--sp-6); }
   /* цвет карточки от обложки: --np-tint вычисляет панель; без обложки — акцентный */
   @property --np-tint { syntax:"<color>"; inherits:true; initial-value:#8b5cf6; }
@@ -749,61 +768,71 @@
     <button class="primary" onclick="demoStart()">Показать на примере</button>
   </div>
   <div class="metrics" id="live-metrics"></div>
-  <div class="live-grid">
-    <div class="card np idle">
-      <div class="np-top">
-        <div class="np-cover" aria-hidden="true"><span class="u-inset-8px"></span><span class="u-inset-20px"></span><span class="u-inset-32px"></span><span class="u-inset-44px"></span><span class="u-inset-56px"></span><span class="u-inset-68px"></span><i></i><img id="np-art" alt="" referrerpolicy="no-referrer" hidden></div>
-        <div class="np-meta">
-          <div class="micro acc">Сейчас играет <span class="pill hidden" id="np-paid">за баллы</span></div>
-          <div class="np-title" id="np-title" data-noi18n>—</div>
-          <div class="np-empty" id="np-empty"><b>Сейчас ничего не играет</b><span>Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную.</span>
-            <button class="sm primary" onclick="go('music','queue');setTimeout(()=>$('m-add').focus(),60)"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить трек</span></button></div>
-          <div class="np-who" id="np-who"></div>
-          <div class="np-bar"><i id="np-bar"></i></div>
-          <div class="np-times"><span id="np-pos"></span><span id="np-votes"></span><span id="np-left"></span></div>
+  <div class="live-tools">
+    <span class="live-tools-hint muted small" id="lay-hint" hidden>Перетаскивайте карточки за ручку или выберите ручку и нажмите пробел, затем стрелки.</span>
+    <div class="grow"></div>
+    <button class="sm" id="lay-reset" onclick="layReset()" hidden>Сбросить расположение</button>
+    <button class="sm" id="lay-edit" onclick="layEdit()" aria-pressed="false"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span id="lay-edit-t">Настроить</span></button>
+  </div>
+  <div class="lay-hidden" id="lay-hidden" hidden></div>
+  <div class="live-grid" id="live-grid">
+    <div class="live-col" data-col="main" aria-label="Основная колонка">
+      <div class="card np idle" data-card="now">
+        <div class="np-top">
+          <div class="np-cover" aria-hidden="true"><span class="u-inset-8px"></span><span class="u-inset-20px"></span><span class="u-inset-32px"></span><span class="u-inset-44px"></span><span class="u-inset-56px"></span><span class="u-inset-68px"></span><i></i><img id="np-art" alt="" referrerpolicy="no-referrer" hidden></div>
+          <div class="np-meta">
+            <div class="micro acc">Сейчас играет <span class="pill hidden" id="np-paid">за баллы</span></div>
+            <div class="np-title" id="np-title" data-noi18n>—</div>
+            <div class="np-empty" id="np-empty"><b>Сейчас ничего не играет</b><span>Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную.</span>
+              <button class="sm primary" onclick="go('music','queue');setTimeout(()=>$('m-add').focus(),60)"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить трек</span></button></div>
+            <div class="np-who" id="np-who"></div>
+            <div class="np-bar"><i id="np-bar"></i></div>
+            <div class="np-times"><span id="np-pos"></span><span id="np-votes"></span><span id="np-left"></span></div>
+          </div>
+        </div>
+        <div class="np-ctl">
+          <button disabled class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
+          <button disabled class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
+          <button disabled id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
+          <button disabled class="pillbtn" id="np-block" onclick="blockNow()" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+          <div class="grow"></div>
+          <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
+        </div>
+        <div class="np-q">
+          <div class="np-qh"><h3 class="card-t">Очередь</h3><span class="num muted small" id="live-qn"></span></div>
+          <div id="live-q"></div>
         </div>
       </div>
-      <div class="np-ctl">
-        <button disabled class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
-        <button disabled class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
-        <button disabled id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
-        <button disabled class="pillbtn" id="np-block" onclick="blockNow()" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
-        <div class="grow"></div>
-        <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
-      </div>
-      <div class="np-q">
-        <div class="np-qh"><h3 class="card-t">Очередь</h3><span class="num muted small" id="live-qn"></span></div>
-        <div id="live-q"></div>
+      <div class="card" data-card="log">
+        <div class="row log-h"><h3 class="card-t grow">Журнал действий и ошибок</h3>
+          <select id="log-kind" class="u-w-auto" onchange="loadLog()">
+            <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
+            <option value="command">Команды</option><option value="mod">Модерация</option><option value="event">События</option><option value="timer">Таймеры</option>
+            <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
+          </select>
+          <button class="sm" onclick="api('/log/clear',{}).then(loadLog)">Очистить</button></div>
+        <div class="log u-mt-3" id="log" data-skel></div>
       </div>
     </div>
-    <div class="live-side">
-      <div class="card qa">
-        <div class="qa-h"><h3 class="card-t">Быстрые действия</h3><span class="qa-timer" id="next-timer">—</span></div>
-        <button onclick="openRemote()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span>Пульт с телефона</span></button>
-        <button onclick="openPrecheck()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg><span>Проверка перед эфиром</span></button>
-        <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Пауза уведомлений</span><kbd data-hk="pause_events"></kbd></button>
-        <button onclick="api('/captions/toggle',{}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
-        <button onclick="go('votes')"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опрос или прогноз</span></button>
-        <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg><span>Остановить МедиаАлерты</span><kbd data-hk="stop_alerts"></kbd></button>
-        <div class="muted small" id="alerts-q"></div>
-      </div>
-      <div class="card chatbox">
-        <h3 class="card-t">Сообщение в чат</h3>
-        <div class="muted small">Публикуется в Twitch от выбранного отправителя.</div>
-        <div class="cb-row"><input id="chat-msg" placeholder="Написать в чат…" onkeydown="if(event.key==='Enter')sendChat()"><button class="primary sq" onclick="sendChat()" aria-label="Отправить" title="Отправить"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
-      </div>
+    <div class="live-col live-side" data-col="side" aria-label="Боковая колонка">
+        <div class="card qa" data-card="quick">
+          <div class="qa-h"><h3 class="card-t">Быстрые действия</h3><span class="qa-timer" id="next-timer">—</span></div>
+          <button onclick="openRemote()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span>Пульт с телефона</span></button>
+          <button onclick="openPrecheck()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg><span>Проверка перед эфиром</span></button>
+          <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Пауза уведомлений</span><kbd data-hk="pause_events"></kbd></button>
+          <button onclick="api('/captions/toggle',{}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
+          <button onclick="go('votes')"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опрос или прогноз</span></button>
+          <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg><span>Остановить МедиаАлерты</span><kbd data-hk="stop_alerts"></kbd></button>
+          <div class="muted small" id="alerts-q"></div>
+        </div>
+        <div class="card chatbox" data-card="chat">
+          <h3 class="card-t">Сообщение в чат</h3>
+          <div class="muted small">Публикуется в Twitch от выбранного отправителя.</div>
+          <div class="cb-row"><input id="chat-msg" placeholder="Написать в чат…" onkeydown="if(event.key==='Enter')sendChat()"><button class="primary sq" onclick="sendChat()" aria-label="Отправить" title="Отправить"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+        </div>
     </div>
   </div>
-  <div class="card">
-    <div class="row log-h"><h3 class="card-t grow">Журнал действий и ошибок</h3>
-      <select id="log-kind" class="u-w-auto" onchange="loadLog()">
-        <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
-        <option value="command">Команды</option><option value="mod">Модерация</option><option value="event">События</option><option value="timer">Таймеры</option>
-        <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
-      </select>
-      <button class="sm" onclick="api('/log/clear',{}).then(loadLog)">Очистить</button></div>
-    <div class="log u-mt-3" id="log" data-skel></div>
-  </div>
+  <div class="sr-only" id="lay-live" aria-live="polite"></div>
 </section>
 
 <!-- ================= МУЗЫКА ================= -->
@@ -2141,6 +2170,7 @@ async function loadSettings(keepFocus) {
     else if (el.hasAttribute("data-list")) el.value = (v || []).join("\n");
     else el.value = v ?? "";
   });
+  if (!LAY_GRAB && !document.querySelector(".lay-drag")) layApply();
   if ($("xf-v")) { const v = +getPath(S, "music.crossfade") || 0; $("xf-v").textContent = v > 0 ? v + " сек" : "выключен"; }
   $("secret").placeholder = S.twitch.has_secret ? "•••••• сохранён (пусто — оставить прежний)" : "";
   document.querySelectorAll("[data-secret]").forEach(el => el.placeholder = getPath(S, el.dataset.secret) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
@@ -3036,6 +3066,189 @@ let CMDS = {custom:[], standard:{}};
 const ART_BAD = new Set();
 const artImg = t => t && t.cover && !ART_BAD.has(t.cover) ? `<img src="${esc(t.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="ART_BAD.add(this.getAttribute('src'));this.remove()">` : "";
 document.addEventListener("DOMContentLoaded", () => { const a = $("np-art"); if (a) a.onerror = () => { ART_BAD.add(a.dataset.src); a.hidden = true; }; });
+// ---------- настраиваемый «Эфир»: порядок карточек, скрытие, закрепление ----------
+// Раскладка хранится в настройках (ui.live_layout) — попадает в резервные копии, профили и облако.
+// Карточки только переносятся (appendChild), а не пересоздаются: их содержимое и обработчики остаются прежними.
+const LAY_DEFAULT = {main: ["now", "log"], side: ["quick", "chat"], hidden: [], pinned: []};
+const LAY_NAMES = {now: "Сейчас играет", log: "Журнал действий и ошибок", quick: "Быстрые действия", chat: "Сообщение в чат"};
+const LAY_FIXED = new Set(["now"]);   // нельзя скрыть
+let LAY = null, LAY_EDIT = false, LAY_GRAB = null;
+const layCards = () => [...document.querySelectorAll("#live-grid [data-card]")];
+const layCol = name => document.querySelector(`#live-grid .live-col[data-col="${name}"]`);
+const layName = id => tr(LAY_NAMES[id] || id);
+function layNormalize(src) {
+  const known = new Set(layCards().map(c => c.dataset.card)), seen = new Set();
+  const clean = arr => (Array.isArray(arr) ? arr : []).filter(id => known.has(id) && !seen.has(id) && seen.add(id));
+  const l = {main: clean(src && src.main), side: clean(src && src.side)};
+  // карточки, о которых раскладка не знает (появились в новой версии), — в конец своей колонки по умолчанию
+  for (const col of ["main", "side"]) LAY_DEFAULT[col].forEach(id => { if (known.has(id) && !seen.has(id)) { l[col].push(id); seen.add(id); } });
+  known.forEach(id => { if (!seen.has(id)) { l.main.push(id); seen.add(id); } });
+  l.hidden = (src && Array.isArray(src.hidden) ? src.hidden : []).filter(id => known.has(id) && !LAY_FIXED.has(id));
+  l.pinned = (src && Array.isArray(src.pinned) ? src.pinned : []).filter(id => known.has(id));
+  return l;
+}
+function layApply() {
+  LAY = layNormalize((S && S.ui && S.ui.live_layout) || LAY_DEFAULT);
+  for (const col of ["main", "side"]) {
+    const box = layCol(col);
+    const ids = LAY[col].filter(id => LAY.pinned.includes(id)).concat(LAY[col].filter(id => !LAY.pinned.includes(id)));
+    const cur = [...box.querySelectorAll(":scope > [data-card]")].map(c => c.dataset.card);
+    if (cur.join() !== ids.join())   // переставляем только если порядок изменился — узлы переносятся, не пересоздаются
+      ids.forEach(id => { const c = document.querySelector(`#live-grid [data-card="${id}"]`); if (c) box.appendChild(c); });
+  }
+  layCards().forEach(c => {
+    const id = c.dataset.card;
+    c.hidden = LAY.hidden.includes(id);
+    c.classList.toggle("lay-pinned", LAY.pinned.includes(id));
+  });
+  layBars(); layHiddenList();
+}
+function layBars() {
+  layCards().forEach(c => {
+    const id = c.dataset.card, nm = layName(id);
+    let bar = c.querySelector(":scope > .lay-bar");
+    if (!bar) {
+      bar = document.createElement("div"); bar.className = "lay-bar";
+      bar.innerHTML = `<button type="button" class="ib lay-handle" aria-pressed="false">${'<svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>'}</button><span class="lay-name"></span>
+        <button type="button" class="ib lay-pin" aria-pressed="false">${'<svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M8 3h8l-1 6 3 4H6l3-4z"/></svg>'}</button>
+        <button type="button" class="ib lay-hide">${'<svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.1 6.1C3.6 7.8 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.9-2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>'}</button>`;
+      c.prepend(bar);
+      const h = bar.querySelector(".lay-handle");
+      h.addEventListener("pointerdown", e => layPointerDown(e, c));
+      h.addEventListener("keydown", e => layKey(e, c));
+      bar.querySelector(".lay-pin").onclick = () => layPin(id);
+      bar.querySelector(".lay-hide").onclick = () => layHide(id, true);
+    }
+    bar.querySelector(".lay-name").textContent = nm;
+    const h = bar.querySelector(".lay-handle"); h.setAttribute("aria-label", `${tr("Переместить карточку")} «${nm}»`); h.title = tr("Перетащить");
+    const pin = bar.querySelector(".lay-pin"), pinned = LAY.pinned.includes(id);
+    pin.setAttribute("aria-pressed", pinned); pin.title = tr(pinned ? "Открепить" : "Закрепить вверху колонки");
+    pin.setAttribute("aria-label", `${tr(pinned ? "Открепить" : "Закрепить")} «${nm}»`);
+    const hide = bar.querySelector(".lay-hide");
+    hide.hidden = LAY_FIXED.has(id); hide.title = tr("Скрыть"); hide.setAttribute("aria-label", `${tr("Скрыть карточку")} «${nm}»`);
+  });
+}
+function layHiddenList() {
+  const box = $("lay-hidden");
+  const list = LAY.hidden;
+  box.hidden = !LAY_EDIT;
+  box.innerHTML = `<b>${tr("Скрытые")}:</b>` + (list.length ? list.map(id => `<button class="sm" onclick="layHide('${id}', false)">${ICON.plus}<span>${esc(layName(id))}</span></button>`).join("")
+    : `<span class="muted">${tr("нет — скрыть карточку можно кнопкой в её заголовке")}</span>`);
+  layCards().forEach(c => { c.hidden = LAY.hidden.includes(c.dataset.card); });
+}
+function layRead() {
+  const l = {main: [], side: [], hidden: LAY.hidden.slice(), pinned: LAY.pinned.slice()};
+  for (const col of ["main", "side"]) layCol(col).querySelectorAll(":scope > [data-card]").forEach(c => l[col].push(c.dataset.card));
+  return l;
+}
+function laySave(l) {
+  LAY = l; S.ui = S.ui || {}; S.ui.live_layout = JSON.parse(JSON.stringify(l));
+  queueSave($("lay-edit"), 400);
+}
+function laySay(t) { $("lay-live").textContent = ""; setTimeout(() => $("lay-live").textContent = t, 30); }
+function layEdit(on) {
+  LAY_EDIT = on ?? !LAY_EDIT;
+  $("live-grid").classList.toggle("editing", LAY_EDIT);
+  $("lay-edit").setAttribute("aria-pressed", LAY_EDIT);
+  $("lay-edit-t").textContent = tr(LAY_EDIT ? "Готово" : "Настроить");
+  $("lay-reset").hidden = !LAY_EDIT; $("lay-hint").hidden = !LAY_EDIT;
+  layApply();
+  laySay(tr(LAY_EDIT ? "Режим настройки карточек включён" : "Режим настройки карточек выключен"));
+}
+function layPin(id) {
+  const l = layRead();
+  l.pinned = l.pinned.includes(id) ? l.pinned.filter(x => x !== id) : l.pinned.concat(id);
+  laySave(l); layApply();
+  laySay(`«${layName(id)}»: ${tr(l.pinned.includes(id) ? "закреплена вверху колонки" : "откреплена")}`);
+}
+function layHide(id, hide) {
+  if (hide && LAY_FIXED.has(id)) return;
+  const l = layRead();
+  l.hidden = hide ? l.hidden.concat(id) : l.hidden.filter(x => x !== id);
+  laySave(l); layApply();
+  laySay(`«${layName(id)}»: ${tr(hide ? "скрыта" : "снова показана")}`);
+}
+async function layReset() {
+  if (!await confirmDlg({title: "Сбросить расположение карточек?", text: "Порядок, закрепление и скрытые карточки «Эфира» вернутся к стандартным.", okLabel: "Сбросить"})) return;
+  laySave(JSON.parse(JSON.stringify(LAY_DEFAULT))); layApply(); laySay(tr("Расположение сброшено"));
+}
+// место, куда встанет карточка: колонка под указателем и позиция между незакреплёнными карточками
+function layTarget(x, y, card) {
+  const cols = [layCol("main"), layCol("side")];
+  let col = cols.find(c => { const r = c.getBoundingClientRect(); return x >= r.left && x <= r.right; });
+  if (!col) col = cols.reduce((a, c) => { const r = c.getBoundingClientRect(), d = Math.abs((r.left + r.right) / 2 - x); return !a || d < a.d ? {c, d} : a; }, null).c;
+  const items = [...col.querySelectorAll(":scope > [data-card]:not([hidden])")].filter(c => c !== card);
+  let before = null;
+  for (const it of items) {
+    if (it.classList.contains("lay-pinned")) continue;
+    const r = it.getBoundingClientRect();
+    if (y < r.top + r.height / 2) { before = it; break; }
+  }
+  return {col, before};
+}
+function layPointerDown(e, card) {
+  if (e.button !== 0 || card.classList.contains("lay-pinned")) return;
+  e.preventDefault();
+  const r = card.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+  const ph = document.createElement("div"); ph.className = "lay-ph"; ph.style.height = r.height + "px";
+  card.after(ph); document.body.style.userSelect = "none";
+  card.classList.add("lay-drag"); card.style.width = r.width + "px"; card.style.left = r.left + "px"; card.style.top = r.top + "px";
+  const handle = e.currentTarget; handle.setPointerCapture(e.pointerId);
+  const move = ev => {
+    card.style.left = (ev.clientX - dx) + "px"; card.style.top = (ev.clientY - dy) + "px";
+    const t = layTarget(ev.clientX, ev.clientY, card);
+    if (t.before) { if (ph.nextElementSibling !== t.before) t.col.insertBefore(ph, t.before); } else if (ph.parentElement !== t.col || ph.nextElementSibling) t.col.appendChild(ph);
+  };
+  const up = () => {
+    handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up);
+    card.classList.remove("lay-drag"); card.style.width = card.style.left = card.style.top = ""; document.body.style.userSelect = "";
+    ph.replaceWith(card);
+    laySave(layRead()); layApply();
+    laySay(layWhere(card));
+  };
+  handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
+}
+function layWhere(card) {
+  const col = card.parentElement, list = [...col.querySelectorAll(":scope > [data-card]:not([hidden])")];
+  return `«${layName(card.dataset.card)}»: ${tr("позиция")} ${list.indexOf(card) + 1} ${tr("из")} ${list.length}, ${tr(col.dataset.col === "main" ? "основная колонка" : "боковая колонка")}`;
+}
+// клавиатура: пробел — взять/отпустить, стрелки — переместить, Esc — отменить
+function layKey(e, card) {
+  const h = e.currentTarget;
+  if (e.key === " " || e.key === "Enter") {
+    e.preventDefault();
+    if (!LAY_GRAB) {
+      if (card.classList.contains("lay-pinned")) { laySay(tr("Закреплённую карточку сначала нужно открепить")); return; }
+      LAY_GRAB = {card, parent: card.parentElement, next: card.nextElementSibling};
+      card.classList.add("lay-grab"); h.setAttribute("aria-pressed", "true");
+      laySay(`${tr("Взята")} ${layWhere(card)}. ${tr("Стрелки — переместить, пробел — отпустить, Esc — отменить")}`);
+    } else {
+      LAY_GRAB = null; card.classList.remove("lay-grab"); h.setAttribute("aria-pressed", "false");
+      laySave(layRead()); layApply(); h.focus();
+      laySay(`${tr("Отпущена")} ${layWhere(card)}`);
+    }
+    return;
+  }
+  if (!LAY_GRAB || LAY_GRAB.card !== card) return;
+  if (e.key === "Escape") {
+    e.preventDefault();
+    LAY_GRAB.parent.insertBefore(card, LAY_GRAB.next && LAY_GRAB.next.parentElement === LAY_GRAB.parent ? LAY_GRAB.next : null);
+    LAY_GRAB = null; card.classList.remove("lay-grab"); h.setAttribute("aria-pressed", "false"); h.focus();
+    laySay(tr("Перемещение отменено")); return;
+  }
+  const col = card.parentElement, sibs = [...col.querySelectorAll(":scope > [data-card]:not([hidden])")], i = sibs.indexOf(card);
+  const firstFree = sibs.findIndex(c => !c.classList.contains("lay-pinned") && c !== card);
+  if (e.key === "ArrowUp" && i > 0 && !sibs[i - 1].classList.contains("lay-pinned")) col.insertBefore(card, sibs[i - 1]);
+  else if (e.key === "ArrowDown" && i < sibs.length - 1) col.insertBefore(card, sibs[i + 1].nextElementSibling);
+  else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    const other = layCol(col.dataset.col === "main" ? "side" : "main");
+    const os = [...other.querySelectorAll(":scope > [data-card]:not([hidden])")].filter(c => !c.classList.contains("lay-pinned"));
+    other.insertBefore(card, os[Math.min(i, os.length)] || null);
+  } else return;
+  e.preventDefault(); h.focus();
+  laySay(layWhere(card));
+}
+
 // ---------- цвет карточки «Сейчас играет» от обложки ----------
 // Уменьшенная копия обложки на canvas → средний цвет без почти чёрных, почти белых и серых пикселей,
 // насыщенность и яркость ограничены, чтобы цвет был спокойным. Результат кешируется по адресу обложки.
