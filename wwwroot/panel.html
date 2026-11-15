@@ -229,9 +229,6 @@
   .saved-mark .undo:hover { background:none; text-decoration:underline; }
   .saved-mark.show { opacity:1; transform:none; }
   html[data-theme="light"] .saved-mark { color:#047857; }
-  #toasts { position:fixed; right:18px; bottom:18px; z-index:100; display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
-  #toasts .toast { position:static; display:flex; align-items:center; gap:12px; animation:toastIn .25s ease-out; }
-  @keyframes toastIn { from { opacity:0; transform:translateY(8px); } }
   /* уведомления */
   .tb-bell-w { position:relative; }
   button.tb-bell { position:relative; width:40px; height:40px; padding:0; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--muted); }
@@ -597,7 +594,7 @@
         <button class="rnd big" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
         <button class="rnd" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
         <button id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
-        <button class="pillbtn" onclick="if(confirm('Заблокировать текущий трек и пропустить?')) api('/music/block',{})" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+        <button class="pillbtn" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
         <div class="grow"></div>
         <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
       </div>
@@ -650,7 +647,7 @@
       <div class="muted small" style="margin-top:6px">Ручное добавление не списывает баллы и не применяет лимиты заказов.</div>
     </div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Очередь</h3>
-      <button class="sm danger" onclick="if(confirm('Очистить очередь?')) api('/music/clear',{})">Очистить</button></div>
+      <button class="sm danger" onclick="confirmDlg({title:'Очистить очередь?',text:'Все треки из очереди будут удалены.',okLabel:'Очистить очередь',danger:1}).then(ok=>ok&&api('/music/clear',{}))">Очистить</button></div>
       <table style="margin-top:8px"><thead><tr><th>#</th><th>Трек</th><th>Длит.</th><th>Заказ</th><th></th></tr></thead><tbody id="m-queue"></tbody></table>
     </div>
   </div>
@@ -877,7 +874,7 @@
     </div>
     <div class="card">
       <div class="row"><span class="micro grow">Стандартные команды</span>
-        <button class="sm" onclick="if(confirm('Вернуть весь стандартный набор? Имена, шаблоны и доступ сбросятся. Свои команды не удаляются.')) api('/commands/reset',{}).then(loadCommands)">Восстановить стандартные</button></div>
+        <button class="sm" onclick="confirmDlg({title:'Вернуть стандартные команды?',text:'Имена, шаблоны и доступ стандартных команд сбросятся. Свои команды не удаляются.',okLabel:'Сбросить',danger:1}).then(ok=>ok&&api('/commands/reset',{}).then(loadCommands))">Восстановить стандартные</button></div>
       <div class="std-grid" id="c-std"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
     </div>
   </div>
@@ -1108,7 +1105,7 @@
     </div>
     <div class="row" style="margin-top:10px">
       <button class="primary" onclick="login('da')">Войти через DonationAlerts</button>
-      <button class="sm danger" onclick="if(confirm('Отключить DonationAlerts?')) api('/logout/da',{}).then(loadSettings)">Выйти</button>
+      <button class="sm danger" onclick="confirmDlg({title:'Отключить DonationAlerts?',text:'Донаты перестанут приходить в программу, пока вы не подключите аккаунт снова.',okLabel:'Отключить',danger:1}).then(ok=>ok&&api('/logout/da',{}).then(loadSettings))">Выйти</button>
     </div>
     <details style="margin-top:12px" id="da-help"><summary class="small" style="cursor:pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
       <li>Откройте <a href="https://www.donationalerts.com/application/clients" target="_blank">страницу приложений DonationAlerts</a> (войдите в свой аккаунт) и нажмите «Создать приложение».
@@ -1198,7 +1195,7 @@
     <h3>Аккаунт Twitch</h3>
     <div class="row"><div class="grow" id="acc-streamer"></div>
       <button class="primary" onclick="twLogin('streamer')" id="tw-login-btn">Войти через Twitch</button>
-      <button class="sm danger" onclick="if(confirm('Выйти из аккаунта стримера?')) api('/logout/streamer',{}).then(poll)">Выйти</button></div>
+      <button class="sm danger" onclick="confirmDlg({title:'Выйти из аккаунта стримера?',text:'Программа перестанет работать с вашим каналом, пока вы не войдёте снова.',okLabel:'Выйти',danger:1}).then(ok=>ok&&api('/logout/streamer',{}).then(poll))">Выйти</button></div>
   </div>
   <div class="card">
     <h3>Чат-бот</h3>
@@ -1218,7 +1215,7 @@
     <div class="row">
       <label class="f grow"><span>Токен</span><input type="password" data-s="yandex.token" data-secret="yandex.has_token" autocomplete="new-password"></label>
       <button style="margin-top:16px" onclick="api('/tools/yandex',{}).then(r=>toast(r))">Проверить</button>
-      <button class="sm danger" style="margin-top:16px" onclick="if(confirm('Удалить токен Яндекса?')) api('/secret/clear',{name:'yandex'}).then(loadSettings)">Удалить</button>
+      <button class="sm danger" style="margin-top:16px" onclick="confirmDlg({title:'Удалить токен Яндекса?',text:'Треки с Яндекс Музыки перестанут играть, пока вы не добавите токен снова.',okLabel:'Удалить токен',danger:1}).then(ok=>ok&&api('/secret/clear',{name:'yandex'}).then(loadSettings))">Удалить</button>
     </div>
     <details style="margin-top:8px"><summary class="small" style="cursor:pointer">Открыть инструкцию: как получить токен</summary><ol class="small muted">
       <li>Откройте <a href="https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d" target="_blank">страницу авторизации Яндекса</a> и войдите.</li>
@@ -1539,7 +1536,7 @@
           <button onclick="api('/pro/giveaway/close',{}).then(loadGiveaway)" id="gv-close">Закрыть приём заявок</button>
           <button class="primary" onclick="api('/pro/giveaway/draw',{}).then(loadGiveaway)">Выбрать победителя</button>
           <span class="grow"></span>
-          <button class="sm danger" onclick="if(confirm('Завершить розыгрыш и очистить список участников?')) api('/pro/giveaway/finish',{}).then(loadGiveaway)">Завершить</button>
+          <button class="sm danger" onclick="confirmDlg({title:'Завершить розыгрыш?',text:'Список участников будет очищен.',okLabel:'Завершить',danger:1}).then(ok=>ok&&api('/pro/giveaway/finish',{}).then(loadGiveaway))">Завершить</button>
         </div>
         <div id="gv-winners-list" style="margin-top:12px"></div>
         <div class="small muted" style="margin-top:10px">Участники (новые сверху):</div>
@@ -1598,6 +1595,45 @@
 // ---------- утилиты ----------
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ---------- линейные иконки (вместо эмодзи в интерфейсе): viewBox 24, обводка currentColor, скруглённые концы ----------
+const svgIc = (d, size = 16, sw = 1.8) => `<svg class="ic" aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON = {
+  check: svgIc('<path d="M20 6L9 17l-5-5"/>'),
+  x: svgIc('<path d="M18 6L6 18M6 6l12 12"/>', 14),
+  alert: svgIc('<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
+  info: svgIc('<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>'),
+  trash: svgIc('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>', 15),
+  edit: svgIc('<path d="M4 20h4L19 9l-4-4L4 16z"/>', 14),
+  play: svgIc('<path d="M7 4.5v15l12-7.5z"/>', 14),
+  stop: svgIc('<rect x="6" y="6" width="12" height="12" rx="2"/>', 14),
+  lock: svgIc('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>', 14),
+  trophy: svgIc('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4"/>'),
+  coin: svgIc('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.5 10a2.5 2 0 015 0c0 2.5-5 1.5-5 4a2.5 2 0 005 0"/>'),
+  gift: svgIc('<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8S10.5 3 8 3.5 7 8 12 8zM12 8s1.5-5 4-4.5S17 8 12 8z"/>'),
+  star: svgIc('<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>'),
+  list: svgIc('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>'),
+  heart: svgIc('<path d="M20.8 5.6a5.4 5.4 0 00-7.7 0L12 6.7l-1.1-1.1a5.4 5.4 0 10-7.7 7.7L12 22l8.8-8.7a5.4 5.4 0 000-7.7z"/>'),
+  diamond: svgIc('<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8 9l4-6 4 6z"/>'),
+  rocket: svgIc('<path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 00-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 012-4A12.9 12.9 0 0122 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 01-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/>'),
+  film: svgIc('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4"/>'),
+  money: svgIc('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
+  party: svgIc('<path d="M5.8 11.3L2 22l10.7-3.8M4 3h.01M22 8h.01M15 2h.01M22 20h.01M22 2l-2.2.7a2.9 2.9 0 00-1.9 3.3c.2.9-.5 1.9-1.4 1.9h-.4L15 8M8.5 9.5l6 6c.5.5 0 1.6-1 1.6-2.8 0-7.1-4.3-7.1-7.1 0-1 1.1-1.5 1.6-1z"/>'),
+  save: svgIc('<path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>'),
+  pulse: svgIc('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
+  palette: svgIc('<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 000 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A5.6 5.6 0 0022 10c0-4.4-4.5-8-10-8z"/>'),
+  frame: svgIc('<rect x="3" y="3" width="18" height="18" rx="3"/><rect x="7" y="7" width="10" height="10" rx="1.5"/>'),
+  type: svgIc('<path d="M4 7V4h16v3M9 20h6M12 4v16"/>'),
+  music: svgIc('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  chat: svgIc('<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>'),
+  wave: svgIc('<path d="M18 11V6a2 2 0 00-4 0M14 10V4a2 2 0 00-4 0v2M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 012.8-2.8L7 15"/>'),
+  youtube: svgIc('<rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10 9.5v5l4.5-2.5z"/>'),
+  yandex: svgIc('<circle cx="12" cy="12" r="9"/><path d="M13.5 17V7h-1.3C10.4 7 9.5 8.2 9.5 9.8c0 1.7.9 2.6 2.4 2.6h1.6M11.5 12.4L9 17"/>'),
+  spotify: svgIc('<circle cx="12" cy="12" r="9"/><path d="M7.5 9.5c3-1 6.5-.7 9 .8M8 12.5c2.5-.7 5-.4 7 .7M8.5 15.3c2-.5 3.8-.3 5.3.5"/>'),
+  hand: svgIc('<path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 012.8-2.8L7 15"/>'),
+  radio: svgIc('<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.5M7.8 16.2a6 6 0 010-8.5M19.1 4.9a10 10 0 010 14.2M4.9 19.1a10 10 0 010-14.2"/>'),
+  minus: svgIc('<path d="M5 12h14"/>', 14),
+};
 const fmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
   return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
 const base = () => location.origin.replace("localhost", "127.0.0.1");
@@ -1606,10 +1642,13 @@ async function api(path, body, method) {
   const opt = {method: method || (body === undefined ? "GET" : "POST"), headers:{}};
   if (body instanceof FormData) opt.body = body;
   else if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
-  const r = await fetch("/api" + path, opt);
-  const j = await r.json().catch(() => ({ok:false, error:r.statusText}));
+  const retry = {label: "Повторить", run: () => api(path, body, method)};
+  let r;
+  try { r = await fetch("/api" + path, opt); }
+  catch (e) { toast(tr("Нет связи с программой — проверьте, что Beg1nnnerOS запущена"), true, retry); throw e; }
+  const j = await r.json().catch(() => ({ok:false, error: r.status >= 500 ? tr("Программа не смогла выполнить действие (ошибка сервера)") : r.statusText}));
   if (!j.ok) {
-    toast(j.error || "Не получилось выполнить действие", true);
+    toast(j.error || tr("Не получилось выполнить действие"), true, r.status >= 500 ? retry : null);
     if (j.field) showFieldError(j.field);
     throw new Error(j.error);
   }
@@ -1637,20 +1676,130 @@ function showFieldError(field) {
   setTimeout(() => { el.scrollIntoView({block: "center", behavior: "smooth"}); el.focus({preventScroll: true}); }, 60);
 }
 const NOTIFS = []; let NOTIF_UNREAD = 0;
+// Всплывающие сообщения: не больше 3 на экране (остальные — только в центре уведомлений),
+// одинаковые склеиваются в «×N» с продлением таймера, наведение ставит на паузу, есть крестик и анимация ухода.
+const TOAST_MAX = 3;
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+function toastStack() {
+  let st = $("toasts");
+  if (!st) { st = document.createElement("div"); st.id = "toasts"; st.setAttribute("aria-live", "polite"); document.body.appendChild(st); }
+  return st;
+}
+function toastClose(t) {
+  if (!t || t.dataset.out) return;
+  t.dataset.out = "1"; clearTimeout(t._tm);
+  if (REDUCED.matches) return t.remove();
+  t.classList.add("out"); setTimeout(() => t.remove(), 200);
+}
+function toastArm(t) { clearTimeout(t._tm); t._tm = setTimeout(() => toastClose(t), t._life); }
 function toast(text, err, action) {
-  const t = document.createElement("div"); t.className = "toast" + (err ? " err" : "");
-  const sp = document.createElement("span"); sp.textContent = text; t.appendChild(sp);
-  if (action) { const b = document.createElement("button"); b.className = "sm"; b.textContent = action.label; b.onclick = () => { t.remove(); action.run(); }; t.appendChild(b); }
-  let stack = document.getElementById("toasts"); if (!stack) { stack = document.createElement("div"); stack.id = "toasts"; document.body.appendChild(stack); }
-  stack.appendChild(t); setTimeout(() => t.remove(), action ? 8000 : err ? 6000 : 3000);
-  NOTIFS.unshift({text, err: !!err, ts: Date.now()}); if (NOTIFS.length > 40) NOTIFS.pop();
+  text = String(text ?? "");
+  const key = (err ? "e:" : "i:") + text;
+  // в центр уведомлений — всегда; повтор того же сообщения в течение минуты склеиваем
+  const last = NOTIFS[0];
+  if (last && last.key === key && Date.now() - last.ts < 60000) { last.n = (last.n || 1) + 1; last.ts = Date.now(); }
+  else { NOTIFS.unshift({key, text, err: !!err, ts: Date.now(), n: 1}); if (NOTIFS.length > 40) NOTIFS.pop(); }
   if ($("ncenter") && $("ncenter").classList.contains("hidden")) NOTIF_UNREAD++;
   renderNotifs();
+  const stack = toastStack();
+  const live = [...stack.children].filter(x => !x.dataset.out);
+  const same = live.find(x => x.dataset.key === key);
+  if (same) {
+    same._n++; same.querySelector(".t-n").textContent = "×" + same._n;
+    same.classList.remove("bump"); void same.offsetWidth; same.classList.add("bump");
+    if (!same.matches(":hover")) toastArm(same);
+    return;
+  }
+  if (live.length >= TOAST_MAX) return;   // переполнение — сообщение уже лежит в центре уведомлений
+  const t = document.createElement("div");
+  t.className = "toast" + (err ? " err" : ""); t.dataset.key = key; t._n = 1;
+  t.setAttribute("role", err ? "alert" : "status");
+  t._life = action ? 8000 : err ? 6000 : 3500;
+  t.innerHTML = `<i class="t-ic" aria-hidden="true">${err ? ICON.alert : ICON.check}</i><span class="t-tx"></span><b class="t-n"></b>`;
+  t.querySelector(".t-tx").textContent = text;
+  if (action) {
+    const b = document.createElement("button"); b.className = "sm t-act"; b.textContent = tr(action.label);
+    b.onclick = () => { toastClose(t); action.run(); }; t.appendChild(b);
+  }
+  const x = document.createElement("button"); x.className = "ib t-x"; x.innerHTML = ICON.x;
+  x.title = tr("Закрыть"); x.setAttribute("aria-label", tr("Закрыть сообщение")); x.onclick = () => toastClose(t); t.appendChild(x);
+  t.onmouseenter = () => clearTimeout(t._tm);
+  t.onmouseleave = () => toastArm(t);
+  t.addEventListener("focusin", () => clearTimeout(t._tm));
+  stack.appendChild(t); toastArm(t);
+}
+
+// ---------- диалоги подтверждения и ввода (вместо системных confirm/prompt) ----------
+// Esc и клик по фону — отмена, Enter — подтверждение, Tab не выходит за пределы окна, фокус потом возвращается на кнопку.
+function dlgOpen(build) {
+  return new Promise(resolve => {
+    const back = document.activeElement;
+    const bg = document.createElement("div"); bg.className = "modal-bg dlg-bg";
+    const box = document.createElement("div"); box.className = "modal dlg"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true");
+    bg.appendChild(box); document.body.appendChild(bg);
+    let done = false;
+    const finish = v => {
+      if (done) return; done = true;
+      document.removeEventListener("keydown", onKey, true);
+      const out = () => { bg.remove(); if (back && back.isConnected) back.focus({preventScroll: true}); };
+      if (REDUCED.matches) out(); else { bg.classList.add("out"); setTimeout(out, 160); }
+      resolve(v);
+    };
+    const api = build(box, finish);
+    const focusables = () => [...box.querySelectorAll("button, input, textarea, select, [tabindex]:not([tabindex='-1'])")].filter(e => !e.disabled);
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(api.cancel()); }
+      else if (e.key === "Enter" && !e.shiftKey && e.target.tagName !== "TEXTAREA" && !(e.target.tagName === "BUTTON" && e.target !== api.ok)) { e.preventDefault(); finish(api.accept()); }
+      else if (e.key === "Tab") {
+        const f = focusables(); if (!f.length) return;
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+      }
+    }
+    document.addEventListener("keydown", onKey, true);
+    bg.addEventListener("mousedown", e => { if (e.target === bg) finish(api.cancel()); });
+    box.querySelector("[data-cancel]").onclick = () => finish(api.cancel());
+    api.ok.onclick = () => finish(api.accept());
+    setTimeout(() => (api.focus || api.ok).focus(), 30);
+  });
+}
+function dlgHead(box, o) {
+  const id = "dlg-t" + Date.now();
+  box.setAttribute("aria-labelledby", id);
+  box.innerHTML = `${o.danger ? `<div class="dlg-ic" aria-hidden="true">${ICON.alert}</div>` : ""}<h3 id="${id}"></h3>${o.text ? '<p class="dlg-tx"></p>' : ""}<div class="dlg-body"></div>
+    <div class="dlg-acts"><button type="button" data-cancel></button><button type="button" class="${o.danger ? "danger solid" : "primary"}" data-ok></button></div>`;
+  box.querySelector("h3").textContent = tr(o.title || "Подтвердите действие");
+  if (o.text) box.querySelector(".dlg-tx").textContent = tr(o.text);
+  box.querySelector("[data-cancel]").textContent = tr(o.cancelLabel || "Отмена");
+  box.querySelector("[data-ok]").textContent = tr(o.okLabel || "OK");
+  return box.querySelector("[data-ok]");
+}
+/** Подтверждение: confirmDlg({title, text, okLabel, cancelLabel, danger}) → Promise<boolean>. */
+function confirmDlg(o) {
+  return dlgOpen((box) => {
+    const ok = dlgHead(box, o);
+    // у опасного действия фокус по умолчанию — на «Отмене», чтобы случайный Enter ничего не удалил
+    return {ok, accept: () => true, cancel: () => false, focus: o.danger ? box.querySelector("[data-cancel]") : ok};
+  });
+}
+/** Ввод строки: promptDlg({title, text, value, placeholder, okLabel, password, readonly}) → Promise<string|null>. */
+function promptDlg(o) {
+  return dlgOpen((box) => {
+    const ok = dlgHead(box, o);
+    const inp = document.createElement(o.multiline ? "textarea" : "input");
+    if (o.password) inp.type = "password";
+    inp.value = o.value || ""; inp.placeholder = o.placeholder ? tr(o.placeholder) : "";
+    inp.readOnly = !!o.readonly; inp.setAttribute("aria-label", tr(o.title || ""));
+    box.querySelector(".dlg-body").appendChild(inp);
+    if (o.readonly) setTimeout(() => inp.select(), 40);
+    return {ok, accept: () => inp.value, cancel: () => null, focus: inp};
+  });
 }
 function renderNotifs() {
   if (!$("nc-list")) return;
   $("tb-bell-n").textContent = NOTIF_UNREAD > 9 ? "9+" : (NOTIF_UNREAD || "");
-  $("nc-list").innerHTML = NOTIFS.map(n => `<div class="nc-it ${n.err ? "err" : ""}"><i></i><span>${esc(n.text)}</span><small>${new Date(n.ts).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</small></div>`).join("")
+  $("nc-list").innerHTML = NOTIFS.map(n => `<div class="nc-it ${n.err ? "err" : ""}"><i></i><span>${esc(n.text)}${n.n > 1 ? ` <b class="nc-n">×${n.n}</b>` : ""}</span><small>${new Date(n.ts).toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"})}</small></div>`).join("")
     || '<div class="muted small" style="padding:14px">Пока ничего — здесь сохраняются все всплывающие сообщения и ошибки.</div>';
 }
 function toggleNotifs(e) {
@@ -1659,7 +1808,7 @@ function toggleNotifs(e) {
   if (!nc.classList.contains("hidden")) { NOTIF_UNREAD = 0; renderNotifs(); }
 }
 document.addEventListener("click", e => { const nc = $("ncenter"); if (nc && !nc.classList.contains("hidden") && !e.target.closest(".tb-bell-w")) nc.classList.add("hidden"); });
-function copy(text) { navigator.clipboard.writeText(text).then(() => toast("Скопировано: " + text), () => prompt("Скопируйте:", text)); }
+function copy(text) { navigator.clipboard.writeText(text).then(() => toast(tr("Скопировано: ") + text), () => promptDlg({title: "Скопируйте вручную", text: "Не получилось записать в буфер обмена — выделите текст и нажмите Ctrl+C.", value: text, readonly: true, okLabel: "Готово"})); }
 const getPath = (o, p) => p.split(".").reduce((a, k) => a == null ? a : a[k], o);
 const setPath = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k] ??= {}, o)[last] = v; };
 
@@ -1862,7 +2011,7 @@ async function updCheck() {
         toast(u.available ? "Доступна версия " + u.latest : "Обновления: " + u.status); } catch (e) {}
 }
 async function updInstall() {
-  if (!confirm("Скачать и установить обновление? Программа закроется на время установки и запустится снова.")) return;
+  if (!await confirmDlg({title: "Установить обновление?", text: "Программа скачает новую версию, закроется на время установки и запустится снова. Настройки сохранятся.", okLabel: "Установить"})) return;
   try { ST.update = await api("/update/install", {}); renderUpdate(ST.update); } catch (e) {}
 }
 async function updSkip(v) {
@@ -2428,6 +2577,10 @@ function insertVar(id, v) {
 
 // ---------- Команды ----------
 let CMDS = {custom:[], standard:{}};
+async function delCustom(id, name) {
+  if (!await confirmDlg({title: `Удалить команду ${name}?`, text: "Команда перестанет работать в чате. Это нельзя отменить.", okLabel: "Удалить", danger: true})) return;
+  await api(`/commands/custom/${id}`, undefined, "DELETE"); loadCommands();
+}
 async function loadCommands() {
   CMDS = await api("/commands");
   const tog = (kind, id, on) => `<input type="checkbox" ${on ? "checked" : ""} onchange="api('/commands/toggle',{kind:'${kind}',id:'${id}',enabled:this.checked})">`;
@@ -2437,7 +2590,7 @@ async function loadCommands() {
   $("c-custom").innerHTML = CMDS.custom.map(c => `<div class="cl">
     <span class="cl-n" data-noi18n>${esc(c.name)}${c.aliases.length ? `<small>${esc(c.aliases.join(" "))}</small>` : ""}</span>
     <span class="cl-r" data-noi18n title="${esc(c.response)}">${esc(c.response)}</span>${acc(c.access)}<span class="num muted small">${c.cooldown} с</span>${tog("custom", c.id, c.enabled)}
-    <span class="cl-a"><button class="ib" title="Изменить" aria-label="Изменить ${esc(c.name)}" onclick="editCustom('${c.id}')">${EDIT_IC}</button><button class="ib" title="Удалить" aria-label="Удалить ${esc(c.name)}" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">${DEL_IC}</button></span></div>`).join("")
+    <span class="cl-a"><button class="ib" title="Изменить" aria-label="Изменить ${esc(c.name)}" onclick="editCustom('${c.id}')">${EDIT_IC}</button><button class="ib" title="Удалить" aria-label="Удалить ${esc(c.name)}" data-name="${esc(c.name)}" onclick="delCustom('${c.id}',this.dataset.name)">${DEL_IC}</button></span></div>`).join("")
     || emptyBox("Своих команд пока нет", "Например: !привет → «Привет, {user}! Добро пожаловать на канал»", "+ Создать команду", "editCustom()");
   $("c-vars").innerHTML = VARS.map(v => `<span class="pill">${v}</span>`).join(" ");
   $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<div class="std">
@@ -2489,7 +2642,7 @@ async function loadTimers() {
     <td>${t.interval} мин</td><td>${t.min_messages}</td>
     <td><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editTimer('${t.id}')">Изменить</button>
-    <button class="sm danger" onclick="if(confirm('Удалить таймер?')) api('/timers/${t.id}',undefined,'DELETE').then(loadTimers)">✕</button></td></tr>`).join("")
+    <button class="ib danger" title="Удалить" aria-label="Удалить таймер" onclick="confirmDlg({title:'Удалить таймер?',text:'Таймер перестанет отправлять сообщение в чат. Это нельзя отменить.',okLabel:'Удалить',danger:1}).then(ok=>ok&&api('/timers/${t.id}',undefined,'DELETE').then(loadTimers))">${ICON.trash}</button></td></tr>`).join("")
     || `<tr><td colspan="6">${emptyBox("Таймеров пока нет", "Таймер сам напоминает в чате о правилах, соцсетях или заказе музыки.", "+ Создать таймер", "editTimer()")}</td></tr>`;
   if ($("c-timers-mini")) $("c-timers-mini").innerHTML = TIMERS.repeating.map(t => `<div class="tm-mini">
     <span class="tm-ic"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
@@ -2577,7 +2730,7 @@ async function loadAlerts() {
     <div class="al-b"><div class="nm"><b data-noi18n title="${esc(a.name)}">${esc(a.name)}</b><input type="checkbox" ${a.enabled ? "checked" : ""} aria-label="Включить алерт" onchange="api('/alerts/toggle',{id:'${a.id}',enabled:this.checked}).then(loadAlerts)"></div>
       <div class="meta"><span class="pill warn">● ${a.cost} баллов</span><span class="pill" data-noi18n>${esc(a.reward_title)}</span></div>
       <label class="vol"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" value="${a.volume}" aria-label="Громкость" oninput="this.nextElementSibling.textContent=this.value;api('/alerts/volume',{id:'${a.id}',volume:+this.value})"><span class="num" style="color:var(--fg);width:24px">${a.volume}</span></label>
-      <div class="act"><button class="sm" onclick="api('/alerts/test',{id:'${a.id}'}).then(()=>toast('Тестовый показ отправлен в OBS'))">▶ Тест</button><button class="sm" onclick="editAlert('${a.id}')">Изменить</button><button class="sm danger" onclick="if(confirm('Удалить алерт и его награду?')) api('/alerts/${a.id}',undefined,'DELETE').then(loadAlerts)">Удалить</button></div></div></div>`).join("")
+      <div class="act"><button class="sm" onclick="api('/alerts/test',{id:'${a.id}'}).then(()=>toast('Тестовый показ отправлен в OBS'))">▶ Тест</button><button class="sm" onclick="editAlert('${a.id}')">Изменить</button><button class="sm danger" onclick="confirmDlg({title:'Удалить алерт?',text:'Алерт и его награда на Twitch будут удалены. Это нельзя отменить.',okLabel:'Удалить алерт',danger:1}).then(ok=>ok&&api('/alerts/${a.id}',undefined,'DELETE').then(loadAlerts))">Удалить</button></div></div></div>`).join("")
     + `<button class="al-new" onclick="editAlert()"><span class="pl">+</span>Новый МедиаАлерт<span class="small muted">картинка, GIF, видео или звук</span></button>`;
 }
 let AE = null;
@@ -2691,6 +2844,7 @@ const OV_THEMES = {
 };
 function applyUiTheme(t) {
   document.documentElement.dataset.theme = t;
+  try { if (window.chrome && chrome.webview) chrome.webview.postMessage({type: "theme", theme: t}); } catch (e) {}   // заголовок окна — в цвет темы
   try { localStorage.setItem("hub-theme", t); } catch (e) {}
 }
 function renderUiThemes() {
@@ -2797,14 +2951,18 @@ async function layoutTest() {
 // ---------- копии ----------
 async function importSettings(inp) {
   const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return;
-  if (!confirm(`Перенести настройки из «${f.name}»? Текущие настройки сохранятся отдельной резервной копией, программа перезапустится.`)) return;
+  if (!await confirmDlg({title: "Перенести настройки из файла?", text: `«${f.name}». Текущие настройки сохранятся отдельной резервной копией, программа перезапустится.`, okLabel: "Перенести и перезапустить"})) return;
   const fd = new FormData(); fd.append("file", f);
   try { const r = await api("/settings/import", fd); toast(r.message || "Настройки перенесены"); setTimeout(() => location.reload(), 4000); } catch (e) {}
+}
+async function restoreBackup(name) {
+  if (!await confirmDlg({title: "Восстановить резервную копию?", text: `«${name}». Текущее состояние сохранится отдельной копией.`, okLabel: "Восстановить"})) return;
+  const r = await api("/backups/restore", {name}); toast(r.message);
 }
 async function loadBackups() {
   const list = await api("/backups");
   $("backups").innerHTML = list.map(b => `<div class="list-item"><span class="grow mono">${esc(b.name)}</span><span class="small muted">${Math.round(b.size / 1024)} КБ</span>
-    <button class="sm" onclick="if(confirm('Восстановить ${esc(b.name)}? Текущее состояние сохранится отдельной копией.')) api('/backups/restore',{name:'${esc(b.name)}'}).then(r=>toast(r.message))">Восстановить</button></div>`).join("")
+    <button class="sm" data-name="${esc(b.name)}" onclick="restoreBackup(this.dataset.name)">Восстановить</button></div>`).join("")
     || '<span class="muted small">Копий пока нет</span>';
 }
 
@@ -2839,7 +2997,7 @@ function renderThemes() {
       <td>${esc(baseName)}</td><td>${used ? '<span class="ok">✓ выбрана</span>' : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
       <td style="text-align:right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
       <button class="sm" title="Копия" onclick="themeDuplicate('${t.id}')">⧉</button>
-      <button class="sm danger" onclick="if(confirm('Удалить тему?')) api('/pro/themes/${t.id}',undefined,'DELETE').then(async()=>{await loadSettings();renderThemes();})">✕</button></td></tr>`;
+      <button class="ib danger" title="Удалить" aria-label="Удалить тему" onclick="confirmDlg({title:'Удалить тему?',text:'Тема пропадёт из списка, а оверлеи с ней вернутся к стандартному виду. Это нельзя отменить.',okLabel:'Удалить тему',danger:1}).then(async ok=>{if(!ok)return;await api('/pro/themes/${t.id}',undefined,'DELETE');await loadSettings();renderThemes();})">${ICON.trash}</button></td></tr>`;
   }).join("") || '<tr><td colspan="5" class="muted">Своих тем пока нет — создайте тему плеера или чата</td></tr>';
 }
 async function applyTheme(id, kind) {
@@ -3015,9 +3173,11 @@ function themePrevBg() { $("th-prevbox").className = "th-prevbox " + $("th-prevb
 document.querySelectorAll("[data-th]").forEach(el => el.addEventListener("input", themePreview));
 function closeTheme() { editingTheme = null; $("th-editor").classList.add("hidden"); $("th-frame").src = "about:blank"; }
 function themeReset() {
-  if (!confirm("Сбросить все настройки темы к стандартным? Название останется.")) return;
+  // действие обратимое (тема ещё не сохранена) — сбрасываем сразу и даём «Отменить»
+  const prev = {draft: JSON.parse(JSON.stringify(thDraft)), css: $("th-css").value};
   const name = $("th-name").value; thDraft = thDefaults(editingTheme.kind); thDraft.name = name;
   $("th-css").value = ""; thRenderFields(); themePreview();
+  toast("Тема сброшена к стандартной", false, {label: "Отменить", run: () => { thDraft = prev.draft; $("th-css").value = prev.css; thRenderFields(); themePreview(); }});
 }
 // Код темы: можно отправить другу или выложить в Telegram, а потом импортировать
 function themeExport() {
@@ -3025,8 +3185,8 @@ function themeExport() {
   const code = "B1THEME:" + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
   copy(code); toast("Код темы скопирован — его можно отправить другу");
 }
-function themeImport() {
-  const code = prompt("Вставьте код темы (начинается с B1THEME:)") || "";
+async function themeImport() {
+  const code = await promptDlg({title: "Импорт темы", text: "Вставьте код темы, который вам прислали. Он начинается с B1THEME:", placeholder: "B1THEME:…", okLabel: "Импортировать"}) || "";
   if (!code.trim()) return;
   try {
     const t = JSON.parse(decodeURIComponent(escape(atob(code.trim().replace(/^B1THEME:/, "")))));
@@ -3163,12 +3323,12 @@ async function pfCreate() {
   $("pf-name").value = ""; renderProfiles(); toast("Профиль создан — откройте его, когда нужно");
 }
 async function pfSwitch(id, name) {
-  if (!confirm(`Открыть профиль «${name}»? Программа перезапустится.`)) return;
+  if (!await confirmDlg({title: `Открыть профиль «${name}»?`, text: "Программа перезапустится с настройками этого профиля.", okLabel: "Открыть и перезапустить"})) return;
   await api("/pro/profiles/switch", {name: id});
   document.body.innerHTML = '<div style="padding:60px;text-align:center;font-size:18px">Перезапуск Beg1nnnerOS…</div>';
 }
 async function pfDelete(id) {
-  if (!confirm(`Удалить профиль «${id}» вместе с его настройками, входами и статистикой? Это нельзя отменить.`)) return;
+  if (!await confirmDlg({title: `Удалить профиль «${id}»?`, text: "Вместе с ним удалятся его настройки, входы и статистика. Это нельзя отменить.", okLabel: "Удалить профиль", danger: true})) return;
   PRO.profiles = await api("/pro/profiles/" + encodeURIComponent(id), undefined, "DELETE"); renderProfiles();
 }
 function renderCloud() {
@@ -3187,11 +3347,14 @@ function pickCloud(path) { $("cl-folder").value = path; queueSave($("cl-folder")
 async function cloudRestore() {
   const f = (PRO && PRO.cloud.file) || {};
   if (!f.exists) { toast("Копии в облаке нет", true); return; }
-  if (!confirm("Заменить настройки, команды, таймеры и алерты этого профиля копией из облака? Текущие сохранятся в резервной копии.")) return;
+  if (!await confirmDlg({title: "Восстановить из облака?", text: "Настройки, команды, таймеры и алерты этого профиля заменятся копией из облака. Текущие сохранятся в резервной копии.", okLabel: "Заменить", danger: true})) return;
   let password = "";
-  if (f.secrets) password = prompt("В копии есть ключи и входы. Введите пароль копии (оставьте пустым, чтобы не переносить их):") || "";
+  if (f.secrets) {
+    password = await promptDlg({title: "Пароль копии", text: "В копии есть ключи и входы. Введите пароль копии или оставьте поле пустым, чтобы не переносить их.", password: true, okLabel: "Продолжить"});
+    if (password === null) return;
+  }
   await api("/pro/cloud/restore", {password});
-  if (confirm("Копия восстановлена. Перезапустить программу сейчас, чтобы применить её?")) {
+  if (await confirmDlg({title: "Копия восстановлена", text: "Перезапустить программу сейчас, чтобы применить её?", okLabel: "Перезапустить", cancelLabel: "Позже"})) {
     await api("/pro/restart", {});
     document.body.innerHTML = '<div style="padding:60px;text-align:center;font-size:18px">Перезапуск Beg1nnnerOS…</div>';
   }
@@ -3284,10 +3447,10 @@ function vtStartPoll() {
     points: $("vt-ppts").checked, points_per_vote: +$("vt-pptsn").value}, $("vt-pstart"));
 }
 function vtStartPred() { vtDo("/votes/prediction/start", {title: $("vt-rq").value, outcomes: vtVals("vt-ropts"), window: +$("vt-rwin").value}, $("vt-rstart")); }
-function vtResolve(btn) {
+async function vtResolve(btn) {
   if (!VT_PICK) return toast("Нажмите на исход-победитель в списке выше", true);
   const o = VT.prediction.outcomes.find(x => x.id === VT_PICK);
-  if (!confirm(`Победил исход «${o ? o.title : "?"}»? Баллы будут выплачены, отменить нельзя.`)) return;
+  if (!await confirmDlg({title: `Победил исход «${o ? o.title : "?"}»?`, text: "Баллы будут выплачены тем, кто на него поставил. Отменить нельзя.", okLabel: "Выплатить баллы"})) return;
   vtDo("/votes/prediction/resolve", {outcome_id: VT_PICK}, btn);
 }
 function vtLeft(t) {
@@ -3319,7 +3482,7 @@ function vtRender() {
       <div class="muted small">${p.total} ${p.total % 10 === 1 && p.total % 100 !== 11 ? "голос" : "голосов"}${p.points ? ` · доп. голос за ${vtNum(p.points_per_vote)} баллов` : ""}</div>
       ${p.choices.map(c => `<div class="vt-row ${!p.active && c.votes === max && max > 0 ? "win" : ""}"><div class="t"><span>${!p.active && c.votes === max && max > 0 ? "🏆 " : ""}${esc(c.title)}</span><b>${c.pct}% · ${c.votes}</b></div>
         <div class="vt-bar"><i style="width:${c.pct}%"></i></div></div>`).join("")}
-      <div class="vt-acts">${p.active ? `<button class="danger" onclick="if(confirm('Завершить опрос досрочно?')) vtDo('/votes/poll/end',{},this)">⏹ Завершить сейчас</button>`
+      <div class="vt-acts">${p.active ? `<button class="danger" onclick="confirmDlg({title:'Завершить опрос досрочно?',text:'Голосование остановится сейчас, итог будет подведён по уже отданным голосам.',okLabel:'Завершить',danger:1}).then(ok=>ok&&vtDo('/votes/poll/end',{},this))">${ICON.stop}<span>Завершить сейчас</span></button>`
         : `<button class="sm" onclick="VT_HIDE.add('${p.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
   }
 
@@ -3339,7 +3502,7 @@ function vtRender() {
     <div class="vt-acts">${live ? `
       ${r.active ? `<button onclick="vtDo('/votes/prediction/lock',{},this)">🔒 Закрыть ставки</button>` : ""}
       <button class="primary" onclick="vtResolve(this)">🏆 Выбрать победителя</button>
-      <button class="danger" onclick="if(confirm('Отменить прогноз? Все баллы вернутся зрителям.')) vtDo('/votes/prediction/cancel',{},this)">Отменить и вернуть баллы</button>`
+      <button class="danger" onclick="confirmDlg({title:'Отменить прогноз?',text:'Все поставленные баллы вернутся зрителям.',okLabel:'Отменить прогноз',cancelLabel:'Не отменять',danger:1}).then(ok=>ok&&vtDo('/votes/prediction/cancel',{},this))">Отменить и вернуть баллы</button>`
       : `<button class="sm" onclick="VT_HIDE.add('${r.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
 }
 

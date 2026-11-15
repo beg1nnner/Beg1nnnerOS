@@ -141,10 +141,11 @@ public partial class App : Application
             menu.Items.Add(pauseEvents);
             menu.Items.Add(L.T("Остановить МедиаАлерты"), null, (s, e) => Hub.Loop.Post(() => RunAction("stop_alerts")));
             menu.Items.Add(new WinForms.ToolStripSeparator());
-            menu.Items.Add(L.T("💜 Поблагодарить разработчика"), null, (s, e) => Shell.OpenUrl("https://www.donationalerts.com/r/beginner24"));
-            menu.Items.Add(L.T("✉ Связь, предложения и ошибки"), null, (s, e) => Shell.OpenUrl("https://t.me/Beg1nnner"));
+            menu.Items.Add(L.T("Поблагодарить разработчика"), null, (s, e) => Shell.OpenUrl("https://www.donationalerts.com/r/beginner24"));
+            menu.Items.Add(L.T("Связь, предложения и ошибки"), null, (s, e) => Shell.OpenUrl("https://t.me/Beg1nnner"));
             menu.Items.Add(L.T("Выход"), null, async (s, e) => await ExitApp());
             menu.Opening += (s, e) => pauseEvents.Checked = Hub.Events.Paused;
+            Desktop.DarkMenuRenderer.Apply(menu);
             _tray = new WinForms.NotifyIcon
             {
                 Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "app.ico")),
@@ -181,8 +182,9 @@ public partial class App : Application
                 });
                 _tray.ContextMenuStrip.Items.Insert(0, _trayUpdate);
                 _tray.ContextMenuStrip.Items.Insert(1, new WinForms.ToolStripSeparator());
+                _trayUpdate.ForeColor = Desktop.DarkMenuRenderer.Fg;
             }
-            _trayUpdate.Text = L.T($"⬇ Обновить до версии {version}");
+            _trayUpdate.Text = L.T($"Обновить до версии {version}");
             _tray.BalloonTipClicked -= OnUpdateBalloon;
             _tray.BalloonTipClicked += OnUpdateBalloon;
             _tray.ShowBalloonTip(8000, L.T($"Доступна новая версия Beg1nnnerOS {version}"),
