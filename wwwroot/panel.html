@@ -179,6 +179,7 @@
   .ab-mark { width:60px; height:60px; border-radius:18px; font-size:20px; }
   .ab-name { font-size:22px; font-weight:600; letter-spacing:-.02em; }
   .twitch-btn { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; background:#9146ff; color:#fff !important; font-weight:600; text-decoration:none; }
+  #p-chat.mod-mode > .tabs { display:none; }
   .ev-top { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:18px; margin-bottom:18px; align-items:start; }
   .ev-top > .card, .ev-side > .card { margin:0; }
   .ev-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
@@ -1518,6 +1519,7 @@ function navMark() {
   const sec = document.querySelector("main > section:not(.hidden)"); if (!sec) return;
   const p = sec.id.slice(2);
   const modOn = p === "chat" && !document.querySelector('#p-chat [data-tab="mod"]').classList.contains("hidden");
+  $("p-chat").classList.toggle("mod-mode", modOn);   // «Модерация» — отдельный пункт меню, вкладки «Чата» не показываем
   let cur = null;
   document.querySelectorAll("nav button[data-p]").forEach(x => { const on = x.dataset.p === p && (x.dataset.sub === "mod") === modOn; x.classList.toggle("on", on); if (on) cur = x; });
   $("tb-h").textContent = cur ? cur.querySelector("span").textContent : "";
