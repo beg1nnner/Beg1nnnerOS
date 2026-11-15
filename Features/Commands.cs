@@ -69,6 +69,7 @@ public sealed class Commands
         ("timer", "!timer", new[] { "!таймер" }, "Разовый таймер-напоминание", 3),
         ("timers", "!timers", Array.Empty<string>(), "Ваши разовые таймеры", 5),
         ("canceltimer", "!canceltimer", Array.Empty<string>(), "Отмена таймера по ID", 2),
+        ("wheel", "!wheel", new[] { "!колесо" }, "Крутить колесо фортуны (можно указать название колеса)", 30),
     };
 
     public static JsonObject StandardDefaults()
@@ -81,7 +82,7 @@ public sealed class Commands
             o[d.Key] = new JsonObject
             {
                 ["name"] = d.Name, ["aliases"] = aliases, ["desc"] = d.Desc, ["cooldown"] = d.Cooldown,
-                ["access"] = "everyone", ["template"] = "{result}", ["random_max"] = 100,
+                ["access"] = d.Key == "wheel" ? "mod" : "everyone", ["template"] = "{result}", ["random_max"] = 100,
                 ["enabled"] = true, ["deleted"] = false,
             };
         }
@@ -110,6 +111,7 @@ public sealed class Commands
             ["mytrack"] = (m, a) => Task.FromResult(_hub.Music.MyTrack(m.Login, m.Name)),
             ["cancel"] = (m, a) => Task.FromResult(_hub.Music.CancelOwn(m.Login, m.Name)),
             ["clip"] = HClip,
+            ["wheel"] = (m, a) => _hub.Wheel.OnCommand(m, a),
             ["history"] = (m, a) =>
             {
                 var list = _hub.Stats.RecentTitles(5);

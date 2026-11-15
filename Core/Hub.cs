@@ -45,6 +45,7 @@ public sealed class Hub
     public readonly Features.CommandImport CommandImport;
     public readonly Features.Captions Captions;
     public readonly Features.VoiceCommands Voice;
+    public readonly Features.Wheel Wheel;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -115,6 +116,7 @@ public sealed class Hub
         ModExtra = new Features.ModerationExtra(this);
         CommandImport = new Features.CommandImport(this);
         Voice = new Features.VoiceCommands(this);
+        Wheel = new Features.Wheel(this);
         Captions = new Features.Captions(this);
     }
 
@@ -131,6 +133,7 @@ public sealed class Hub
         Loop.Start(Music.Run);
         Loop.Start(Alerts.Run);
         Loop.Start(Votes.Run);
+        Loop.Start(Wheel.Run);
         Loop.Post(() => Captions.Apply());
         Loop.Start(Donations.Run);
         Loop.Start(YtDlp.UpdateIfNeeded);

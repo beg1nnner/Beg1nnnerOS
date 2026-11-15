@@ -35,7 +35,7 @@ public sealed partial class WebServer
           ("donationalerts", "client_secret"), ("donationalerts", "refresh_token"),
           ("announce", "tg_token"), ("announce", "dc_webhook") };
     private static readonly string[] Sections =
-        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes", "mod", "captions" };
+        { "server", "twitch", "chat", "autopost", "music", "overlay", "alerts", "events", "chat_overlay", "yandex", "donationalerts", "tools", "hotkeys", "ui", "pro", "announce", "votes", "mod", "captions", "wheel" };
 
     public WebServer(Hub hub) { _hub = hub; }
 
@@ -181,6 +181,7 @@ public sealed partial class WebServer
         app.MapGet("/votes", (HttpContext c) => NoStore(c, Page("votes.html")));
         app.MapGet("/events", (HttpContext c) => NoStore(c, Page("events.html")));
         app.MapGet("/captions", (HttpContext c) => NoStore(c, Page("captions.html")));
+        app.MapGet("/wheel", (HttpContext c) => NoStore(c, Page("wheel.html")));
         app.MapGet("/ws/chat", (RequestDelegate)WsChat);
         app.MapGet("/api/chat/overlay", H((c, b) => Ok(_hub.ChatOverlay.Config())));
         app.MapGet("/callback", D(Callback));
@@ -326,6 +327,19 @@ public sealed partial class WebServer
         app.MapGet("/api/captions/devices", H((c, b) => Ok(new { items = Features.Captions.Devices() })));
         app.MapPost("/api/captions/toggle", H((c, b) => Ok(new { enabled = _hub.Captions.Toggle() })));
         app.MapGet("/api/voice", H((c, b) => Ok(_hub.Voice.State())));
+        // колесо фортуны
+        app.MapGet("/api/wheel", H((c, b) => Ok(_hub.Wheel.State())));
+        app.MapGet("/api/wheel/overlay", H((c, b) => Ok(_hub.Wheel.Overlay())));
+        app.MapPost("/api/wheel/spin", H((c, b) =>
+        {
+            var src = b.Str("source", "panel") is "dock" ? "dock" : "panel";
+            var err = _hub.Wheel.Request(src, "", "", "", b.Str("wheel"), b.Bool("test"));
+            if (err != "") throw new UserError(err);
+            return Ok(_hub.Wheel.State());
+        }));
+        app.MapPost("/api/wheel/skip", H((c, b) => { _hub.Wheel.SkipCurrent(); return Ok(_hub.Wheel.State()); }));
+        app.MapPost("/api/wheel/clear", H((c, b) => { _hub.Wheel.ClearQueue(); return Ok(_hub.Wheel.State()); }));
+        app.MapPost("/api/wheel/remove", H((c, b) => { _hub.Wheel.Remove(b.Int("id")); return Ok(_hub.Wheel.State()); }));
         app.MapPost("/api/voice/test", H((c, b) => {
             _hub.Voice.StartTest(); _hub.Captions.Apply();
             _hub.Loop.Start(async () => { await Task.Delay(21000); _hub.Captions.Apply(); });   // по окончании проверки — вернуть как было
@@ -629,7 +643,8 @@ public sealed partial class WebServer
         var data = _hub.S;
         var oldPort = data.Int("server.port");
         var oldDa = _hub.Donations.Token;
-        string RewardsSig() => data["music"]["rewards"].ToJsonString() + data.Str("music.rewards_enabled") + data.Str("alerts.enabled");
+        string RewardsSig() => data["music"]["rewards"].ToJsonString() + data.Str("music.rewards_enabled") + data.Str("alerts.enabled")
+                               + string.Join(";", _hub.Wheel.RewardsWanted());
         var oldRewards = RewardsSig();
         foreach (var sec in Sections)
         {
@@ -708,6 +723,9 @@ public sealed partial class WebServer
                 case "pro":
                     ValidatePro(nw, incoming, data.Obj("pro"));
                     break;
+                case "wheel":
+                    ValidateWheel(nw);
+                    break;
             }
             data[sec] = nw;
         }
@@ -736,6 +754,46 @@ public sealed partial class WebServer
         if (body["hotkeys"] is JsonObject) _hub.ApplyHotkeys();
         if (RewardsSig() != oldRewards) _hub.Rewards.ScheduleSync();
         return Ok(null, new() { ["restart_required"] = data.Int("server.port") != oldPort });
+    }
+
+    private static void ValidateWheel(JsonObject w)
+    {
+        var list = w.Arr("wheels") ?? new JsonArray();
+        if (list.Count == 0) throw new UserError("Нужно хотя бы одно колесо");
+        var ids = new HashSet<string>();
+        var titles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in list)
+        {
+            if (node is not JsonObject wh) throw new UserError("Неверные данные колеса");
+            var id = wh.Str("id");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(id, "^[a-z0-9_-]{1,20}$") || !ids.Add(id)) wh["id"] = id = Guid.NewGuid().ToString("N")[..8];
+            var name = wh.Str("name").Trim();
+            if (name == "" || name.Length > 40) throw new UserError("Название колеса: от 1 до 40 символов", "wheel.name");
+            wh["name"] = name;
+            var sectors = wh.Arr("sectors") ?? new JsonArray();
+            var count = sectors.Count(s => s.Str("name").Trim() != "");
+            if (count < Features.Wheel.MinSectors || count > Features.Wheel.MaxSectors)
+                throw new UserError($"Колесо «{name}»: нужно от {Features.Wheel.MinSectors} до {Features.Wheel.MaxSectors} секторов (сейчас {count})", "wheel.sectors");
+            foreach (var s in sectors)
+                if (s.Str("name").Trim().Length > Features.Wheel.NameMax)
+                    throw new UserError($"Колесо «{name}»: название сектора длиннее {Features.Wheel.NameMax} символов — «{s.Str("name").Trim()}»", "wheel.sectors");
+            if (wh.Obj("reward") is JsonObject r && r.Bool("enabled"))
+            {
+                var t = r.Str("title").Trim();
+                if (t == "" || t.Length > 45) throw new UserError($"Колесо «{name}»: название награды — от 1 до 45 символов", "wheel.reward");
+                if (!titles.Add(t)) throw new UserError($"Награды колёс называются одинаково («{t}») — в Twitch названия должны отличаться", "wheel.reward");
+                r["title"] = t;
+                r["cost"] = Math.Max(1, r.Int("cost", 500));
+            }
+        }
+        w["spin_sec"] = Math.Clamp(w.Num("spin_sec", 6), 5, 8);
+        w["hold_sec"] = Math.Clamp(w.Int("hold_sec", 5), 2, 20);
+        w["volume"] = Math.Clamp(w.Int("volume", 60), 0, 100);
+        w["cooldown"] = Math.Clamp(w.Int("cooldown", 10), 0, 3600);
+        w["per_user_limit"] = Math.Clamp(w.Int("per_user_limit", 0), 0, 100);
+        w["queue_max"] = Math.Clamp(w.Int("queue_max", 20), 1, 100);
+        if (w.Str("chat_template").Length > 300) w["chat_template"] = w.Str("chat_template")[..300];
+        if (!ids.Contains(w.Str("active"))) w["active"] = list[0].Str("id");
     }
 
     private static void ValidateMusic(JsonObject m)

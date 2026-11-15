@@ -109,6 +109,19 @@ public static class Config
               "caps": {"enabled": true, "action": "warn", "timeout": 30, "min_len": 15, "percent": 70},
               "symbols": {"enabled": true, "action": "delete", "timeout": 30, "run": 12, "emotes": 10},
               "length": {"enabled": false, "action": "delete", "timeout": 30, "max": 350}},
+      "wheel": {"active": "main", "spin_sec": 6, "hold_sec": 5, "sound": true, "volume": 60, "theme": "studio", "show_title": true,
+                "chat_result": true, "chat_template": "🎡 {user} крутит колесо «{wheel}»: выпало «{result}»!",
+                "cooldown": 10, "per_user_limit": 0, "queue_max": 20,
+                "donation": {"enabled": false, "min": 100, "wheel": ""},
+                "wheels": [{"id": "main", "name": "Колесо фортуны", "reward": {"enabled": false, "title": "Крутить колесо фортуны", "cost": 500},
+                  "sectors": [
+                    {"name": "Удача!", "weight": 2, "color": "#8b5cf6", "action": "none"},
+                    {"name": "Трек от стримера", "weight": 3, "color": "#ec4899", "action": "none"},
+                    {"name": "Таймаут 1 минута", "weight": 1, "color": "#ef4444", "action": "timeout", "seconds": 60},
+                    {"name": "Приветствие в чат", "weight": 3, "color": "#10b981", "action": "chat", "text": "{user}, колесо передаёт привет!"},
+                    {"name": "Ничего", "weight": 4, "color": "#3b82f6", "action": "none"},
+                    {"name": "Джекпот", "weight": 1, "color": "#f59e0b", "action": "none"}
+                  ]}]},
       "captions": {"enabled": false, "device": "", "engine": "whisper", "model": "base", "lang": "ru", "show": "both",
                    "censor": true, "hide_sec": 5, "style": "studio", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true,
                    "voice": {"enabled": false, "wake": "бот", "hide": true, "chime": true, "chime_style": "notify", "chime_volume": 40, "phrases": {}, "off": {}}},
@@ -165,7 +178,7 @@ public static class Config
       },
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
-                  "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s", "stream_safe": "ctrl+alt+h"},
+                  "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s", "stream_safe": "ctrl+alt+h", "wheel_spin": ""},
       "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru", "cover_tint": true, "live_layout": {}, "stream_safe": false},
       "pro": {
         "themes": [],

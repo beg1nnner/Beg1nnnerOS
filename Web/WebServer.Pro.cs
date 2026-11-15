@@ -61,7 +61,7 @@ public sealed partial class WebServer
         app.MapPost("/api/pro/giveaway/close", H(async (c, b) => { await P.Giveaway.Close(); return Ok(P.Giveaway.State()); }));
         app.MapPost("/api/pro/giveaway/draw", H(async (c, b) =>
         {
-            await P.Giveaway.Draw(b.Int("count", 0));
+            await P.Giveaway.Draw(b.Int("count", 0), b.Bool("wheel"));
             return Ok(P.Giveaway.State());
         }));
         app.MapPost("/api/pro/giveaway/reroll", H(async (c, b) =>

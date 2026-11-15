@@ -124,6 +124,10 @@ public partial class App : Application
                 break;
             case "stop_alerts": Hub.Loop.Start(Hub.Alerts.StopAll); break;
             case "pause_events": Hub.Events.SetPaused(!Hub.Events.Paused); break;
+            case "wheel_spin":
+                var werr = Hub.Wheel.Request("hotkey", "", "", "");
+                if (werr != "") ShowBalloon(L.T("Колесо фортуны"), werr);
+                break;
             case "stream_safe":
                 var safe = !Hub.S.Bool("ui.stream_safe");
                 Hub.S.Set("ui.stream_safe", safe); Hub.Settings.Save();   // панель подхватит через /state

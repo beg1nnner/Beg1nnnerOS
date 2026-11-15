@@ -298,7 +298,22 @@
   .saved-mark.show { pointer-events:auto; opacity:1; transform:none; }
   /* уведомления */
   .tb-bell-w { position:relative; }
-  /* голосовые команды */
+  /* колесо фортуны */
+  .wl-layout { display:grid; grid-template-columns:minmax(0, 3fr) minmax(320px, 2fr); gap:var(--sp-5); align-items:start; margin-bottom:var(--sp-5); }
+  .wl-layout > .card { margin-bottom:0; }
+  @media (max-width:1100px) { .wl-layout { grid-template-columns:1fr; } }
+  .wl-tbl td { vertical-align:middle; }
+  .wl-tbl input[type=color] { width:36px; height:32px; padding:2px; }
+  .wl-tbl .wl-nm { min-width:150px; width:100%; }
+  .wl-tbl .wl-w { width:72px; }
+  .wl-tbl .wl-act { display:flex; gap:var(--sp-2); align-items:center; flex-wrap:wrap; }
+  .wl-tbl .wl-act select { width:auto; }
+  .wl-tbl .wl-act input, .wl-tbl .wl-act .wl-al { flex:1; min-width:120px; }
+  .wl-tbl .wl-act input[type=number] { flex:none; width:90px; min-width:0; }
+  .wl-prev { aspect-ratio:1; border-radius:var(--r-md); overflow:hidden; background:repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/24px 24px; }
+  .wl-prev iframe { width:100%; height:100%; border:0; display:block; }
+  .wl-q { display:flex; align-items:center; gap:var(--sp-2); padding:var(--sp-2) 0; border-bottom:1px solid var(--line); font-size:var(--fs-md); }
+  .wl-reward { padding-top:var(--sp-4); border-top:1px solid var(--line); }
   .tbl-wrap { overflow-x:auto; }
   .vc-tbl td { vertical-align:top; }
   .vc-tbl input[type=text], .vc-tbl input:not([type]) { width:100%; min-width:180px; }
@@ -1757,14 +1772,14 @@
   <div id="cloud-offer" class="card hl hidden u-mt-3"></div>
   <div class="tabs u-mt-4" data-group="pro">
     <button data-t="themes" class="on">Темы оверлеев</button>
-    <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши</button><button data-t="prof">Профили и облако</button>
+    <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши</button><button data-t="wheel">Колесо</button><button data-t="prof">Профили и облако</button>
   </div>
 
   <!-- Темы -->
   <div data-tab="themes">
     <div class="card">
       <div class="row"><h3 class="card-t grow">Свои темы</h3>
-        <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button>
+        <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button><button class="sm" onclick="editTheme(null,'wheel')">+ Тема колеса</button>
         <button class="sm" onclick="themeImport()">Импорт по коду</button></div>
       <table class="u-mt-3"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list" data-skel></tbody></table>
       <div class="small muted u-mt-2">«Применить» выбирает тему для источника в OBS. Для отдельной сцены адрес с темой: <code>/?theme=custom:ID</code> или <code>/chat?theme=custom:ID</code>.</div>
@@ -1831,12 +1846,97 @@
         <div class="row u-mt-3">
           <button onclick="api('/pro/giveaway/close',{}).then(loadGiveaway)" id="gv-close">Закрыть приём заявок</button>
           <button class="primary" onclick="api('/pro/giveaway/draw',{}).then(loadGiveaway)">Выбрать победителя</button>
+          <button onclick="api('/pro/giveaway/draw',{wheel:true}).then(()=>{loadGiveaway();toast('Победитель выбран — колесо крутится в OBS, в чат итог уйдёт после остановки')})" title="Победителя выбирает программа из всех участников, колесо в OBS показывает выбор">Выбрать колесом</button>
           <span class="grow"></span>
           <button class="sm danger" onclick="confirmDlg({title:'Завершить розыгрыш?',text:'Список участников будет очищен.',okLabel:'Завершить',danger:1}).then(ok=>ok&&api('/pro/giveaway/finish',{}).then(loadGiveaway))">Завершить</button>
         </div>
         <div id="gv-winners-list" class="u-mt-3"></div>
         <div class="small muted u-mt-3">Участники (новые сверху):</div>
         <div id="gv-entries" class="log u-maxh-220px u-mt-2" data-skel></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Колесо фортуны -->
+  <div data-tab="wheel" class="hidden">
+    <div class="wl-layout">
+      <div class="card">
+        <h3 class="card-t u-mt-0">Колесо фортуны</h3>
+        <div class="row u-fw-wrap u-ai-fend u-mt-3">
+          <label class="f grow u-minw-220px"><span>Колесо</span><select id="wl-sel" onchange="wlPick(this.value)"></select></label>
+          <div class="row u-mb-2"><button class="sm" onclick="wlAdd()">+ Новое</button><button class="sm" onclick="wlDup()">Копия</button>
+          <button class="ib danger" id="wl-del" onclick="wlDel()" aria-label="Удалить колесо" title="Удалить колесо"></button></div>
+        </div>
+        <label class="f u-mt-3"><span>Название колеса</span><input id="wl-name" maxlength="40" oninput="wlSet('name', this.value)"></label>
+        <div class="tbl-wrap u-mt-3"><table class="wl-tbl">
+          <thead><tr><th scope="col">Цвет</th><th scope="col">Сектор</th><th scope="col">Вес</th><th scope="col">Шанс</th><th scope="col">Действие при выпадении</th><th scope="col"><span class="sr-only">Удалить</span></th></tr></thead>
+          <tbody id="wl-sectors"></tbody></table></div>
+        <div class="row u-mt-2"><button class="sm" id="wl-addsec" onclick="wlSecAdd()">+ Сектор</button><span class="small muted" id="wl-count"></span></div>
+        <div class="wl-reward u-mt-4">
+          <label class="switch"><input type="checkbox" id="wl-rw-on" onchange="wlReward('enabled', this.checked)"> Награда за баллы канала крутит это колесо</label>
+          <div class="row u-mt-2 u-fw-wrap" id="wl-rw-f">
+            <label class="f grow u-minw-220px"><span>Название награды в Twitch</span><input id="wl-rw-title" maxlength="45" oninput="wlReward('title', this.value)"></label>
+            <label class="f u-w-150px"><span>Цена, баллов</span><input type="number" min="1" id="wl-rw-cost" oninput="wlReward('cost', +this.value)"></label>
+          </div>
+          <div class="small muted u-mt-1">Если колесо нельзя крутить (кулдаун, лимит, полная очередь), баллы вернутся зрителю автоматически.</div>
+        </div>
+      </div>
+      <div class="card wl-side">
+        <div class="row"><h3 class="card-t grow">Предпросмотр</h3><span class="pill" id="wl-state"></span></div>
+        <div class="wl-prev"><iframe id="wl-frame" title="Предпросмотр колеса" tabindex="-1"></iframe></div>
+        <div class="row u-mt-3 u-fw-wrap">
+          <button class="primary" onclick="wlSpin(true)">Крутить (проверка)</button>
+          <button onclick="wlSpin(false)" title="Настоящий запуск: выполнится действие сектора и итог уйдёт в чат">Крутить</button>
+          <span class="grow"></span>
+          <button class="sm" id="wl-skip" onclick="api('/wheel/skip',{}).then(wlLoad)">Пропустить</button>
+          <button class="sm" id="wl-clear" onclick="confirmDlg({title:'Очистить очередь колеса?',text:'Все ожидающие запуски будут убраны, за награды баллы вернутся.',okLabel:'Очистить',danger:1}).then(ok=>ok&&api('/wheel/clear',{}).then(wlLoad))">Очистить очередь</button>
+        </div>
+        <div class="small muted u-mt-2">Проверка крутит колесо в OBS, но не выполняет действия и ничего не пишет в чат.</div>
+        <div id="wl-queue" class="u-mt-3"></div>
+      </div>
+    </div>
+    <div class="masonry">
+      <div class="card">
+        <h3 class="u-mt-0">Источник для OBS</h3>
+        <div class="row"><code id="wl-url" data-secret></code><button class="sm" onclick="copy(base()+'/wheel')">Скопировать адрес</button></div>
+        <div class="muted small">«Источники» → «+» → «Браузер», 1920×1080, поверх сцены. Колесо скрыто и появляется только во время вращения. Включите «Управлять аудио через OBS», чтобы звук шёл отдельной дорожкой.</div>
+        <div class="row u-mt-3 u-fw-wrap u-ai-fend">
+          <label class="f u-w-230px"><span>Оформление</span><select data-s="wheel.theme" id="wl-theme" onchange="wlFrame()"></select></label>
+          <label class="switch u-mb-2"><input type="checkbox" data-s="wheel.show_title"> Название колеса и ник над ним</label>
+        </div>
+        <div class="small muted u-mt-1">Свою тему колеса можно собрать в «Темы оверлеев» → «+ Тема колеса».</div>
+      </div>
+      <div class="card">
+        <h3 class="u-mt-0">Вращение и звук</h3>
+        <label class="f"><span>Длительность вращения: <b id="wl-sec-v"></b></span><input type="range" min="5" max="8" step="0.5" data-s="wheel.spin_sec" oninput="$('wl-sec-v').textContent=this.value+' '+tr('сек')"></label>
+        <label class="f u-mt-2"><span>Сколько показывать результат, сек</span><input type="number" min="2" max="20" data-s="wheel.hold_sec" class="u-w-150px"></label>
+        <label class="switch u-mt-3"><input type="checkbox" data-s="wheel.sound"> Звук щелчков и победы</label>
+        <label class="f u-mt-2"><span>Громкость: <b id="wl-vol-v"></b></span><input type="range" min="0" max="100" data-s="wheel.volume" oninput="$('wl-vol-v').textContent=this.value"></label>
+      </div>
+      <div class="card">
+        <h3 class="u-mt-0">Кто и как запускает</h3>
+        <div class="small">Кнопкой здесь, в док-панели OBS, горячей клавишей (задайте её в «Настройки → Интерфейс и клавиши»), наградой за баллы, донатом или командой <b>!wheel</b> (<b>!колесо</b>).</div>
+        <div class="small muted u-mt-1">Кто может писать <b>!wheel</b> — по умолчанию модераторы — меняется в «Чат → Команды → Стандартные команды». Можно указать название колеса: <code>!wheel Призы</code>.</div>
+        <div class="row u-mt-3 u-fw-wrap u-ai-fend">
+          <label class="f u-w-170px"><span>Пауза между запусками зрителей, сек</span><input type="number" min="0" max="3600" data-s="wheel.cooldown"></label>
+          <label class="f u-w-170px"><span>Запусков на зрителя за стрим (0 — без лимита)</span><input type="number" min="0" max="100" data-s="wheel.per_user_limit"></label>
+          <label class="f u-w-150px"><span>Очередь, не больше</span><input type="number" min="1" max="100" data-s="wheel.queue_max"></label>
+        </div>
+        <label class="switch u-mt-3"><input type="checkbox" data-s="wheel.donation.enabled"> Донат DonationAlerts от суммы крутит колесо</label>
+        <div class="row u-mt-2 u-fw-wrap u-ai-fend">
+          <label class="f u-w-150px"><span>Сумма от</span><input type="number" min="1" data-s="wheel.donation.min"></label>
+          <label class="f u-w-230px"><span>Какое колесо</span><select data-s="wheel.donation.wheel" id="wl-don-wheel"></select></label>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="u-mt-0">Итог в чат</h3>
+        <label class="switch"><input type="checkbox" data-s="wheel.chat_result"> Писать результат в чат</label>
+        <label class="f u-mt-2"><span>Текст</span><input data-s="wheel.chat_template" maxlength="300"></label>
+        <div class="small muted u-mt-1">Переменные: <code>{user}</code> — кто крутил, <code>{wheel}</code> — колесо, <code>{result}</code> — выпавший сектор. Итог также попадает в ленту событий и журнал.</div>
+      </div>
+      <div class="card">
+        <h3 class="u-mt-0">История</h3>
+        <div id="wl-hist" class="log u-maxh-220px" data-skel></div>
       </div>
     </div>
   </div>
@@ -2200,6 +2300,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   if (b.dataset.t === "fallback") loadFbNext();
   if (b.dataset.t === "mod") { loadMod(); modActs(); }
   if (["themes", "give", "prof"].includes(b.dataset.t)) loadPro();
+  if (b.dataset.t === "wheel") wlOpen();
   navMark();
 }));
 
@@ -3817,9 +3918,9 @@ async function loadPro() {
 function renderThemes() {
   const list = (S.pro && S.pro.themes) || [];
   $("th-list").innerHTML = list.map(t => {
-    const used = (t.kind === "player" ? S.overlay.theme : S.chat_overlay.theme) === "custom:" + t.id;
-    const baseName = (t.kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES)[t.base] || t.base;
-    return `<tr><td><b data-noi18n>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
+    const used = (t.kind === "player" ? S.overlay.theme : t.kind === "wheel" ? S.wheel.theme : S.chat_overlay.theme) === "custom:" + t.id;
+    const baseName = (t.kind === "player" ? PLAYER_BASES : t.kind === "wheel" ? WHEEL_BASES : CHAT_BASE_NAMES)[t.base] || t.base;
+    return `<tr><td><b data-noi18n>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : t.kind === "wheel" ? "Колесо фортуны" : "Чат в OBS"}</td>
       <td>${esc(baseName)}</td><td>${used ? `<span class="ok ic-tx">${ICON.check}<span>выбрана</span></span>` : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
       <td class="u-ta-right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
       <button class="sm" title="Копия" onclick="themeDuplicate('${t.id}')">⧉</button>
@@ -3827,7 +3928,7 @@ function renderThemes() {
   }).join("") || '<tr><td colspan="5" class="muted">Своих тем пока нет — создайте тему плеера или чата</td></tr>';
 }
 async function applyTheme(id, kind) {
-  const body = kind === "player" ? {overlay: {theme: "custom:" + id}} : {chat_overlay: {theme: "custom:" + id}};
+  const body = kind === "player" ? {overlay: {theme: "custom:" + id}} : kind === "wheel" ? {wheel: {theme: "custom:" + id}} : {chat_overlay: {theme: "custom:" + id}};
   await api("/settings", body); await loadSettings(); renderThemes(); toast("Тема применена — OBS обновится сам");
 }
 function hexToRgb(h) { h = (h || "#000000").replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join("");
@@ -3966,18 +4067,18 @@ function editTheme(id, kind, imported) {
   const t = id ? S.pro.themes.find(x => x.id === id) : null;
   kind = t ? t.kind : kind;
   editingTheme = {id: t ? t.id : "", kind};
-  const bases = kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES;
+  const bases = kind === "player" ? PLAYER_BASES : kind === "wheel" ? WHEEL_BASES : CHAT_BASE_NAMES;
   $("th-base").innerHTML = Object.entries(bases).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
   thDraft = t ? thFromTheme(t, kind) : imported ? thFromTheme(imported, kind) : thDefaults(kind);
   if (!t && !imported) { thDraft.name = ""; }
-  $("th-title").textContent = (t ? "Тема: " + t.name : imported ? "Импорт темы" : "Новая тема") + (kind === "player" ? " · плеер" : " · чат в OBS");
+  $("th-title").textContent = (t ? "Тема: " + t.name : imported ? "Импорт темы" : "Новая тема") + (kind === "player" ? " · плеер" : kind === "wheel" ? " · колесо" : " · чат в OBS");
   $("th-name").value = thDraft.name || ""; $("th-base").value = thDraft.base || "classic"; $("th-css").value = thDraft.css || "";
   $("th-pal").innerHTML = Object.entries(TH_PALETTES).map(([n, c]) =>
     `<button class="sm" onclick="thPalette('${n}')"><i style="background:linear-gradient(90deg,${c[2]} 0 34%,${c[0]} 34% 67%,${c[1]} 67%)"></i>${n}</button>`).join("");
   thRenderFields();
-  $("th-prevnote").textContent = kind === "player" ? "Демо-трек с прогрессом и очередью." : "Демо-сообщения появляются каждые пару секунд — видно анимацию.";
+  $("th-prevnote").textContent = kind === "player" ? "Демо-трек с прогрессом и очередью." : kind === "wheel" ? "Пример колеса; цвета секторов задаются в самом колесе." : "Демо-сообщения появляются каждые пару секунд — видно анимацию.";
   $("th-editor").classList.remove("hidden");
-  const src = kind === "player" ? "/?demo&preview=1" : "/chat?demo&size=22";
+  const src = kind === "player" ? "/?demo&preview=1" : kind === "wheel" ? "/wheel?demo&preview=1" : "/chat?demo&size=22";
   $("th-frame").onload = () => setTimeout(themePreview, 300);
   $("th-frame").src = src;
   themePrevBg();
@@ -4533,6 +4634,132 @@ function capRender() {
     + (c.partial ? `<div class="muted"><i>${esc(c.partial)}</i></div>` : "") || '<span class="muted">пока тишина</span>';
   vcRender(c);
 }
+// ---------- колесо фортуны ----------
+const WHEEL_BASES = {studio: "Студия", classic: "Классика", neon: "Неон", minimal: "Минимал", retro: "Терминал"};
+const WL_COLORS = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#a855f7", "#22c55e", "#eab308", "#06b6d4"];
+const WL_ACTIONS = {none: "Ничего", chat: "Сообщение в чат", alert: "МедиаАлерт", timeout: "Таймаут зрителю"};
+let WL = null, WL_ID = "", WL_T = null;
+const wlList = () => (S.wheel && S.wheel.wheels) || [];
+const wlCur = () => wlList().find(w => w.id === WL_ID) || wlList()[0];
+async function wlOpen() {
+  $("wl-url").textContent = base() + "/wheel";
+  $("wl-del").innerHTML = ICON.trash;
+  if (!WL_ID) WL_ID = (S.wheel && S.wheel.active) || (wlList()[0] || {}).id || "";
+  wlRender(); wlFrame();
+  await wlLoad();
+  clearInterval(WL_T);
+  WL_T = setInterval(() => { if (!document.querySelector('[data-tab="wheel"]') || document.querySelector('[data-tab="wheel"]').classList.contains("hidden") || $("p-pro").classList.contains("hidden")) { clearInterval(WL_T); WL_T = null; return; } wlLoad(); }, 1200);
+}
+async function wlLoad() {
+  try { WL = await api("/wheel", undefined, undefined, {quiet: true}); } catch (e) { return; }
+  const cur = WL.current;
+  $("wl-state").textContent = cur ? (WL.current_result ? `${tr("Выпало")}: ${WL.current_result}` : tr("крутится…")) : tr("ожидает");
+  $("wl-state").className = "pill " + (cur ? "ok" : "");
+  $("wl-skip").disabled = !cur; $("wl-clear").disabled = !WL.queue.length;
+  $("wl-queue").innerHTML = WL.queue.length ? `<div class="micro">${tr("Очередь")} · ${WL.queue.length}</div>` + WL.queue.map((q, i) =>
+    `<div class="wl-q"><span class="num muted">${i + 1}</span><span class="grow"><b data-noi18n>${esc(q.wheel)}</b> · <span data-noi18n>${esc(q.user || tr(WL_SRC[q.source] || q.source))}</span>${q.test ? ` <span class="pill">${tr("проверка")}</span>` : ""}</span>
+      <button class="ib" aria-label="${esc(tr("Убрать из очереди"))}" title="${esc(tr("Убрать из очереди"))}" onclick="api('/wheel/remove',{id:${q.id}}).then(wlLoad)">${ICON.x || "×"}</button></div>`).join("") : "";
+  const h = WL.history || [];
+  $("wl-hist").innerHTML = h.map(x => `<div class="lg"><span class="k">${new Date(x.ts * 1000).toLocaleTimeString()}</span>
+    <span class="lg-t"><b data-noi18n>${esc(x.result)}</b> — <span data-noi18n>${esc(x.wheel)}</span>, ${esc(x.user || tr(WL_SRC[x.source] || x.source))}${x.test ? " · " + tr("проверка") : ""}${x.action ? " · " + esc(x.action) : ""}</span></div>`).join("")
+    || emptyBox("Колесо ещё не крутили", "Здесь появятся результаты — кто крутил и что выпало.");
+  if (!$("wl-sectors").contains(document.activeElement)) wlRenderSectors();   // список алертов мог измениться
+}
+const WL_SRC = {panel: "панель", dock: "док-панель", hotkey: "горячая клавиша", reward: "награда", donation: "донат", chat: "команда в чате", giveaway: "розыгрыш"};
+function wlRender() {
+  const list = wlList(), w = wlCur();
+  if (w) WL_ID = w.id;
+  $("wl-sel").innerHTML = list.map(x => `<option value="${esc(x.id)}" data-noi18n>${esc(x.name)}</option>`).join("");
+  $("wl-sel").value = WL_ID;
+  $("wl-don-wheel").innerHTML = `<option value="">${tr("Выбранное колесо")}</option>` + list.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("");
+  $("wl-don-wheel").value = getPath(S, "wheel.donation.wheel") || "";
+  const th = $("wl-theme"), custom = ((S.pro && S.pro.themes) || []).filter(t => t.kind === "wheel");
+  th.innerHTML = Object.entries(WHEEL_BASES).map(([k, v]) => `<option value="${k}">${tr(v)}</option>`).join("")
+    + custom.map(t => `<option value="custom:${esc(t.id)}" data-noi18n>${esc(t.name)}</option>`).join("");
+  th.value = getPath(S, "wheel.theme") || "studio";
+  $("wl-del").disabled = list.length < 2;
+  if (!w) return;
+  $("wl-name").value = w.name || "";
+  const rw = w.reward || {};
+  $("wl-rw-on").checked = !!rw.enabled; $("wl-rw-title").value = rw.title || ""; $("wl-rw-cost").value = rw.cost || 500;
+  $("wl-rw-f").classList.toggle("hidden", !rw.enabled);
+  $("wl-sec-v").textContent = (getPath(S, "wheel.spin_sec") || 6) + " " + tr("сек");
+  $("wl-vol-v").textContent = getPath(S, "wheel.volume") ?? 60;
+  wlRenderSectors();
+}
+function wlRenderSectors() {
+  const w = wlCur(); if (!w) return;
+  const secs = w.sectors || [], total = secs.reduce((a, x) => a + Math.max(1, +x.weight || 1), 0);
+  const alerts = (WL && WL.alerts) || [];
+  $("wl-sectors").innerHTML = secs.map((x, i) => {
+    const act = x.action || "none", lbl = esc(x.name || tr("сектор") + " " + (i + 1));
+    const param = act === "chat" ? `<input value="${esc(x.text || "")}" maxlength="300" placeholder="${esc(tr("{user}, тебе повезло!"))}" aria-label="${esc(tr("Текст сообщения"))} · ${lbl}" oninput="wlSec(${i},'text',this.value)">`
+      : act === "alert" ? `<select class="wl-al" aria-label="${esc(tr("Какой алерт"))} · ${lbl}" onchange="wlSec(${i},'alert_id',this.value)"><option value="">${tr("выберите алерт")}</option>${alerts.map(a => `<option value="${esc(a.id)}"${a.id === x.alert_id ? " selected" : ""}>${esc(a.name)}</option>`).join("")}</select>`
+      : act === "timeout" ? `<input type="number" min="1" max="1209600" value="${+x.seconds || 60}" aria-label="${esc(tr("Таймаут, секунд"))} · ${lbl}" oninput="wlSec(${i},'seconds',+this.value)"><span class="small muted">${tr("сек")}</span>` : "";
+    return `<tr><td><input type="color" class="no-hex" value="${esc(x.color || WL_COLORS[i % WL_COLORS.length])}" aria-label="${esc(tr("Цвет сектора"))} · ${lbl}" oninput="wlSec(${i},'color',this.value)"></td>
+      <td><input class="wl-nm" value="${esc(x.name || "")}" maxlength="30" aria-label="${esc(tr("Название сектора"))} ${i + 1}" oninput="wlSec(${i},'name',this.value)"></td>
+      <td><input class="wl-w" type="number" min="1" max="1000" value="${+x.weight || 1}" aria-label="${esc(tr("Вес"))} · ${lbl}" oninput="wlSec(${i},'weight',Math.max(1,+this.value||1),true)"></td>
+      <td class="num muted" data-chance="${i}">${Math.round(Math.max(1, +x.weight || 1) / total * 1000) / 10}%</td>
+      <td><div class="wl-act"><select aria-label="${esc(tr("Действие"))} · ${lbl}" onchange="wlSec(${i},'action',this.value,true)">${Object.entries(WL_ACTIONS).map(([k, v]) => `<option value="${k}"${k === act ? " selected" : ""}>${tr(v)}</option>`).join("")}</select>${param}</div></td>
+      <td><button class="ib danger" aria-label="${esc(tr("Удалить сектор"))} · ${lbl}" title="${esc(tr("Удалить сектор"))}" onclick="wlSecDel(${i})" ${secs.length <= 2 ? "disabled" : ""}>${ICON.trash}</button></td></tr>`;
+  }).join("");
+  $("wl-count").textContent = `${secs.length} ${tr("из")} 24 · ${tr("минимум 2")}`;
+  $("wl-addsec").disabled = secs.length >= 24;
+}
+function wlChanged(rerender) {
+  if (rerender) wlRenderSectors();
+  else {   // только пересчитать шансы — не трогаем поля, в которых человек печатает
+    const secs = wlCur().sectors, total = secs.reduce((a, x) => a + Math.max(1, +x.weight || 1), 0);
+    secs.forEach((x, i) => { const td = document.querySelector(`[data-chance="${i}"]`); if (td) td.textContent = Math.round(Math.max(1, +x.weight || 1) / total * 1000) / 10 + "%"; });
+  }
+  wlPreview();
+  queueSave(null, 600);
+}
+function wlSec(i, k, v, rerender) { wlCur().sectors[i][k] = v; wlChanged(rerender || k === "weight"); }
+function wlSet(k, v) { wlCur()[k] = v; if (k === "name") { const o = $("wl-sel").selectedOptions[0]; if (o) o.textContent = v; } wlPreview(); queueSave(null, 600); }
+function wlReward(k, v) { const w = wlCur(); w.reward = w.reward || {}; w.reward[k] = v; $("wl-rw-f").classList.toggle("hidden", !w.reward.enabled);
+  if (k === "enabled" && v && !w.reward.title) { w.reward.title = tr("Крутить колесо") + " «" + w.name + "»"; $("wl-rw-title").value = w.reward.title.slice(0, 45); }
+  queueSave(null, 800); }
+function wlSecAdd() {
+  const w = wlCur(); if (w.sectors.length >= 24) return;
+  w.sectors.push({name: tr("Сектор") + " " + (w.sectors.length + 1), weight: 1, color: WL_COLORS[w.sectors.length % WL_COLORS.length], action: "none"});
+  wlChanged(true);
+  const inputs = document.querySelectorAll("#wl-sectors .wl-nm"); const last = inputs[inputs.length - 1]; if (last) { last.focus(); last.select(); }
+}
+function wlSecDel(i) { const w = wlCur(); if (w.sectors.length <= 2) return; w.sectors.splice(i, 1); wlChanged(true); }
+function wlPick(id) { WL_ID = id; S.wheel.active = id; queueSave(null, 300); wlRender(); wlPreview(); }
+function wlNewId() { return Math.random().toString(36).slice(2, 10); }
+function wlAdd() {
+  const w = {id: wlNewId(), name: tr("Новое колесо"), reward: {enabled: false, title: "", cost: 500},
+    sectors: [1, 2, 3, 4].map(n => ({name: tr("Сектор") + " " + n, weight: 1, color: WL_COLORS[n - 1], action: "none"}))};
+  S.wheel.wheels.push(w); wlPick(w.id); $("wl-name").focus(); $("wl-name").select();
+}
+function wlDup() {
+  const c = JSON.parse(JSON.stringify(wlCur())); c.id = wlNewId(); c.name = (c.name + " " + tr("копия")).slice(0, 40);
+  if (c.reward) c.reward.enabled = false;
+  S.wheel.wheels.push(c); wlPick(c.id);
+}
+async function wlDel() {
+  const w = wlCur(); if (wlList().length < 2) return;
+  if (!await confirmDlg({title: "Удалить колесо?", text: `Колесо «${w.name}» и его награда за баллы будут удалены. Это нельзя отменить.`, okLabel: "Удалить", danger: 1})) return;
+  S.wheel.wheels = wlList().filter(x => x.id !== w.id);
+  wlPick(S.wheel.wheels[0].id);
+}
+function wlFrame() {
+  const th = $("wl-theme").value || "studio";
+  $("wl-frame").onload = () => setTimeout(wlPreview, 200);
+  $("wl-frame").src = "/wheel?preview=1&theme=" + encodeURIComponent(th);
+}
+function wlPreview() {
+  const w = wlCur(); if (!w) return;
+  try { $("wl-frame").contentWindow.postMessage({type: "b1-wheel", wheel: {name: w.name, sectors: (w.sectors || []).filter(x => (x.name || "").trim())}}, "*"); } catch (e) {}
+}
+async function wlSpin(test) {
+  await flushSave();
+  try { await api("/wheel/spin", {wheel: WL_ID, test}); toast(test ? "Проверка: колесо крутится в OBS" : "Колесо запущено"); } catch (e) {}
+  wlLoad();
+}
+
 // ---------- голосовые команды ----------
 const VC_TITLES = {skip: "Следующий трек", pause: "Пауза", resume: "Продолжить", clip: "Сделать клип"};
 function vcRender(c) {

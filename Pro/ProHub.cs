@@ -189,10 +189,10 @@ public sealed class ProHub
     public JsonObject SaveTheme(JsonNode b)
     {
         var kind = b.Str("kind");
-        if (kind != "player" && kind != "chat") throw new UserError("Неизвестный тип темы");
+        if (kind != "player" && kind != "chat" && kind != "wheel") throw new UserError("Неизвестный тип темы");
         var name = b.Str("name").Trim();
         if (name == "" || name.Length > 40) throw new UserError("Название темы: от 1 до 40 символов", "theme.name");
-        var bases = kind == "player"
+        var bases = kind == "wheel" ? Features.Wheel.Bases : kind == "player"
             ? new[] { "studio", "classic", "minimal", "neon", "vinyl", "bar", "glass", "retro" }
             : new[] { "studio", "classic", "cards", "bubbles", "neon", "retro", "compact", "light" };
         var bs = b.Str("base", "classic");

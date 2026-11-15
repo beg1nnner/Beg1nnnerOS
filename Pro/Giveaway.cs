@@ -145,7 +145,7 @@ public sealed class Giveaway
     }
 
     /// <summary>Выбирает победителей (если розыгрыш открыт — сначала закрывает приём).</summary>
-    public async Task<List<Entry>> Draw(int count = 0)
+    public async Task<List<Entry>> Draw(int count = 0, bool wheel = false)
     {
         if (Status == "idle") throw new UserError("Сначала начните розыгрыш");
         if (Status == "open") await Close(false);
@@ -160,6 +160,14 @@ public sealed class Giveaway
         }
         Save();
         if (picked.Count == 0) throw new UserError("Нет участников, которые ещё не выигрывали");
+        if (wheel)
+        {
+            // «Колесом»: победитель уже выбран из полного списка; колесо его только показывает, в чат — после остановки
+            var all = Entries.Values.Select(e => (e.Name, e.Tickets)).ToList();
+            foreach (var p in picked) _hub.Wheel.SpinGiveaway(Prize, all, p.Name);
+            _hub.Log.Add("system", $"Розыгрыш «{Prize}»: победитель выбран, показ на колесе");
+            return picked;
+        }
         var names = string.Join(", ", picked.Select(p => "@" + p.Name));
         await _hub.Twitch.SendChat(picked.Count == 1
             ? $"🏆 Победитель розыгрыша «{Prize}»: {names}! Поздравляем!"

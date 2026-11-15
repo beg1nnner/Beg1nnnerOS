@@ -44,6 +44,7 @@ const PREVIEW = Q.get("preview") === "1";
 if (PREVIEW) document.body.classList.add("preview");
 const stage = document.getElementById("stage");
 const ICONS = {
+  wheel:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/>',
   follow:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/>',
   sub:'<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/>',
   donation:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.5a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3h3.5"/>',
@@ -56,7 +57,7 @@ const ICONS = {
   online:'<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/>',
   update:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
 };
-const COLORS = {follow:"#a78bfa", sub:"#f59e0b", donation:"#ec4899", cheer:"#38bdf8", raid:"#22c55e", hype:"#f97316", reward:"#8b5cf6", poll:"#3b82f6", ad:"#94a3b8", online:"#ef4444", update:"#8b5cf6"};
+const COLORS = {wheel:"#f59e0b", follow:"#a78bfa", sub:"#f59e0b", donation:"#ec4899", cheer:"#38bdf8", raid:"#22c55e", hype:"#f97316", reward:"#8b5cf6", poll:"#3b82f6", ad:"#94a3b8", online:"#ef4444", update:"#8b5cf6"};
 let CFG = {duration: 6, position: "top", size: 100, accent: "#8b5cf6", sound: true};
 let SEQ = -1, QUEUE = [], BUSY = false;
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

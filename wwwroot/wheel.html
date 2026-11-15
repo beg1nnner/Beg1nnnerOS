@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<script src="/static/i18n.js"></script>
+<title>Beg1nnnerOS — колесо фортуны</title>
+<style>
+  @font-face { font-family:"Geist"; src:url("/static/fonts/Geist.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Geist Mono"; src:url("/static/fonts/GeistMono.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+  :root {
+    --accent:#8b5cf6; --accent2:#ec4899; --text:#f4f4f7; --muted:#b6b6c4; --label-bg:rgba(14,14,19,.9);
+    --rim:#16161d; --rim-w:14px; --sep:rgba(255,255,255,.55); --hub:#0e0e13; --font:"Geist","Segoe UI",system-ui,sans-serif;
+    --weight:700; --scale:1; --radius:18px; --glow:0 0 40px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+    --label-border:1px solid rgba(255,255,255,.08); --tshadow:0 1px 3px rgba(0,0,0,.6); --upper:none;
+  }
+  html, body { margin:0; height:100%; background:transparent; overflow:hidden; font-family:var(--font); color:var(--text); }
+  body.preview { background:repeating-conic-gradient(#20202a 0 25%, #1a1a22 0 50%) 0 0/30px 30px; }
+  #stage { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3.5vmin;
+    opacity:0; transform:scale(.92); transition:opacity .45s ease, transform .5s cubic-bezier(.2,.9,.3,1.2); }
+  #stage.show { opacity:1; transform:none; }
+  .top { text-align:center; min-height:1em; }
+  .wname { font-size:calc(3.2vmin * var(--scale)); font-weight:var(--weight); text-transform:var(--upper); text-shadow:var(--tshadow); letter-spacing:-.01em; }
+  .who { font-size:calc(2.2vmin * var(--scale)); color:var(--muted); margin-top:.3vmin; text-shadow:var(--tshadow); }
+  #wrap { position:relative; width:min(68vmin, 900px); aspect-ratio:1; }
+  #wrap canvas { width:100%; height:100%; display:block; border-radius:50%; box-shadow:var(--glow); }
+  #ptr { position:absolute; left:50%; top:-1.6vmin; width:6vmin; height:7vmin; transform:translateX(-50%); filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); z-index:2; }
+  #ptr.tick { animation:tick .12s ease-out; }
+  @keyframes tick { 40% { transform:translateX(-50%) rotate(-12deg); } }
+  #res { padding:1.4vmin 3vmin; border-radius:var(--radius); background:var(--label-bg); border:var(--label-border);
+    font-size:calc(4vmin * var(--scale)); font-weight:var(--weight); text-transform:var(--upper); text-shadow:var(--tshadow);
+    box-shadow:0 16px 40px -18px #000c; opacity:0; transform:translateY(1.5vmin) scale(.9); transition:opacity .35s, transform .45s cubic-bezier(.2,.9,.3,1.4);
+    max-width:80vw; text-align:center; }
+  #res.show { opacity:1; transform:none; }
+  #res small { display:block; font-size:.45em; font-weight:500; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:.2em; }
+  /* готовые темы */
+  body.t-classic { --rim:#f5c542; --rim-w:18px; --sep:#fff; --hub:#b91c1c; --label-bg:#b91c1c; --accent:#f5c542; --glow:0 10px 40px -10px #000; --label-border:3px solid #f5c542; }
+  body.t-neon { --rim:#0b0614; --rim-w:10px; --sep:color-mix(in srgb, var(--accent) 80%, #fff); --hub:#0b0614; --accent:#ff2bd6; --accent2:#22d3ee;
+    --glow:0 0 60px -4px var(--accent), 0 0 0 3px var(--accent); --label-bg:rgba(11,6,20,.9); --label-border:2px solid var(--accent2);
+    --tshadow:0 0 12px color-mix(in srgb, var(--accent) 80%, transparent); }
+  body.t-minimal { --rim:transparent; --rim-w:0px; --sep:rgba(255,255,255,.9); --hub:#fff; --glow:0 20px 50px -20px #000a; --label-bg:rgba(255,255,255,.95); --text:#111; --muted:#555; --tshadow:none; --label-border:0; }
+  body.t-minimal .wname, body.t-minimal .who { color:#fff; text-shadow:0 1px 4px #000a; }
+  body.t-retro { --font:"Geist Mono",Consolas,monospace; --rim:#0a0f0a; --rim-w:12px; --sep:#22c55e; --hub:#0a0f0a; --accent:#22c55e; --accent2:#a3e635;
+    --label-bg:#0a0f0a; --text:#bbf7d0; --muted:#4ade80; --label-border:2px solid #22c55e; --radius:4px; --upper:uppercase; --glow:0 0 30px -8px #22c55e; }
+</style>
+<style id="custom-theme"></style>
+</head>
+<body>
+<div id="stage" aria-live="polite">
+  <div class="top"><div class="wname" id="wname"></div><div class="who" id="who"></div></div>
+  <div id="wrap">
+    <svg id="ptr" viewBox="0 0 60 70" aria-hidden="true"><path d="M30 68L6 14a26 26 0 1 1 48 0z" fill="var(--accent)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><circle cx="30" cy="24" r="8" fill="#fff" opacity=".9"/></svg>
+    <canvas id="cv" width="1000" height="1000"></canvas>
+  </div>
+  <div id="res"></div>
+</div>
+<script>
+// Источник для OBS: колесо фортуны. Результат выбирает программа до начала вращения — здесь только анимация.
+// Параметры: ?preview=1 — шахматный фон и пример колеса; ?theme=studio|classic|neon|minimal|retro|custom:ID.
+const Q = new URLSearchParams(location.search);
+const PREVIEW = Q.get("preview") === "1" || Q.has("demo");
+if (PREVIEW) document.body.classList.add("preview");
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const tr = window.tr || (s => s);
+let CFG = {sound: true, volume: 60, theme: "studio", title: true, custom_themes: []};
+let previewTheme = null, previewWheel = null;
+let angle = 0;                 // текущий поворот колеса, градусы
+let spin = null, anim = null;  // текущее вращение с сервера и его анимация
+let shownId = 0, doneId = 0;
+
+// ---------- рисование ----------
+function css(v) { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+function layout(sectors) {
+  const total = sectors.reduce((a, s) => a + Math.max(1, s.weight || 1), 0);
+  let a = 0;
+  return sectors.map(s => { const w = Math.max(1, s.weight || 1) / total * 360; const r = {s, from: a, to: a + w}; a += w; return r; });
+}
+function fitText(text, max, size) {
+  // сначала уменьшаем шрифт (до 70%), и только потом обрезаем многоточием
+  const font = s => `${css("--weight") || 700} ${s}px ${css("--font")}`;
+  for (let s = size; s >= size * 0.7; s -= size * 0.05) { ctx.font = font(s); if (ctx.measureText(text).width <= max) return text; }
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + "…").width > max) t = t.slice(0, -1);
+  return t + "…";
+}
+function lum(hex) {
+  const h = hex.replace("#", ""); if (h.length < 6) return 0.5;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function draw(sectors, winner = -1) {
+  const W = cv.width, R = W / 2, rim = parseFloat(css("--rim-w")) * 2 || 0, r = R - rim;
+  ctx.clearRect(0, 0, W, W);
+  ctx.save(); ctx.translate(R, R);
+  // обод
+  if (rim > 0) { ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = css("--rim"); ctx.fill(); }
+  ctx.rotate((angle - 90) * Math.PI / 180);
+  const L = layout(sectors), scale = parseFloat(css("--scale")) || 1, upper = css("--upper") === "uppercase";
+  L.forEach((x, i) => {
+    const a0 = x.from * Math.PI / 180, a1 = x.to * Math.PI / 180;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a1); ctx.closePath();
+    ctx.fillStyle = x.s.color || "#8b5cf6"; ctx.fill();
+    if (winner >= 0 && i !== winner) { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill(); }
+    ctx.strokeStyle = css("--sep"); ctx.lineWidth = Math.max(2, W / 400); ctx.stroke();
+    // подпись вдоль радиуса
+    const mid = (a0 + a1) / 2, span = (x.to - x.from);
+    ctx.save(); ctx.rotate(mid);
+    const size = Math.min(W / 22, Math.max(W / 60, span * W / 900)) * scale;
+    const name = upper ? x.s.name.toUpperCase() : x.s.name;
+    const t = fitText(name, r * 0.76 - W / 14, size);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillStyle = lum(x.s.color || "#000") > 0.62 ? "#111" : "#fff";
+    ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 4;
+    ctx.fillText(t, r - W / 28, 0);
+    ctx.restore();
+  });
+  if (winner >= 0) {   // подсветка выигравшего сектора
+    const x = L[winner];
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, x.from * Math.PI / 180, x.to * Math.PI / 180); ctx.closePath();
+    ctx.lineWidth = W / 70; ctx.strokeStyle = "#fff"; ctx.shadowColor = css("--accent"); ctx.shadowBlur = W / 25; ctx.stroke();
+  }
+  ctx.restore();
+  // ступица
+  ctx.beginPath(); ctx.arc(R, R, W / 14, 0, Math.PI * 2); ctx.fillStyle = css("--hub"); ctx.fill();
+  ctx.lineWidth = W / 120; ctx.strokeStyle = css("--accent"); ctx.stroke();
+}
+
+// ---------- звук (без файлов) ----------
+let actx = null;
+function beep(freq, dur, type = "triangle", gain = 1, when = 0) {
+  if (!CFG.sound || !CFG.volume) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    const v = (CFG.volume / 100) ** 2 * 0.35 * gain;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) {}
+}
+const tickSound = () => beep(1500, 0.04, "square", 0.35);
+const winSound = () => [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.5, "triangle", 0.9, i * 0.11));
+
+// ---------- анимация ----------
+const ease = x => 1 - Math.pow(1 - x, 4);   // быстро разгоняется и долго, плавно замедляется
+function startSpin(s) {
+  const L = layout(s.sectors), win = L[s.result];
+  // точка внутри выигравшего сектора (не на самой границе)
+  const pad = (win.to - win.from) * 0.18;
+  const target = win.from + pad + Math.random() * Math.max(0, win.to - win.from - pad * 2);
+  const base = ((angle % 360) + 360) % 360;
+  let delta = ((360 - target) - base + 720) % 360;
+  delta += 360 * (Math.round(s.duration_ms / 1000) + 2);   // полные обороты
+  anim = {s, from: angle, delta, dur: Math.max(500, s.duration_ms), t0: performance.now() - Math.max(0, s.elapsed_ms), lastSector: -1, L};
+  $("res").classList.remove("show");
+  requestAnimationFrame(frame);
+}
+function sectorAt(a, L) {
+  const p = ((360 - (a % 360)) % 360 + 360) % 360;
+  return L.findIndex(x => p >= x.from && p < x.to);
+}
+function frame(now) {
+  if (!anim) return;
+  const k = Math.min(1, Math.max(0, (now - anim.t0) / anim.dur));
+  angle = anim.from + anim.delta * ease(k);
+  const sec = sectorAt(angle, anim.L);
+  if (sec !== anim.lastSector && anim.lastSector !== -1 && k < 1) { tickSound(); const p = $("ptr"); p.classList.remove("tick"); void p.offsetWidth; p.classList.add("tick"); }
+  anim.lastSector = sec;
+  draw(anim.s.sectors);
+  if (k < 1) { requestAnimationFrame(frame); return; }
+  const s = anim.s; anim = null; doneId = s.id;
+  draw(s.sectors, s.result);
+  showResult(s);
+  winSound();
+}
+function showResult(s) {
+  const name = s.sectors[s.result].name;
+  $("res").innerHTML = `<small>${esc(tr(s.giveaway ? "Победитель" : "Выпало"))}</small>${esc(name)}`;
+  $("res").classList.add("show");
+}
+function esc(t) { return String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function header(s) {
+  $("wname").textContent = CFG.title === false ? "" : (s.giveaway ? tr("Розыгрыш") + ": " + s.wheel : s.wheel);
+  $("who").textContent = s.user ? `${tr("крутит")} ${s.user}` : "";
+}
+
+// ---------- темы ----------
+const SHADOWS = {none: "none", soft: "0 4px 14px rgba(0,0,0,.3)", strong: "0 8px 24px rgba(0,0,0,.6)", glow: "0 0 40px -4px var(--accent)"};
+const TSHADOW = {none: "none", soft: "0 1px 3px rgba(0,0,0,.6)", outline: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000", glow: "0 0 10px var(--accent)"};
+const BASES = ["studio", "classic", "neon", "minimal", "retro"];
+let customKey = null;
+function applyTheme() {
+  const want = Q.get("theme") || CFG.theme || "studio";
+  const ct = previewTheme || (want.startsWith("custom:") ? (CFG.custom_themes || []).find(t => "custom:" + t.id === want) : null);
+  const base = ct ? (BASES.includes(ct.base) ? ct.base : "studio") : (BASES.includes(want) ? want : "studio");
+  document.body.className = "t-" + base + (PREVIEW ? " preview" : "");
+  const key = ct ? JSON.stringify(ct) : "";
+  if (key === customKey) return;
+  customKey = key;
+  const el = $("custom-theme");
+  if (!ct) { el.textContent = ""; return; }
+  const v = [`--accent:${ct.accent}`, `--accent2:${ct.accent2 || ct.accent}`, `--text:${ct.text_color}`, `--muted:${ct.muted_color || ct.text_color}`,
+    `--label-bg:${ct.background}`, `--radius:${ct.radius ?? 18}px`, `--weight:${Math.min(+ct.weight || 700, 900)}`, `--scale:${(ct.font_scale || 100) / 100}`,
+    `--upper:${ct.uppercase ? "uppercase" : "none"}`, `--glow:${SHADOWS[ct.shadow] || SHADOWS.soft}`, `--tshadow:${TSHADOW[ct.text_shadow] || TSHADOW.soft}`];
+  if (ct.border_width > 0) v.push(`--rim-w:${ct.border_width * 2}px`, `--rim:${ct.border_color}`, `--label-border:${Math.min(4, ct.border_width)}px solid ${ct.border_color}`);
+  if (ct.font) v.push(`--font:${ct.font}, "Segoe UI", sans-serif`);
+  el.textContent = `body { ${v.join("; ")}; }\n` + (ct.css || "");
+}
+window.addEventListener("message", e => {
+  const d = e.data || {};
+  if (d.type === "b1-theme") { previewTheme = d.theme; customKey = null; applyTheme(); redraw(); }
+  if (d.type === "b1-wheel") { previewWheel = d.wheel; if (!spin && !anim) showStatic(); }
+  if (d.type === "b1-wheel-spin" && previewWheel) {   // проверка в предпросмотре панели — без сервера
+    const s = {id: -Date.now(), wheel: previewWheel.name, user: "", sectors: previewWheel.sectors, result: d.result ?? 0, duration_ms: d.duration_ms || 6000, elapsed_ms: 0};
+    $("stage").classList.add("show"); header(s); startSpin(s);
+  }
+});
+function redraw() { if (anim) return; const s = spin || staticWheel(); if (s) draw(s.sectors, spin && doneId === spin.id ? spin.result : -1); }
+const DEMO = {name: "Колесо фортуны", sectors: [
+  {name: "Удача!", weight: 2, color: "#8b5cf6"}, {name: "Трек от стримера", weight: 3, color: "#ec4899"}, {name: "Таймаут 1 минута", weight: 1, color: "#ef4444"},
+  {name: "Приветствие в чат", weight: 3, color: "#10b981"}, {name: "Ничего", weight: 4, color: "#3b82f6"}, {name: "Джекпот", weight: 1, color: "#f59e0b"}]};
+function staticWheel() { return previewWheel || (PREVIEW ? DEMO : null); }
+function showStatic() {
+  const w = staticWheel(); if (!w) return;
+  $("stage").classList.add("show");
+  header({wheel: w.name, user: ""});
+  draw(w.sectors);
+}
+
+// ---------- опрос программы ----------
+async function poll() {
+  try {
+    const r = await fetch("/api/wheel/overlay", {cache: "no-store"});
+    const j = await r.json(); const d = j.data || j;
+    CFG = Object.assign(CFG, d); applyTheme();
+    const s = d.spin;
+    if (s && s.id !== shownId) {
+      shownId = s.id; spin = s;
+      $("stage").classList.add("show"); header(s);
+      if (s.elapsed_ms >= s.duration_ms) { doneId = s.id; draw(s.sectors, s.result); showResult(s); }   // открыли уже после остановки
+      else if (s.elapsed_ms < -50) setTimeout(() => startSpin(Object.assign({}, s, {elapsed_ms: 0})), -s.elapsed_ms);
+      else startSpin(s);
+    } else if (!s && spin && !anim) {
+      spin = null;
+      $("res").classList.remove("show");
+      if (staticWheel()) showStatic(); else $("stage").classList.remove("show");
+    }
+  } catch (e) {}
+  setTimeout(poll, 300);
+}
+applyTheme();
+if (PREVIEW) showStatic();
+poll();
+</script>
+</body>
+</html>

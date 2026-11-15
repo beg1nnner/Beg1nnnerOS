@@ -65,6 +65,8 @@ public sealed class Rewards
                     outp["alert:" + a.Str("id")] = new Desired(a.Str("reward_title"), a.Int("cost"), false,
                         prompt.Length > 200 ? prompt[..200] : prompt);
                 }
+        foreach (var (key, title, cost) in _hub.Wheel.RewardsWanted())
+            outp[key] = new Desired(title, cost, false, L.TE("Крутит колесо фортуны на стриме"));
         return outp;
     }
 
@@ -160,7 +162,7 @@ public sealed class Rewards
             var oldKey = Ids.FirstOrDefault(p => J.AsStr(p.Value) == rid).Key ?? "";
             try
             {
-                if (oldKey.StartsWith("alert:"))
+                if (oldKey.StartsWith("alert:") || oldKey.StartsWith("wheel:"))
                     await tw.DeleteReward(rid);
                 else
                 {
@@ -222,6 +224,8 @@ public sealed class Rewards
             await MusicRedemption(key[6..], ev, rid, redId, cost, name, login);
         else if (key.StartsWith("alert:"))
             await _hub.Alerts.OnRedemption(key[6..], rid, redId, name, login);
+        else if (key.StartsWith("wheel:"))
+            await _hub.Wheel.OnRedemption(key[6..], rid, redId, name, login, ev.Str("user_id"));
         else
             await Complete(rid, redId, false);
     }

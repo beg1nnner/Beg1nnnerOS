@@ -295,6 +295,18 @@ public sealed class Alerts
         _wake.TrySetResult(true);
     }
 
+    /// <summary>Показ алерта по действию другой функции (сектор колеса фортуны) — без награды и баллов.</summary>
+    public void Play(string id, string user)
+    {
+        var a = Get(id) ?? throw new Beg1nnnerOS.Twitch.UserError("Алерт не найден");
+        Pending.Add(new JsonObject
+        {
+            ["alert_id"] = id, ["reward_id"] = "", ["redemption_id"] = "", ["user"] = user, ["login"] = "", ["ts"] = ActionLog.Now,
+        });
+        _hub.Log.Add("alert", $"Алерт «{a.Str("name")}» от колеса фортуны");
+        _wake.TrySetResult(true);
+    }
+
     /// <summary>Тестовый показ алерта в OBS (без награды и баллов).</summary>
     public void Test(string id)
     {

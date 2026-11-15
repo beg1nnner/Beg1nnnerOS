@@ -65,6 +65,10 @@ public sealed class Events
         if (_feed.Count > 50) _feed.RemoveRange(0, _feed.Count - 50);
     }
 
+    /// <summary>Событие от другой функции программы (например, итог колеса фортуны) — в ленту оверлея событий.</summary>
+    public void ShowCustom(string type, string title, string user, string text) =>
+        Show(type, title, new() { ["user"] = user }, L.T(text));
+
     /// <summary>Новые события для экрана (после id). after &lt; 0 — только текущий номер, без старых событий.</summary>
     public object Feed(long after)
     {
