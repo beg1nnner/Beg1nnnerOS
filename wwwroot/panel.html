@@ -33,22 +33,16 @@
   .nav-badge { font:normal 11px var(--mono); padding:1px 7px; border-radius:999px; background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent2); }
   .nav-badge:empty { display:none; }
   .nav-fill { flex:1; min-height:20px; }
-  .nav-link { display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:14px; text-decoration:none; margin-top:8px; transition:transform .15s, box-shadow .15s; }
-  .nav-link:hover { transform:translateY(-1px); }
-  .nav-link .nl-ic { width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
-  .nav-link .nl-t { display:flex; flex-direction:column; min-width:0; line-height:1.3; }
-  .nav-link .nl-t b { font-size:13.5px; font-weight:600; }
-  .nav-link .nl-t small { font-size:12px; }
-  .nav-link.twitch { background:color-mix(in srgb, #9146ff 13%, var(--bg)); border:1px solid rgba(145,70,255,.4); color:#ede9fe;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px -14px rgba(145,70,255,.75); }
-  .nav-link.twitch .nl-ic { background:#9146ff; } .nav-link.twitch small { color:#c4b5fd; }
-  .nav-link.thanks { background:color-mix(in srgb, #ec4899 11%, var(--bg)); border:1px solid rgba(244,114,182,.35); color:#fce7f3;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px -14px rgba(236,72,153,.7); }
-  .nav-link.thanks .nl-ic { background:#ec4899; } .nav-link.thanks small { color:#f9a8d4; }
-  .nav-link.contact { padding:9px 12px; border:1px solid var(--hair); color:var(--muted); font-size:13px; font-weight:500; }
-  .nav-link.contact:hover { color:var(--fg); border-color:#29a9eb80; }
-  html[data-theme="light"] .nav-link.twitch { color:#4c1d95; } html[data-theme="light"] .nav-link.twitch small { color:#6d28d9; }
-  html[data-theme="light"] .nav-link.thanks { color:#831843; } html[data-theme="light"] .nav-link.thanks small { color:#be185d; }
+  /* ссылки автора: тихий ряд из трёх иконок с подсказками */
+  .nav-links { position:relative; display:flex; gap:4px; margin-top:10px; padding-top:10px; border-top:1px solid var(--hair); }
+  .nav-link { flex:1; height:36px; display:flex; align-items:center; justify-content:center; border-radius:10px; color:var(--dim); text-decoration:none;
+    transition:color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+  .nav-link:hover, .nav-link:focus-visible { color:var(--fg); background:var(--hover); }
+  /* подсказка — над всем рядом, чтобы не вылезать за край меню */
+  .nav-link[data-tip]::after { content:attr(data-tip); position:absolute; left:0; right:0; bottom:calc(100% + 6px); z-index:20; text-align:center;
+    padding:6px 10px; border-radius:8px; background:var(--panel2); border:1px solid var(--line); color:var(--fg); font-size:12px; line-height:1.4; box-shadow:var(--pop-shadow);
+    opacity:0; transform:translateY(4px); pointer-events:none; transition:opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+  .nav-link:hover::after, .nav-link:focus-visible::after { opacity:1; transform:none; }
   .nav-me { display:flex; align-items:center; gap:10px; padding:10px; margin-top:10px; border-radius:12px; border:1px solid var(--hair); background:var(--field); }
   .nm-av { position:relative; width:34px; height:34px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
     background:color-mix(in srgb, var(--accent) 22%, var(--bg)); color:var(--accent2); font-weight:700; font-size:14px; text-transform:uppercase; }
@@ -60,14 +54,17 @@
   .nav-toggle:hover { color:var(--fg); background:var(--hover); }
   body.nav-mini nav { width:78px; padding:18px 10px 14px; align-items:center; }
   body.nav-mini nav .logo { flex-direction:column; padding:2px 0 8px; gap:8px; }
-  body.nav-mini .logo-txt, body.nav-mini nav button[data-p] span, body.nav-mini .nav-link .nl-t, body.nav-mini .nav-link.contact span, body.nav-mini .nm-t { display:none; }
+  body.nav-mini .logo-txt, body.nav-mini nav button[data-p] span, body.nav-mini .nm-t { display:none; }
   body.nav-mini .nav-toggle { margin:0; }
   body.nav-mini .nav-group { font-size:0; padding:10px 0 6px; width:28px; border-top:1px solid var(--hair); margin-top:8px; }
   body.nav-mini nav button[data-p] { width:48px; height:42px; padding:0; justify-content:center; }
   body.nav-mini nav button[data-p].on::before { left:-10px; }
   body.nav-mini .nav-badge { position:absolute; top:4px; right:4px; padding:0 5px; font-size:10px; }
-  body.nav-mini .nav-link { padding:7px; border-radius:12px; width:48px; justify-content:center; box-sizing:border-box; }
-  body.nav-mini .nav-link.contact { height:40px; }
+  body.nav-mini .nav-links { flex-direction:column; width:48px; }
+  body.nav-mini .nav-link { flex:none; width:48px; }
+  body.nav-mini .nav-link { position:relative; }
+  body.nav-mini .nav-link[data-tip]::after { left:calc(100% + 10px); right:auto; bottom:auto; top:50%; width:max-content; max-width:220px; text-align:left; transform:translate(-4px, -50%); }
+  body.nav-mini .nav-link:hover::after, body.nav-mini .nav-link:focus-visible::after { transform:translate(0, -50%); }
   body.nav-mini .nav-me { padding:6px; justify-content:center; }
   main { flex:1; padding:22px 36px 60px; max-width:1360px; min-width:0; }
   /* ---------- шапка ---------- */
@@ -160,7 +157,6 @@
   .lg-k { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12.5px; }
   .lg-k i { width:7px; height:7px; border-radius:50%; flex:none; }
   .log .kind-error .lg-t { color:var(--err); } .log .kind-skip .lg-t { color:var(--warn); }
-  .ic { flex:none; vertical-align:middle; }
   select.seg-src { display:none !important; }
   .seg { display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; border-radius:11px; background:var(--field); border:1px solid var(--hair); max-width:100%; }
   .seg button { height:34px; padding:0 14px; border:none; border-radius:8px; background:none; color:var(--muted); font-size:13px; font-weight:500; white-space:nowrap; }
@@ -272,8 +268,6 @@
   .cl-r { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cl .pill { justify-self:start; } .pill.acc { color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
   .cl-a { display:flex; gap:6px; justify-content:flex-end; }
-  button.ib { width:32px; height:32px; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--dim); border-color:var(--hair); }
-  button.ib:hover { color:var(--fg); }
   @media (max-width:800px) { .cl-h { display:none; } .cl { grid-template-columns:1fr auto auto; } .cl-r { grid-column:1 / -1; } }
   .cl-vars { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-top:14px; border-top:1px solid var(--hair); }
   .cl-vars .pill { color:var(--muted); }
@@ -361,7 +355,9 @@
   .mod-tag.timeout { background:rgba(244,63,94,.12); color:#fda4af; } .mod-tag.delete { background:rgba(251,191,36,.12); color:#fcd34d; }
   .incl { display:flex; flex-direction:column; gap:10px; }
   .incl span { display:flex; align-items:center; gap:10px; font-size:14px; }
-  .incl span::before { content:"✓"; color:var(--ok); font-weight:700; }
+  .incl span::before { content:""; width:14px; height:14px; flex:none; background:var(--ok);
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat; }
   .chl-v { display:flex; gap:14px; padding:12px 0; border-top:1px solid var(--hair); }
   .chl-v:first-child { border-top:0; padding-top:0; }
   .chl-v .pill { flex:none; align-self:flex-start; color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
@@ -433,17 +429,16 @@
          background:color-mix(in srgb, var(--accent) 10%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 40%, transparent); box-shadow:var(--shadow); }
   .upd .t { flex:1; min-width:240px; }
   .upd .t b { font-size:15px; }
-  nav .upd-nav { margin-top:8px; margin-bottom:0; width:100%; padding:11px 14px; border-radius:14px; border:0; cursor:pointer;
-                 font-weight:700; font-size:14px; color:#fff; text-align:left; background:#16a34a;
-                 box-shadow:0 6px 22px rgba(34,197,94,.35); position:relative; }
-  nav .upd-nav small { display:block; font-weight:600; font-size:11.5px; opacity:.9; margin-top:2px; }
-  nav .upd-nav::after { content:""; position:absolute; top:10px; right:10px; width:9px; height:9px; border-radius:50%; background:#fff;
+  nav .upd-nav { margin-top:8px; margin-bottom:0; width:100%; padding:10px 14px; border-radius:12px; cursor:pointer; position:relative;
+                 display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:4px 8px; text-align:left; font-weight:600; font-size:13px;
+                 color:var(--accent2); background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  nav .upd-nav:hover { background:color-mix(in srgb, var(--accent) 18%, transparent); border-color:color-mix(in srgb, var(--accent) 50%, transparent); }
+  nav .upd-nav small { flex-basis:100%; font-weight:500; font-size:12px; color:var(--muted); }
+  nav .upd-nav::after { content:""; position:absolute; top:12px; right:12px; width:8px; height:8px; border-radius:50%; background:var(--accent);
                         animation:updPulse 1.6s ease-in-out infinite; }
   nav .upd-nav:disabled { cursor:default; filter:saturate(.7); }
   nav .upd-nav:disabled::after { display:none; }
-  nav .upd-nav:not(.hidden) ~ .thanks-btn { margin-top:0 !important; }
   @keyframes updPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.35; transform:scale(.7); } }
-  .err { color:#ef4444; }
   .th-layout { display:flex; gap:20px; align-items:flex-start; margin-top:10px; flex-wrap:wrap; }
   .th-form { flex:1; min-width:340px; }
   .th-prev { flex:none; width:440px; position:sticky; top:12px; }
@@ -467,8 +462,8 @@
              background:var(--panel); border:1px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); display:inline-block; margin:8px 0 10px; }
   .chk { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); }
   .chk:last-child { border-bottom:0; }
-  .chk .ic { width:22px; text-align:center; font-weight:800; }
-  .chk .ok { color:#22c55e; } .chk .bad { color:#ef4444; } .chk .wait { color:var(--muted); }
+  .chk > .ic { display:grid; place-items:center; width:22px; height:22px; flex:none; }
+  .chk .ok { color:var(--ok); } .chk .bad { color:var(--err); } .chk .wait { color:var(--muted); }
   #wizard { position:fixed; inset:0; background:rgba(5,4,10,.72); backdrop-filter:blur(4px); z-index:60; display:flex; align-items:center; justify-content:center; padding:24px; }
   #wizard.hidden { display:none; }
   .wz { width:min(760px,100%); max-height:calc(100vh - 48px); overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:32px 36px; box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 40px 120px -20px rgba(0,0,0,.9), 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent); }
@@ -529,7 +524,7 @@
   .imp-it input[type=checkbox] { width:auto; margin-top:3px; }
   .imp-it .bd { flex:1; min-width:0; }
   .imp-it .rs { font-size:12.5px; color:var(--muted); overflow-wrap:anywhere; margin-top:2px; }
-  .imp-w { font-size:11.5px; color:#fbbf24; margin-top:3px; }
+  .imp-w { font-size:11.5px; color:var(--warn); margin-top:3px; }
   .imp-tag { font-size:11px; padding:1px 7px; border-radius:999px; background:#2a2a36; margin-left:6px; color:var(--muted); }
 </style>
 </head>
@@ -552,9 +547,11 @@
   <button data-p="pro" id="nav-pro"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Дополнительно</span><i class="nav-badge" id="nb-pro"></i></button>
   <div class="nav-fill"></div>
   <button class="upd-nav hidden" id="nav-upd" onclick="updNavClick()"></button>
-  <a class="nav-link twitch" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener" title="Канал автора программы на Twitch"><span class="nl-ic"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M10 8.5l4 2-4 2z"/></svg></span><span class="nl-t"><b>Мой канал на Twitch</b><small>twitch.tv/beg1nnner</small></span></a>
-  <a class="nav-link thanks" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" title="Поддержать разработчика через DonationAlerts"><span class="nl-ic"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span><span class="nl-t"><b>Поблагодарить разработчика</b><small>через DonationAlerts</small></span></a>
-  <a class="nav-link contact" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" title="Предложения по улучшению и сообщения об ошибках"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-6"/></svg><span>Связь и предложения</span></a>
+  <div class="nav-links" role="group" aria-label="Автор программы">
+    <a class="nav-link" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener" data-tip="Канал автора на Twitch" aria-label="Канал автора на Twitch"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v11l-4 4h-4l-3 3H7v-3H4z"/><path d="M11 7v4M15 7v4"/></svg></a>
+    <a class="nav-link" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" data-tip="Поблагодарить разработчика (DonationAlerts)" aria-label="Поблагодарить разработчика через DonationAlerts"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.4 5.4 0 00-7.7 0L12 6.7l-1.1-1.1a5.4 5.4 0 10-7.7 7.7L12 22l8.8-8.7a5.4 5.4 0 000-7.7z"/></svg></a>
+    <a class="nav-link" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" data-tip="Связь, предложения и ошибки (Telegram)" aria-label="Связь, предложения и ошибки в Telegram"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-6"/></svg></a>
+  </div>
   <div class="nav-me" id="nav-me"><span class="nm-av" id="nm-av">?</span><span class="nm-t"><b id="nm-login">Нет входа</b><small id="nm-sub">Twitch</small></span></div>
 </nav>
 <main>
@@ -763,7 +760,7 @@
         <span class="small muted" id="fb-status" style="margin-left:auto"></span>
       </div>
       <div class="row" style="margin-top:10px;align-items:center">
-        <label class="switch"><input type="checkbox" data-s="music.fallback_liked"> Играть и понравившиеся треки ♥</label>
+        <label class="switch"><input type="checkbox" data-s="music.fallback_liked"> Играть и понравившиеся треки</label>
       </div>
     </div>
     <div class="card">
@@ -771,7 +768,7 @@
       <div id="fb-next" style="margin-top:10px"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
     </div>
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">♥ Понравившиеся</h3><button class="sm" onclick="openLiked()">Открыть список <span id="fb-liked-n"></span></button></div>
+      <div class="row"><h3 class="grow" style="margin:0">Понравившиеся</h3><button class="sm" onclick="openLiked()">Открыть список <span id="fb-liked-n"></span></button></div>
       <div class="muted small" style="margin-top:8px">Лайк ставится кнопкой «В избранное» в «Эфире», в док-панели OBS, в истории треков или горячей клавишей (по умолчанию Ctrl+Alt+L, включите в «Настройках»). Такие треки играют в резервном плейлисте, даже если ссылка на плейлист не указана.</div>
     </div>
   </div>
@@ -1633,7 +1630,24 @@ const ICON = {
   hand: svgIc('<path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8"/><path d="M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 012.8-2.8L7 15"/>'),
   radio: svgIc('<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 010 8.5M7.8 16.2a6 6 0 010-8.5M19.1 4.9a10 10 0 010 14.2M4.9 19.1a10 10 0 010-14.2"/>'),
   minus: svgIc('<path d="M5 12h14"/>', 14),
+  up: svgIc('<path d="M6 15l6-6 6 6"/>', 14),
+  down: svgIc('<path d="M6 9l6 6 6-6"/>', 14),
+  back: svgIc('<path d="M19 12H5M11 18l-6-6 6-6"/>', 15),
+  next: svgIc('<path d="M5 12h14M13 6l6 6-6 6"/>', 15),
+  key: svgIc('<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L20 3M16 7l3 3M14 9l2 2"/>'),
+  clock: svgIc('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  download: svgIc('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>'),
+  cloud: svgIc('<path d="M17.5 19H8a6 6 0 11.9-11.9A7 7 0 0119 9.5a4.8 4.8 0 01-1.5 9.5z"/>'),
+  zap: svgIc('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', 13),
+  undo: svgIc('<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/>', 14),
+  spark: svgIc('<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
+  speaker: svgIc('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/>'),
+  ext: svgIc('<path d="M7 17L17 7M8 7h9v9"/>', 13),
+  heartFill: '<svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.8 5.6a5.4 5.4 0 00-7.7 0L12 6.7l-1.1-1.1a5.4 5.4 0 10-7.7 7.7L12 22l8.8-8.7a5.4 5.4 0 000-7.7z"/></svg>',
+  plus: svgIc('<path d="M12 5v14M5 12h14"/>', 14),
 };
+// подпись с иконкой: «иконка + текст» в одной строке
+const icTx = (ic, text) => `<span class="ic-tx">${ICON[ic]}<span>${text}</span></span>`;
 const fmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
   return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(x).padStart(2,"0"); };
 const base = () => location.origin.replace("localhost", "127.0.0.1");
@@ -1825,7 +1839,7 @@ function toggleNav() {
   applyNav();
 }
 window.addEventListener("resize", applyNav); applyNav();
-document.querySelectorAll("nav button[data-p], nav .nav-link").forEach(b => { const t = b.querySelector("span:not(.nl-ic), .nl-t b"); if (t && !b.title) b.title = t.textContent.trim(); });
+document.querySelectorAll("nav button[data-p]").forEach(b => { const t = b.querySelector("span"); if (t && !b.title) b.title = t.textContent.trim(); });
 // ---------- навигация ----------
 document.querySelectorAll("nav button[data-p]").forEach(b => b.onclick = () => go(b.dataset.p, b.dataset.sub || (b.dataset.p === "chat" ? "cmds" : "")));
 const CRUMBS = {live:"Панель управления", music:"Эфир", chat:"Эфир", alerts:"Эфир", events:"Интерактив", votes:"Интерактив", captions:"Интерактив", settings:"Система", pro:"Система"};
@@ -1981,12 +1995,12 @@ function renderUpdate(u) {
   if (show) {
     const act = u.downloading
       ? `<div style="min-width:220px"><div class="small">${esc(u.status)} ${u.progress}%</div><div class="bar" style="margin:6px 0 0"><i style="width:${u.progress}%"></i></div></div>`
-      : (u.installer ? `<button onclick="updInstall()">⬇ Обновить${u.size_mb ? " (" + u.size_mb + " МБ)" : ""}</button>`
-                     : `<a href="${esc(u.page)}" target="_blank" rel="noopener" style="font-weight:600">Открыть страницу релиза ↗</a>`)
+      : (u.installer ? `<button class="primary" onclick="updInstall()">${ICON.download}<span>Обновить${u.size_mb ? " (" + u.size_mb + " МБ)" : ""}</span></button>`
+                     : `<a href="${esc(u.page)}" target="_blank" rel="noopener" style="font-weight:600">Открыть страницу релиза ${ICON.ext}</a>`)
         + (u.notes ? `<button class="sm" onclick="UPD_NOTES=!UPD_NOTES;renderUpdate(ST.update)">${UPD_NOTES ? "Скрыть" : "Что нового"}</button>` : "")
         + `<button class="sm" onclick="UPD_HIDE='${esc(u.latest)}';renderUpdate(ST.update)">Позже</button>`
         + `<button class="sm" onclick="updSkip('${esc(u.latest)}')">Пропустить версию</button>`;
-    const html = `<div class="t"><b>🎉 Доступна новая версия ${esc(u.latest)}</b><div class="muted small">У вас ${esc(u.current)}. Обновление установится в ту же папку, настройки сохранятся, программа перезапустится сама.</div></div>${act}`;
+    const html = `<div class="t"><b class="ic-tx">${ICON.party}<span>Доступна новая версия ${esc(u.latest)}</span></b><div class="muted small">У вас ${esc(u.current)}. Обновление установится в ту же папку, настройки сохранятся, программа перезапустится сама.</div></div>${act}`;
     if (bar.dataset.html !== html) { bar.innerHTML = html; bar.dataset.html = html; }
     if (UPD_NOTES && notes.dataset.v !== u.latest) { notes.textContent = u.notes; notes.dataset.v = u.latest; }
   }
@@ -1998,8 +2012,8 @@ function renderUpdate(u) {
   const nb = $("nav-upd");
   nb.classList.toggle("hidden", !u.available);
   if (u.available) {
-    const html = u.downloading ? `⏳ Обновление ${u.progress}%<small>${esc(u.status)}</small>`
-                               : `⬇ Обновить<small>до версии ${esc(u.latest)}</small>`;
+    const html = u.downloading ? `<i class="spin" aria-hidden="true"></i>Обновление <span class="num">${u.progress}%</span><small>${esc(u.status)}</small>`
+                               : `${ICON.download}Обновить<small>до версии ${esc(u.latest)}</small>`;
     if (nb.innerHTML !== html) nb.innerHTML = html;
     nb.disabled = !!u.downloading;
   }
@@ -2020,7 +2034,10 @@ async function updSkip(v) {
 
 // ---------- история треков ----------
 let MH_T = null, MH_ITEMS = [];
-const SRC_ICON = {youtube: "▶️", yandex: "🟡", spotify: "🟢", manual: "✋"};
+// источник трека — линейная иконка с подписью для экранного диктора
+const SRC_ICON = {youtube: `<i class="src-ic yt" title="YouTube">${ICON.youtube}</i>`, yandex: `<i class="src-ic ya" title="Яндекс Музыка">${ICON.yandex}</i>`,
+  spotify: `<i class="src-ic sp" title="Spotify">${ICON.spotify}</i>`, manual: `<i class="src-ic mn" title="Добавлен вручную">${ICON.hand}</i>`,
+  fallback: `<i class="src-ic fb" title="Резервный плейлист">${ICON.radio}</i>`};
 function fmtLen(s) { s = Math.round(s || 0); return s ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : ""; }
 function fmtWhen(ts) {
   const d = new Date(ts * 1000), today = new Date().toDateString() === d.toDateString();
@@ -2034,9 +2051,9 @@ async function loadHistory(more) {
   MH_ITEMS = more ? MH_ITEMS.concat(r.items) : r.items;
   $("mh-total").textContent = r.total ? `Треков: ${r.total}` : "";
   $("mh-list").innerHTML = MH_ITEMS.map((t, i) => `<tr><td class="small muted">${fmtWhen(t.ts)}</td>
-      <td>${t.fallback ? "📻 " : (SRC_ICON[t.source] || "") + " "}${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a>` : esc(t.title)}</td>
+      <td>${t.fallback ? SRC_ICON.fallback : (SRC_ICON[t.source] || "")}${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.title)}</a>` : esc(t.title)}</td>
       <td>${t.fallback ? '<span class="muted small">резервный плейлист</span>' : esc(t.requester || "—")}</td><td class="small muted">${fmtLen(t.duration)}</td>
-      <td style="text-align:right;white-space:nowrap">${t.vid ? `<button class="sm ${LIKED.has(t.vid) ? "liked" : ""}" title="Понравился — в резервный плейлист" onclick="likeHist(${i}, this)">${LIKED.has(t.vid) ? "♥" : "♡"}</button>` : ""}
+      <td style="text-align:right;white-space:nowrap">${t.vid ? `<button class="sm ${LIKED.has(t.vid) ? "liked" : ""}" title="Понравился — в резервный плейлист" aria-label="Понравился — в резервный плейлист" aria-pressed="${LIKED.has(t.vid)}" onclick="likeHist(${i}, this)">${LIKED.has(t.vid) ? ICON.heartFill : ICON.heart}</button>` : ""}
         <button class="sm" title="Добавить в очередь заново" onclick="requeue(${i}, this)">＋ В очередь</button></td></tr>`).join("")
     || `<tr><td colspan="5">${emptyBox("За этот период треков нет", "Выберите другой период или включите «Резервный плейлист» в фильтре.")}</td></tr>`;
   $("mh-more").classList.toggle("hidden", MH_ITEMS.length >= r.total);
@@ -2045,25 +2062,25 @@ async function loadHistory(more) {
 let LIKED = new Set(), LIKED_ITEMS = [];
 async function loadLikedSet() { try { LIKED_ITEMS = (await api("/music/liked")).items; LIKED = new Set(LIKED_ITEMS.map(x => x.vid)); } catch (e) {} }
 async function likeNow() {
-  try { const r = await api("/music/like", {}); toast((r.liked ? "♥ " : "♡ ") + r.message); poll(); } catch (e) {}
+  try { const r = await api("/music/like", {}); toast(r.message); poll(); } catch (e) {}
 }
 async function likeHist(i, btn) {
   const t = MH_ITEMS[i]; if (!t || !t.vid) return;
   try {
     const r = await api("/music/like", {vid: t.vid, title: t.title, url: t.url, source: t.source, duration: t.duration, requester: t.requester});
     if (r.liked) LIKED.add(t.vid); else LIKED.delete(t.vid);
-    btn.textContent = r.liked ? "♥" : "♡"; btn.classList.toggle("liked", r.liked); toast((r.liked ? "♥ " : "♡ ") + r.message);
+    btn.innerHTML = r.liked ? ICON.heartFill : ICON.heart; btn.setAttribute("aria-pressed", r.liked); btn.classList.toggle("liked", r.liked); toast(r.message);
   } catch (e) {}
 }
 async function openLiked() {
   await loadLikedSet();
   const rows = LIKED_ITEMS.slice().reverse();
-  modal(`<h3 style="margin-top:0">♥ Понравившиеся треки (${rows.length})</h3>
+  modal(`<h3 style="margin-top:0">Понравившиеся треки <span class="num muted">${rows.length}</span></h3>
     <div class="muted small">Играют в резервном плейлисте, когда нет заказов (если включено «Играть и понравившиеся треки»).</div>
     <div style="max-height:60vh;overflow:auto;margin-top:10px">${rows.map(x => `<div class="list-item" data-vid="${esc(x.vid)}">
       <span class="grow">${SRC_ICON[x.source] || ""} ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title)}
         <span class="muted small">${x.requester ? "· заказ " + esc(x.requester) : ""} · ${fmtWhen(x.ts)}</span></span>
-      <button class="sm danger" onclick="unlike('${esc(x.vid)}', this)">Убрать</button></div>`).join("") || '<div class="muted">Пока пусто — нажмите «♡ Лайк», когда играет трек, который нравится.</div>'}</div>
+      <button class="sm danger" onclick="unlike('${esc(x.vid)}', this)">Убрать</button></div>`).join("") || '<div class="muted">Пока пусто — нажмите «В избранное», когда играет трек, который нравится.</div>'}</div>
     <div style="text-align:right;margin-top:12px"><button onclick="closeModal()">Закрыть</button></div>`);
 }
 async function unlike(vid, btn) {
@@ -2073,7 +2090,7 @@ async function unlike(vid, btn) {
 async function requeue(i, btn) {
   const t = MH_ITEMS[i]; if (!t) return;
   btn.disabled = true; btn.textContent = "…";
-  try { const r = await api("/music/add", {query: t.url || t.title}); toast(r.message || "Трек добавлен в очередь"); btn.textContent = "✓ В очереди"; }
+  try { const r = await api("/music/add", {query: t.url || t.title}); toast(r.message || "Трек добавлен в очередь"); btn.innerHTML = icTx("check", tr("В очереди")); }
   catch (e) { btn.disabled = false; btn.textContent = "＋ В очередь"; }
 }
 function copyHistory() {
@@ -2105,25 +2122,25 @@ async function deviceLogin(kind, box, onOk) {
       или <a href="#" onclick="copy('${esc(d.uri)}');return false">скопируйте ссылку</a>.</div>
     <div class="small" style="margin-top:4px">2. Проверьте, что на странице этот код, и нажмите «Активировать» и «Разрешить»:</div>
     <div class="devcode">${esc(d.code)}</div>${botNote}
-    <div class="small" id="${box}-st"><span class="muted">⏳ Жду подтверждения на Twitch…</span></div>`;
+    <div class="small" id="${box}-st"><span class="muted ic-tx"><i class="spin" aria-hidden="true"></i><span>Жду подтверждения на Twitch…</span></span></div>`;
   DEV_T = setInterval(async () => {
     let s; try { s = await api("/twitch/device"); } catch (e) { return; }
     const st = $(box + "-st"); if (!st) { clearInterval(DEV_T); return; }
-    if (s.status === "ok") { clearInterval(DEV_T); delete el.dataset.busy; st.innerHTML = `<b style="color:#22c55e">✓ ${esc(s.message)}</b>`; toast(s.message); await loadSettings(); poll(); setTimeout(() => onOk && onOk(), 900); }
+    if (s.status === "ok") { clearInterval(DEV_T); delete el.dataset.busy; st.innerHTML = `<b class="ok ic-tx">${ICON.check}<span>${esc(s.message)}</span></b>`; toast(s.message); await loadSettings(); poll(); setTimeout(() => onOk && onOk(), 900); }
     else if (s.status === "error" || s.status === "expired") {
       clearInterval(DEV_T);
       st.innerHTML = `<span style="color:#ef4444">${esc(s.message)}</span> <button class="sm" onclick="deviceLogin('${kind}','${box}',null)">Попробовать снова</button>`;
-    } else if (s.status === "waiting") st.innerHTML = `<span class="muted">⏳ Жду подтверждения на Twitch… (код действует ещё ${Math.ceil(s.left / 60)} мин)</span>`;
+    } else if (s.status === "waiting") st.innerHTML = `<span class="muted ic-tx"><i class="spin" aria-hidden="true"></i><span>Жду подтверждения на Twitch… (код действует ещё ${Math.ceil(s.left / 60)} мин)</span></span>`;
   }, 2000);
 }
 
 // ---------- проверка связи с YouTube ----------
 async function ytCheck(box) {
   const el = $(box); el.classList.remove("hidden");
-  el.innerHTML = '<div class="chk"><span class="ic wait">⏳</span><div>Проверяю DNS, соединение и загрузчик… (до 30 секунд)</div></div>';
+  el.innerHTML = '<div class="chk"><span class="ic wait"><i class="spin" aria-hidden="true"></i></span><div>Проверяю DNS, соединение и загрузчик… (до 30 секунд)</div></div>';
   let r;
   try { r = await api("/tools/youtube-check", {}); } catch (e) { el.innerHTML = '<div class="err">Проверка не удалась</div>'; return; }
-  el.innerHTML = r.steps.map(s => `<div class="chk"><span class="ic ${s.ok ? "ok" : "bad"}">${s.ok ? "✓" : "✗"}</span>
+  el.innerHTML = r.steps.map(s => `<div class="chk"><span class="ic ${s.ok ? "ok" : "bad"}">${s.ok ? ICON.check : ICON.x}</span>
       <div><b>${esc(s.name)}</b> — ${esc(s.detail)}${s.advice ? `<div class="small muted" style="margin-top:4px">${esc(s.advice)}</div>` : ""}</div></div>`).join("")
     + `<div class="small" style="margin-top:8px;font-weight:600;color:${r.ok ? "#22c55e" : "var(--warn,#f59e0b)"}">${esc(r.summary)}</div>`;
 }
@@ -2154,23 +2171,23 @@ function wzRender() {
     body = `<div class="row" data-noi18n style="justify-content:flex-end;gap:6px;margin-bottom:-6px">
         <button class="sm ${(S && S.ui && S.ui.language === "en") ? "" : "primary"}" onclick="wzLang('ru')">Русский</button>
         <button class="sm ${(S && S.ui && S.ui.language === "en") ? "primary" : ""}" onclick="wzLang('en')">English</button></div>
-      <h2>👋 Добро пожаловать в Beg1nnnerOS</h2>
+      <h2 class="wz-h"><i class="wz-ic">${ICON.wave}</i>Добро пожаловать в Beg1nnnerOS</h2>
       <div class="muted">Четыре коротких шага — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
       <div id="wz-tw" style="margin-top:16px"></div>`;
   } else if (k === "bot") {
-    body = `<h2>💬 От чьего имени писать в чат</h2>
+    body = `<h2 class="wz-h"><i class="wz-ic">${ICON.chat}</i>От чьего имени писать в чат</h2>
       <div class="muted">Бот отвечает на команды, благодарит за фолловы и донаты.</div>
       <label class="opt"><input type="radio" name="wz-s" value="streamer" onchange="wzSender(this.value)"> <b>От моего аккаунта</b> — проще всего, ничего настраивать не нужно</label>
       <label class="opt"><input type="radio" name="wz-s" value="bot" onchange="wzSender(this.value)"> <b>Отдельный аккаунт-бот</b> — сообщения идут от бота (нужен второй аккаунт Twitch)</label>
       <div id="wz-bot" style="margin-top:8px"></div>`;
   } else if (k === "music") {
-    body = `<h2>🎵 Музыка за баллы</h2>
+    body = `<h2 class="wz-h"><i class="wz-ic">${ICON.music}</i>Музыка за баллы</h2>
       <div class="muted">Зрители заказывают треки с YouTube и Яндекс Музыки. Проверим, что YouTube доступен с вашего компьютера.</div>
-      <div style="margin-top:14px"><button class="primary" onclick="ytCheck('wz-yt')">🩺 Проверить связь с YouTube</button></div>
+      <div style="margin-top:14px"><button onclick="ytCheck('wz-yt')">${ICON.pulse}<span>Проверить связь с YouTube</span></button></div>
       <div id="wz-yt" class="hidden" style="margin-top:10px"></div>
       <div class="small muted" style="margin-top:12px">Награды для заказа музыки создаются сами в разделе «Музыка». Там же можно включить резервный плейлист — он играет, когда заказов нет.</div>`;
   } else {
-    body = `<h2>🎬 Источники в OBS</h2>
+    body = `<h2 class="wz-h"><i class="wz-ic">${ICON.film}</i>Источники в OBS</h2>
       <div class="muted">В OBS: «Источники» → «+» → <b>«Браузер»</b> → вставьте адрес. Индикатор загорится зелёным, когда источник откроется в OBS.</div>
       <div id="wz-obs" style="margin-top:12px"></div>`;
   }
@@ -2178,8 +2195,8 @@ function wzRender() {
   $("wz-body").innerHTML = `<div class="wz-steps">${bars}</div>${body}
     <div class="wz-foot"><span class="small muted grow">Шаг ${WZ.step + 1} из ${WZ_STEPS.length}</span>
       <button class="sm" onclick="closeWizard(false)">Позже</button>
-      ${WZ.step ? '<button onclick="wzGo(-1)">← Назад</button>' : ""}
-      ${last ? '<button class="primary" onclick="closeWizard(true)">Готово ✓</button>' : '<button class="primary" onclick="wzGo(1)">Далее →</button>'}</div>`;
+      ${WZ.step ? `<button onclick="wzGo(-1)">${ICON.back}<span>Назад</span></button>` : ""}
+      ${last ? '<button class="primary" onclick="closeWizard(true)">Готово</button>' : `<button class="primary" onclick="wzGo(1)"><span>Далее</span>${ICON.next}</button>`}</div>`;
   if (k === "bot") {
     const cur = WZ.sender || (S && S.twitch ? S.twitch.sender : "streamer") || "streamer";
     const inp = document.querySelector(`input[name=wz-s][value=${cur}]`); if (inp) inp.checked = true;
@@ -2191,10 +2208,10 @@ function wzRefresh(force) {
   const k = WZ_STEPS[WZ.step];
   if (k === "twitch") {
     const el = $("wz-tw"); if (!el) return;
-    if (r.streamer.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">✓</span><div>Вход выполнен: <b>${esc(r.streamer.login)}</b>. Нажмите «Далее».</div></div>`; return; }
+    if (r.streamer.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">${ICON.check}</span><div>Вход выполнен: <b>${esc(r.streamer.login)}</b>. Нажмите «Далее».</div></div>`; return; }
     if (el.dataset.busy) return;
     if (r.quick_login) {
-      el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('streamer','wz-tw',()=>{delete $('wz-tw').dataset.busy;wzRefresh(true)})">🔑 Войти через Twitch</button>
+      el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('streamer','wz-tw',()=>{delete $('wz-tw').dataset.busy;wzRefresh(true)})">${ICON.key}<span>Войти через Twitch</span></button>
         <div class="small muted" style="margin-top:8px">Откроется страница Twitch с кодом — нужно только нажать «Разрешить». Ключи и регистрация приложения не нужны.</div>`;
     } else {
       el.innerHTML = `<div class="small">Для входа нужны ключи приложения Twitch. Откройте «Настройки → Ключи», вставьте Client ID и Client Secret (там есть инструкция), затем нажмите «Войти».</div>
@@ -2204,18 +2221,18 @@ function wzRefresh(force) {
     const el = $("wz-bot"); if (!el) return;
     const sel = (document.querySelector("input[name=wz-s]:checked") || {}).value;
     if (sel !== "bot") { el.innerHTML = ""; return; }
-    if (r.bot.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">✓</span><div>Бот подключён: <b>${esc(r.bot.login)}</b></div></div>`; return; }
+    if (r.bot.ok) { el.innerHTML = `<div class="chk"><span class="ic ok">${ICON.check}</span><div>Бот подключён: <b>${esc(r.bot.login)}</b></div></div>`; return; }
     if (el.dataset.busy) return;
-    el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('bot','wz-bot',()=>{delete $('wz-bot').dataset.busy;wzRefresh(true)})">🔑 Войти аккаунтом бота</button>`;
+    el.innerHTML = `<button class="primary" onclick="this.parentNode.dataset.busy=1;deviceLogin('bot','wz-bot',()=>{delete $('wz-bot').dataset.busy;wzRefresh(true)})">${ICON.key}<span>Войти аккаунтом бота</span></button>`;
   } else if (k === "obs") {
     const el = $("wz-obs"); if (!el) return;
     const o = r.obs || {}, ov = (S && S.overlay) || {};
     const rows = [
-      ["🎵 Плеер «Сейчас играет»", "/", `${ov.width || 800}×${ov.height || 200}`, o.player],
-      ["💬 Чат на экране", "/chat", "400×600", o.chat > 0],
-      ["✨ МедиаАлерты", "/alerts", "1920×1080, поверх всех", o.alerts > 0],
+      ["Плеер «Сейчас играет»", "/", `${ov.width || 800}×${ov.height || 200}`, o.player],
+      ["Чат на экране", "/chat", "400×600", o.chat > 0],
+      ["МедиаАлерты", "/alerts", "1920×1080, поверх всех", o.alerts > 0],
     ];
-    if (S && S.music && S.music.output === "obs") rows.push(["🔊 Музыка в OBS", "/music-obs", "1×1, «Управлять аудио через OBS»", o.music]);
+    if (S && S.music && S.music.output === "obs") rows.push(["Музыка в OBS", "/music-obs", "1×1, «Управлять аудио через OBS»", o.music]);
     el.innerHTML = rows.map(([n, path, size, on]) => `<div class="src-row"><div><b>${n}</b><div class="small muted"><code>${esc(base() + path)}</code> · размер ${size}</div></div>
       <button class="sm" onclick="copy(base()+'${path}')">Скопировать</button><span class="dot ${on ? "on" : "off"}">${on ? "● подключён" : "○ не найден"}</span></div>`).join("");
   }
@@ -2279,7 +2296,7 @@ async function poll(pushed) {
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
-  if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast("💾 " + m.restored + " — заказы зрителей не потерялись"); }
+  if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast(m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
     + (c.gain_db ? ` · громкость ${c.gain_db > 0 ? "+" : "−"}${Math.abs(c.gain_db).toFixed(1)} дБ` : "") + (c.in_obs ? " · играет в OBS" : "") : "";
@@ -2293,18 +2310,18 @@ async function poll(pushed) {
   if (Date.now() - masterBusy > 1500) { $("al-master").value = ST.alerts.volume; $("al-masterv").textContent = ST.alerts.volume; }
   setHTML("live-q", (m.queue.slice(0, 6).map((t, i) => { const col = avColor(t.requester);
     return `<div class="qrow"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="cv" style="color:${col}">${ICO_MUSIC}</span>
-    <span class="tt" data-noi18n title="${esc(t.title)}">${esc(t.title)}${t.priority === 3 ? ' <span class="pill warn">⚡</span>' : ""}</span>
+    <span class="tt" data-noi18n title="${esc(t.title)}">${esc(t.title)}${t.priority === 3 ? `<span class="pill warn prio" title="${tr("Вне очереди")}">${ICON.zap}</span>` : ""}</span>
     <span class="who">${t.requester ? `<span class="av" style="background:${col}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span>` : '<span class="muted">вручную</span>'}</span>
     <span class="d">${fmt(t.duration)}</span></div>`; }).join("") || emptyBox("Очередь пуста", "Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную в «Музыке»."))
     + (m.queue.length > 6 ? `<div class="muted small" style="padding:8px">…и ещё ${m.queue.length - 6}</div>` : ""));
   const qsec = m.queue.reduce((a, t) => a + (t.duration || 0), 0);
   $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
   $("nb-music").textContent = m.queue.length || "";
-  setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted" style="width:56px">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? " ⚡" : t.priority ? " ★" : ""}</td>
+  setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted" style="width:56px">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? `<span class="prio-ic" title="${tr("Вне очереди")}">${ICON.zap}</span>` : t.priority ? `<span class="prio-ic" title="${tr("Приоритет")}">${ICON.star}</span>` : ""}</td>
     <td><span style="display:flex;align-items:center;gap:12px"><span class="cv-sm" style="color:${avColor(t.requester)}">${ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
     <td>${t.requester ? `<span style="display:inline-flex;align-items:center;gap:8px"><span class="av" style="background:${avColor(t.requester)}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span></span>` : '<span class="muted">вручную</span>'}</td>
-    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:-1})">↑</button><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:1})">↓</button>
-    <button class="sm danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">✕${t.paid ? " ↩" : ""}</button></td></tr>`).join("")
+    <td class="row" style="flex-wrap:nowrap"><button class="ib" title="Выше" aria-label="Переместить выше" onclick="api('/music/move',{id:'${t.id}',delta:-1})">${ICON.up}</button><button class="ib" title="Ниже" aria-label="Переместить ниже" onclick="api('/music/move',{id:'${t.id}',delta:1})">${ICON.down}</button>
+    <button class="ib danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}" aria-label="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">${t.paid ? ICON.undo : ICON.trash}</button></td></tr>`).join("")
     || `<tr><td colspan="5">${emptyBox("Очередь пуста", "Зрители заказывают треки за баллы канала, или добавьте трек вручную выше.")}</td></tr>`);
   const nt = ST.next_timer;
   $("next-timer").innerHTML = nt ? `<span data-noi18n>${esc(nt.name)}</span> · <b class="mono" style="background:none;padding:0;color:var(--fg)">${fmt(nt.seconds)}</b>${nt.messages_left ? ` · ждёт ${nt.messages_left} сообщ.` : ""}` : 'таймеры — во время эфира';
@@ -2538,7 +2555,7 @@ async function loadFbNext() {
   let r; try { r = await api("/music/fallback/next"); } catch (e) { $("fb-next").innerHTML = '<span class="muted small">Недоступно</span>'; return; }
   $("fb-next-st").textContent = r.status || "";
   $("fb-next").innerHTML = (r.items || []).map((t, i) => `<div class="qrow" style="grid-template-columns:22px 40px minmax(0,1fr) 52px"><span class="n">${i + 1}</span>
-    <span class="cv" style="color:${t.liked ? "#f472b6" : "var(--accent2)"}">${ICO_MUSIC}</span><span class="tt" data-noi18n>${esc(t.title)}${t.liked ? ' <span class="pill" style="color:#f9a8d4;background:rgba(244,114,182,.12);border-color:transparent">♥</span>' : ""}</span><span class="d">${fmt(t.duration)}</span></div>`).join("")
+    <span class="cv ${t.liked ? "is-liked" : ""}">${ICO_MUSIC}</span><span class="tt"><span data-noi18n>${esc(t.title)}</span>${t.liked ? `<span class="liked-mark" title="${tr("В избранном")}">${ICON.heartFill}</span>` : ""}</span><span class="d">${fmt(t.duration)}</span></div>`).join("")
     || '<span class="muted small">Резервный плейлист выключен или пуст</span>';
 }
 function setHTML(el, html) { if (typeof el === "string") el = $(el); if (el && el._h !== html) { el._h = html; el.innerHTML = html; } }
@@ -2591,7 +2608,7 @@ async function loadCommands() {
     <span class="cl-n" data-noi18n>${esc(c.name)}${c.aliases.length ? `<small>${esc(c.aliases.join(" "))}</small>` : ""}</span>
     <span class="cl-r" data-noi18n title="${esc(c.response)}">${esc(c.response)}</span>${acc(c.access)}<span class="num muted small">${c.cooldown} с</span>${tog("custom", c.id, c.enabled)}
     <span class="cl-a"><button class="ib" title="Изменить" aria-label="Изменить ${esc(c.name)}" onclick="editCustom('${c.id}')">${EDIT_IC}</button><button class="ib" title="Удалить" aria-label="Удалить ${esc(c.name)}" data-name="${esc(c.name)}" onclick="delCustom('${c.id}',this.dataset.name)">${DEL_IC}</button></span></div>`).join("")
-    || emptyBox("Своих команд пока нет", "Например: !привет → «Привет, {user}! Добро пожаловать на канал»", "+ Создать команду", "editCustom()");
+    || emptyBox("Своих команд пока нет", "Например: !привет → «Привет, {user}! Добро пожаловать на канал»", "Создать команду", "editCustom()");
   $("c-vars").innerHTML = VARS.map(v => `<span class="pill">${v}</span>`).join(" ");
   $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<div class="std">
     <button class="std-b" onclick="editStd('${k}')" title="Изменить"><span class="num">${esc(c.name)}</span><small>${esc(c.desc)}</small></button>${tog("standard", k, c.enabled)}</div>`).join("");
@@ -2730,7 +2747,7 @@ async function loadAlerts() {
     <div class="al-b"><div class="nm"><b data-noi18n title="${esc(a.name)}">${esc(a.name)}</b><input type="checkbox" ${a.enabled ? "checked" : ""} aria-label="Включить алерт" onchange="api('/alerts/toggle',{id:'${a.id}',enabled:this.checked}).then(loadAlerts)"></div>
       <div class="meta"><span class="pill warn">● ${a.cost} баллов</span><span class="pill" data-noi18n>${esc(a.reward_title)}</span></div>
       <label class="vol"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" value="${a.volume}" aria-label="Громкость" oninput="this.nextElementSibling.textContent=this.value;api('/alerts/volume',{id:'${a.id}',volume:+this.value})"><span class="num" style="color:var(--fg);width:24px">${a.volume}</span></label>
-      <div class="act"><button class="sm" onclick="api('/alerts/test',{id:'${a.id}'}).then(()=>toast('Тестовый показ отправлен в OBS'))">▶ Тест</button><button class="sm" onclick="editAlert('${a.id}')">Изменить</button><button class="sm danger" onclick="confirmDlg({title:'Удалить алерт?',text:'Алерт и его награда на Twitch будут удалены. Это нельзя отменить.',okLabel:'Удалить алерт',danger:1}).then(ok=>ok&&api('/alerts/${a.id}',undefined,'DELETE').then(loadAlerts))">Удалить</button></div></div></div>`).join("")
+      <div class="act"><button class="sm" onclick="api('/alerts/test',{id:'${a.id}'}).then(()=>toast('Тестовый показ отправлен в OBS'))">${ICON.play}<span>Тест</span></button><button class="sm" onclick="editAlert('${a.id}')">Изменить</button><button class="sm danger" onclick="confirmDlg({title:'Удалить алерт?',text:'Алерт и его награда на Twitch будут удалены. Это нельзя отменить.',okLabel:'Удалить алерт',danger:1}).then(ok=>ok&&api('/alerts/${a.id}',undefined,'DELETE').then(loadAlerts))">Удалить</button></div></div></div>`).join("")
     + `<button class="al-new" onclick="editAlert()"><span class="pl">+</span>Новый МедиаАлерт<span class="small muted">картинка, GIF, видео или звук</span></button>`;
 }
 let AE = null;
@@ -2994,7 +3011,7 @@ function renderThemes() {
     const used = (t.kind === "player" ? S.overlay.theme : S.chat_overlay.theme) === "custom:" + t.id;
     const baseName = (t.kind === "player" ? PLAYER_BASES : CHAT_BASE_NAMES)[t.base] || t.base;
     return `<tr><td><b data-noi18n>${esc(t.name)}</b> <span class="small muted">custom:${esc(t.id)}</span></td><td>${t.kind === "player" ? "Плеер" : "Чат в OBS"}</td>
-      <td>${esc(baseName)}</td><td>${used ? '<span class="ok">✓ выбрана</span>' : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
+      <td>${esc(baseName)}</td><td>${used ? `<span class="ok ic-tx">${ICON.check}<span>выбрана</span></span>` : `<button class="sm" onclick="applyTheme('${t.id}','${t.kind}')">Применить</button>`}</td>
       <td style="text-align:right"><button class="sm" onclick="editTheme('${t.id}')">Изменить</button>
       <button class="sm" title="Копия" onclick="themeDuplicate('${t.id}')">⧉</button>
       <button class="ib danger" title="Удалить" aria-label="Удалить тему" onclick="confirmDlg({title:'Удалить тему?',text:'Тема пропадёт из списка, а оверлеи с ней вернутся к стандартному виду. Это нельзя отменить.',okLabel:'Удалить тему',danger:1}).then(async ok=>{if(!ok)return;await api('/pro/themes/${t.id}',undefined,'DELETE');await loadSettings();renderThemes();})">${ICON.trash}</button></td></tr>`;
@@ -3018,7 +3035,7 @@ function parseColor(c, defHex) {
 }
 // Схема конструктора тем: раздел → поля. kinds — для каких тем поле показывается.
 const TH_SECTIONS = [
-  ["🎨 Цвета и фон", [
+  ["Цвета и фон", [
     {k: "accent", l: "Акцент", t: "color", d: "#9146ff"},
     {k: "accent2", l: "Второй акцент (градиенты)", t: "color", d: "#f472b6"},
     {k: "bg_type", l: "Тип фона", t: "sel", d: "solid", o: {solid: "Сплошной", gradient: "Градиент", glass: "Стекло (размытие)", none: "Без фона"}},
@@ -3031,7 +3048,7 @@ const TH_SECTIONS = [
     {k: "muted_color", l: "Второстепенный текст", t: "color", d: "#c9c3dc"},
     {k: "mention_color", l: "Упоминания (@ник)", t: "color", d: "#ffd166", kinds: ["chat"]},
   ]],
-  ["🔲 Форма и рамка", [
+  ["Форма и рамка", [
     {k: "radius", l: "Скругление", t: "range", min: 0, max: 60, u: " px", d: 14},
     {k: "padding", l: "Внутренние отступы", t: "range", min: 0, max: 40, u: " px", d: 14},
     {k: "gap", l: "Расстояние между блоками", t: "range", min: 0, max: 40, u: " px", d: 8},
@@ -3040,7 +3057,7 @@ const TH_SECTIONS = [
     {k: "border_style", l: "Вид рамки", t: "sel", d: "solid", o: {solid: "Сплошная", dashed: "Штрих", dotted: "Точки", double: "Двойная", gradient: "Градиент акцентов"}},
     {k: "border_color", l: "Цвет рамки", t: "color", d: "#ffffff"},
   ]],
-  ["🔤 Текст", [
+  ["Текст", [
     {k: "font", l: "Шрифт", t: "font", d: ""},
     {k: "font_scale", l: "Размер текста", t: "range", min: 60, max: 180, u: "%", d: 100},
     {k: "weight", l: "Жирность", t: "sel", d: "700", o: {400: "Обычный", 500: "Средний", 600: "Полужирный", 700: "Жирный", 800: "Очень жирный", 900: "Чёрный"}},
@@ -3049,13 +3066,13 @@ const TH_SECTIONS = [
     {k: "text_shadow", l: "Тень текста", t: "sel", d: "none", o: {none: "Без тени", soft: "Мягкая", outline: "Обводка", glow: "Свечение акцентом"}},
     {k: "uppercase", l: "ЗАГЛАВНЫЕ буквы", t: "check", d: false},
   ]],
-  ["✨ Тени и анимация", [
+  ["Тени и анимация", [
     {k: "shadow", l: "Тень блока", t: "sel", d: "soft", o: {none: "Без тени", soft: "Мягкая", strong: "Сильная", glow: "Свечение акцентом"}},
     {k: "shadow_color", l: "Цвет тени", t: "color", d: "#000000"},
     {k: "anim", l: "Появление", t: "sel", d: "slide-up", o: {none: "Без анимации", fade: "Проявление", "slide-up": "Снизу", "slide-left": "Слева", "slide-right": "Справа", pop: "Увеличение", bounce: "Прыжок"}},
     {k: "anim_ms", l: "Скорость появления", t: "range", min: 100, max: 2000, step: 50, u: " мс", d: 400},
   ]],
-  ["🎵 Плеер", [
+  ["Плеер", [
     {k: "show_label", l: "Надпись над названием", t: "check", d: true},
     {k: "label_text", l: "Текст надписи", t: "text", d: "", ph: "Сейчас играет"},
     {k: "eq", l: "Анимированный эквалайзер", t: "check", d: false},
@@ -3067,7 +3084,7 @@ const TH_SECTIONS = [
     {k: "queue_label", l: "Заголовок очереди", t: "text", d: "", ph: "Далее"},
     {k: "queue_scale", l: "Размер очереди", t: "range", min: 60, max: 130, u: "%", d: 100},
   ], ["player"]],
-  ["💬 Сообщения чата", [
+  ["Сообщения чата", [
     {k: "name_color", l: "Цвет ника", t: "sel", d: "user", o: {user: "Цвет зрителя из Twitch", accent: "Акцент", text: "Как текст"}},
     {k: "name_layout", l: "Ник", t: "sel", d: "inline", o: {inline: "В строку с сообщением", above: "Над сообщением"}},
     {k: "show_colon", l: "Двоеточие после ника", t: "check", d: true},
@@ -3121,10 +3138,11 @@ function thRenderFields() {
       return `<label class="f"><span>${f.l}</span><input id="${id}" value="${esc(v)}" maxlength="30" placeholder="${esc(f.ph || "")}" oninput="thSet('${f.k}',this.value)"></label>`;
     }).join("");
     const open = THF_OPEN.has(si) ? " open" : "";
-    return `<details class="th-sec" data-si="${si}"${open} ontoggle="this.open?THF_OPEN.add(${si}):THF_OPEN.delete(${si})"><summary>${title}</summary><div class="th-grid">${items}</div></details>`;
+    return `<details class="th-sec" data-si="${si}"${open} ontoggle="this.open?THF_OPEN.add(${si}):THF_OPEN.delete(${si})"><summary>${icTx(TH_SEC_IC[title] || "frame", title)}</summary><div class="th-grid">${items}</div></details>`;
   }).join("") + `<datalist id="th-fonts">${["Segoe UI", "Arial", "Verdana", "Tahoma", "Trebuchet MS", "Georgia", "Times New Roman", "Consolas", "Courier New", "Impact", "Comic Sans MS", "Bahnschrift", "Segoe Print", "Segoe Script", "Franklin Gothic Medium", "Candara", "Corbel", "Lucida Console"].map(f => `<option>${f}</option>`).join("")}</datalist>`;
 }
 const THF_OPEN = new Set([0]);
+const TH_SEC_IC = {"Цвета и фон": "palette", "Форма и рамка": "frame", "Текст": "type", "Тени и анимация": "spark", "Плеер": "music", "Сообщения чата": "chat"};
 function thSet(k, v, rerender) {
   thDraft[k] = v;
   if (rerender || k === "bg_type") thRenderFields();
@@ -3250,7 +3268,7 @@ async function announceTest(target) {
 async function streamSummary(id) {
   let r; try { r = await api("/stream-summary/" + encodeURIComponent(id)); } catch (e) { return; }
   SUMMARY_ID = id;
-  $("modal-body").innerHTML = `<h3 style="margin-top:0">📋 Итоги стрима</h3>
+  $("modal-body").innerHTML = `<h3 style="margin-top:0">Итоги стрима</h3>
     <textarea id="sum-text" rows="16" style="width:100%;font-size:13.5px">${esc(r.text)}</textarea>
     <div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="primary" onclick="copy($('sum-text').value);toast('Итоги скопированы')">Скопировать</button>
       <button onclick="sendSummary('telegram')">Отправить в Telegram</button><button onclick="sendSummary('discord')">Отправить в Discord</button>
@@ -3265,9 +3283,9 @@ async function sendSummary(target) {
 async function showStream(id) {
   const d = await api("/pro/streams/" + encodeURIComponent(id));
   const s = d.summary;
-  const evName = {donation: "💸 Донат", follow: "💜 Фоллов", sub: "⭐ Подписка", cheer: "💎 Биты", raid: "🚀 Рейд", clip: "🎬 Клип"};
+  const evName = {donation: icTx("money", "Донат"), follow: icTx("heart", "Фоллов"), sub: icTx("star", "Подписка"), cheer: icTx("diamond", "Биты"), raid: icTx("rocket", "Рейд"), clip: icTx("film", "Клип")};
   $("ss-detail").innerHTML = `<div class="row"><h3 class="grow" style="margin:0">${esc(s.title || "Стрим")} · ${dt(s.started)}</h3>
-      <button class="sm" onclick="streamSummary('${id}')">📋 Итоги стрима</button>
+      <button class="sm" onclick="streamSummary('${id}')">${ICON.list}<span>Итоги стрима</span></button>
       <button class="sm" onclick="$('ss-detail').classList.add('hidden')">Закрыть</button></div>
     <div class="small muted">${esc(s.category)} · ${fmt(s.duration)} · пик ${s.peak}, в среднем ${s.avg} зрителей</div>
     <h3 style="margin-top:14px">Зрители</h3>${viewersChart(d.viewers)}
@@ -3302,10 +3320,10 @@ function renderGiveaway(g) {
   $("gv-run").classList.toggle("hidden", g.status === "idle");
   if (g.status === "idle") { if (!$("gv-prize").value) gvFill(); return; }
   const how = [g.keyword && `слово ${esc(g.keyword)}`, g.reward_title && `награда «${esc(g.reward_title)}»`].filter(Boolean).join(" или ");
-  $("gv-info").innerHTML = `🎁 <span data-noi18n>${esc(g.prize)}</span> <span class="small muted">· ${how} · участников: ${g.count}${g.tickets !== g.count ? ` (билетов ${g.tickets})` : ""}${g.ends_in ? ` · до закрытия ${fmt(g.ends_in)}` : ""}</span>`;
+  $("gv-info").innerHTML = `<span class="gv-ic">${ICON.gift}</span><span data-noi18n>${esc(g.prize)}</span> <span class="small muted">· ${how} · участников: ${g.count}${g.tickets !== g.count ? ` (билетов ${g.tickets})` : ""}${g.ends_in ? ` · до закрытия ${fmt(g.ends_in)}` : ""}</span>`;
   $("gv-close").classList.toggle("hidden", g.status !== "open");
   $("gv-winners-list").innerHTML = g.winners.length ? "<b>Победители:</b> " + g.winners.map(w =>
-    `<span class="pill ok" style="font-size:13px">🏆 ${esc(w.name)}${w.sub ? " ⭐" : ""}</span> <button class="sm" onclick="api('/pro/giveaway/reroll',{login:'${esc(w.login)}'}).then(loadGiveaway)">Перевыбрать</button>`).join(" ") : "";
+    `<span class="pill ok win-pill">${ICON.trophy}<span data-noi18n>${esc(w.name)}</span>${w.sub ? `<span title="${tr("Подписчик")}">${ICON.star}</span>` : ""}</span> <button class="sm" onclick="api('/pro/giveaway/reroll',{login:'${esc(w.login)}'}).then(loadGiveaway)">Перевыбрать</button>`).join(" ") : "";
   $("gv-entries").innerHTML = g.entries.map(e => `<div>${esc(e.name)}${e.sub ? ' <span class="pill">подписчик</span>' : ""}${e.tickets > 1 ? ` <span class="muted">×${e.tickets}</span>` : ""}</div>`).join("") || '<span class="muted">Пока никого</span>';
 }
 
@@ -3340,7 +3358,7 @@ function renderCloud() {
   $("cl-file").textContent = f.exists ? `В облаке: копия от ${f.ts ? dt(f.ts) : "?"} с ПК «${f.machine || "?"}»${f.secrets ? ", с ключами" : ""}` : (f.path ? "Копии в облаке пока нет" : "");
   const offer = f.exists && f.offer;
   $("cloud-offer").classList.toggle("hidden", !offer);
-  if (offer) $("cloud-offer").innerHTML = `<div class="row"><b class="grow">☁️ В облаке есть копия профиля с компьютера «${esc(f.machine)}» от ${dt(f.ts)}. Восстановить её здесь?</b>
+  if (offer) $("cloud-offer").innerHTML = `<div class="row"><b class="grow ic-tx">${ICON.cloud}<span>В облаке есть копия профиля с компьютера «${esc(f.machine)}» от ${dt(f.ts)}. Восстановить её здесь?</span></b>
     <button class="primary sm" onclick="cloudRestore()">Восстановить</button><button class="sm" onclick="$('cloud-offer').classList.add('hidden')">Не сейчас</button></div>`;
 }
 function pickCloud(path) { $("cl-folder").value = path; queueSave($("cl-folder"), 100); }
@@ -3372,7 +3390,7 @@ setInterval(async () => {
 }, 2000);
 // при запуске: предложение восстановить облачную копию
 setTimeout(() => loadPro().then(() => {
-  if (PRO && PRO.cloud.file && PRO.cloud.file.offer) toast("☁️ В облаке есть копия профиля с другого компьютера — см. «Дополнительно» → «Профили и облако»");
+  if (PRO && PRO.cloud.file && PRO.cloud.file.offer) toast("В облаке есть копия профиля с другого компьютера — см. «Дополнительно» → «Профили и облако»");
 }), 2500);
 
 // ================= ОПРОСЫ И ПРОГНОЗЫ =================
@@ -3396,7 +3414,7 @@ function vtSetOpts(box, vals, max) {
 }
 function vtOptRow(box, v, i) {
   return `<div class="vt-opt"><span class="n">${i + 1}</span><input maxlength="25" value="${esc(v)}" placeholder="Вариант ${i + 1}">
-    <button class="sm" title="Убрать" onclick="vtDelOpt('${box}',this)">✕</button></div>`;
+    <button class="ib" title="Убрать" aria-label="Убрать вариант" onclick="vtDelOpt('${box}',this)">${ICON.x}</button></div>`;
 }
 function vtOptBtn(box) {
   const el = $(box), n = el.querySelectorAll(".vt-opt").length, max = +el.dataset.max;
@@ -3465,9 +3483,9 @@ function vtRender() {
   else if (!v.scopes.polls || !v.scopes.predictions)
     warn.push(`Нужны новые права Twitch для опросов и прогнозов. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button>`);
   [v.poll_error, v.prediction_error].filter(Boolean).forEach(e => warn.push(esc(e)));
-  $("vt-warn").innerHTML = warn.map(w => `<div class="card hl" style="margin-bottom:12px">⚠️ ${w}</div>`).join("");
+  $("vt-warn").innerHTML = warn.map(w => `<div class="notice warn">${ICON.alert}<div>${w}</div></div>`).join("");
   const tpl = (kind, list) => list.map((t, i) => `<button class="vt-tpl" onclick="vtUseTpl('${kind}',${i})" title="${esc((t.choices || t.outcomes || []).join(" / "))}">${esc(t.title)}
-    <span onclick="vtDelTpl('${kind}',${i},event)" title="Удалить шаблон" style="opacity:.5;margin-left:4px">✕</span></button>`).join("") || `<span class="muted small">нет — заполните форму и нажмите «Сохранить как шаблон»</span>`;
+    <span class="tpl-x" role="button" tabindex="0" aria-label="Удалить шаблон" onclick="vtDelTpl('${kind}',${i},event)" onkeydown="if(event.key==='Enter'){vtDelTpl('${kind}',${i},event)}" title="Удалить шаблон">${ICON.x}</span></button>`).join("") || `<span class="muted small">нет — заполните форму и нажмите «Сохранить как шаблон»</span>`;
   $("vt-poll-tpls").innerHTML = tpl("poll", v.templates.polls);
   $("vt-pred-tpls").innerHTML = tpl("prediction", v.templates.predictions);
 
@@ -3480,7 +3498,7 @@ function vtRender() {
     const st = p.active ? `<span class="vt-st on">идёт · осталось ${vtLeft(p.ends)}</span>` : `<span class="vt-st">${p.status === "TERMINATED" ? "завершён досрочно" : "завершён"}</span>`;
     $("vt-poll-live").innerHTML = `<div class="vt-live"><h4>${esc(p.title)} ${st}</h4>
       <div class="muted small">${p.total} ${p.total % 10 === 1 && p.total % 100 !== 11 ? "голос" : "голосов"}${p.points ? ` · доп. голос за ${vtNum(p.points_per_vote)} баллов` : ""}</div>
-      ${p.choices.map(c => `<div class="vt-row ${!p.active && c.votes === max && max > 0 ? "win" : ""}"><div class="t"><span>${!p.active && c.votes === max && max > 0 ? "🏆 " : ""}${esc(c.title)}</span><b>${c.pct}% · ${c.votes}</b></div>
+      ${p.choices.map(c => `<div class="vt-row ${!p.active && c.votes === max && max > 0 ? "win" : ""}"><div class="t"><span>${!p.active && c.votes === max && max > 0 ? ICON.trophy : ""}<span data-noi18n>${esc(c.title)}</span></span><b class="num">${c.pct}% · ${c.votes}</b></div>
         <div class="vt-bar"><i style="width:${c.pct}%"></i></div></div>`).join("")}
       <div class="vt-acts">${p.active ? `<button class="danger" onclick="confirmDlg({title:'Завершить опрос досрочно?',text:'Голосование остановится сейчас, итог будет подведён по уже отданным голосам.',okLabel:'Завершить',danger:1}).then(ok=>ok&&vtDo('/votes/poll/end',{},this))">${ICON.stop}<span>Завершить сейчас</span></button>`
         : `<button class="sm" onclick="VT_HIDE.add('${p.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
@@ -3496,12 +3514,12 @@ function vtRender() {
   $("vt-pred-live").innerHTML = `<div class="vt-live"><h4>${esc(r.title)} ${st}</h4>
     <div class="muted small">${r.total_users} участн. · ${vtNum(r.total_points)} баллов в банке${live ? " · нажмите на исход, чтобы выбрать победителя" : ""}</div>
     ${r.outcomes.map(o => `<div class="vt-row ${live ? "pick" : ""} ${o.id === VT_PICK ? "sel" : ""} ${r.winner === o.id ? "win" : ""}" ${live ? `onclick="VT_PICK='${o.id}';vtRender()"` : ""}>
-      <div class="t"><span>${r.winner === o.id ? "🏆 " : ""}${esc(o.title)}</span><b>${o.pct}% · ${vtNum(o.points)} 🪙 · ${o.users} чел.${o.ratio ? ` · 1:${o.ratio}` : ""}</b></div>
+      <div class="t"><span>${r.winner === o.id ? ICON.trophy : ""}<span data-noi18n>${esc(o.title)}</span></span><b class="num">${o.pct}% · ${vtNum(o.points)} <span class="coin" title="${tr("баллов")}">${ICON.coin}</span> · ${o.users} чел.${o.ratio ? ` · 1:${o.ratio}` : ""}</b></div>
       <div class="vt-bar"><i style="width:${o.pct}%;background:${o.color === "pink" ? "#f472b6" : o.color === "blue" ? "#60a5fa" : "var(--accent)"}"></i></div>
       ${o.top.length ? `<div class="muted small" style="margin-top:3px">топ: ${o.top.map(t => `${esc(t.name)} ${vtNum(t.points)}`).join(", ")}</div>` : ""}</div>`).join("")}
     <div class="vt-acts">${live ? `
-      ${r.active ? `<button onclick="vtDo('/votes/prediction/lock',{},this)">🔒 Закрыть ставки</button>` : ""}
-      <button class="primary" onclick="vtResolve(this)">🏆 Выбрать победителя</button>
+      ${r.active ? `<button onclick="vtDo('/votes/prediction/lock',{},this)">${ICON.lock}<span>Закрыть ставки</span></button>` : ""}
+      <button class="primary" onclick="vtResolve(this)">${ICON.trophy}<span>Выбрать победителя</span></button>
       <button class="danger" onclick="confirmDlg({title:'Отменить прогноз?',text:'Все поставленные баллы вернутся зрителям.',okLabel:'Отменить прогноз',cancelLabel:'Не отменять',danger:1}).then(ok=>ok&&vtDo('/votes/prediction/cancel',{},this))">Отменить и вернуть баллы</button>`
       : `<button class="sm" onclick="VT_HIDE.add('${r.id}');vtRender()">Скрыть результат</button>`}</div></div>`;
 }
@@ -3528,12 +3546,12 @@ async function modTest() {
 }
 async function modUnban(id, btn) {
   btn.disabled = true;
-  try { const r = await api("/mod/unban", {user_id: id}); toast(r.message); btn.textContent = "✓ снят"; } catch (e) { btn.disabled = false; }
+  try { const r = await api("/mod/unban", {user_id: id}); toast(r.message); btn.innerHTML = icTx("check", tr("снят")); } catch (e) { btn.disabled = false; }
 }
 async function loadMod() {
   let m; try { m = await api("/mod"); } catch (e) { return; }
-  $("mod-warn").innerHTML = !m.ready ? `<div class="card hl">⚠️ Сначала войдите в Twitch.</div>`
-    : !m.scopes ? `<div class="card hl">⚠️ Чтобы удалять сообщения и давать таймауты, программе нужны права модератора. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button></div>` : "";
+  $("mod-warn").innerHTML = !m.ready ? `<div class="notice warn">${ICON.alert}<div>Сначала войдите в Twitch.</div></div>`
+    : !m.scopes ? `<div class="notice warn">${ICON.alert}<div>Чтобы удалять сообщения и давать таймауты, программе нужны права модератора. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button></div></div>` : "";
   $("mod-count").textContent = m.count ? `Срабатываний сегодня: ${m.count}` : "Сегодня нарушений не было";
   $("mod-list").innerHTML = m.items.map(i => {
     const d = new Date(i.ts * 1000);
@@ -3550,7 +3568,7 @@ let IMP = {src: "nightbot", items: []};
 const IMP_SRC = {nightbot: "Nightbot", streamelements: "StreamElements", moobot: "moo.bot", text: "Вставить текстом"};
 function openImport() {
   const login = (ST && ST.ready && ST.ready.streamer && ST.ready.streamer.login) || "";
-  modal(`<h3 style="margin-top:0">⇩ Импорт своих команд из другого бота</h3>
+  modal(`<h3 style="margin-top:0">Импорт своих команд из другого бота</h3>
     <div class="muted small">Программа возьмёт публичный список команд канала (тот, что виден зрителям по !commands), переведёт переменные в формат Beg1nnnerOS и покажет, что добавится. Ничего не добавится без вашего подтверждения.</div>
     <div class="imp-src">${Object.entries(IMP_SRC).map(([k, t]) => `<button class="sm ${k === IMP.src ? "on" : ""}" onclick="impSrc('${k}')">${t}</button>`).join("")}</div>
     <div id="imp-in"></div>
@@ -3594,7 +3612,7 @@ function impRender() {
         <span class="imp-tag">${esc(ACCESS[x.access] || x.access)}</span>${x.cooldown ? `<span class="imp-tag">кулдаун ${x.cooldown} с</span>` : ""}
         ${x.status !== "new" ? `<span class="imp-tag" style="color:#f87171">${esc(x.reason)}</span>` : ""}
         <div class="rs">${esc(x.response)}</div>
-        ${x.warnings.map(w => `<div class="imp-w">⚠ ${esc(w)}</div>`).join("")}
+        ${x.warnings.map(w => `<div class="imp-w">${ICON.alert}<span>${esc(w)}</span></div>`).join("")}
         ${x.original && x.original !== x.response ? `<details class="small muted"><summary style="cursor:pointer">как было</summary><code style="white-space:pre-wrap">${esc(x.original)}</code></details>` : ""}
       </div></div>`).join("")}</div>`;
   impBtn();
@@ -3649,20 +3667,20 @@ function capRender() {
   $("cap-model-f").classList.toggle("hidden", eng === "vosk");
   $("cap-gpu-f").classList.toggle("hidden", eng === "vosk");
   $("cap-accel").innerHTML = (c.accel ? `Сейчас работает на: <b>${esc(c.accel)}</b>` + (c.speed ? ` · быстрее реального времени в <b>${c.speed}</b> раз` : "") : "")
-    + (c.restart_needed ? `<div style="color:#fbbf24;margin-top:4px">⚠ Смена ускорения заработает после перезапуска программы</div>` : "");
+    + (c.restart_needed ? `<div class="warn ic-tx" style="margin-top:4px">${ICON.alert}<span>Смена ускорения заработает после перезапуска программы</span></div>` : "");
   const sel = $("cap-model"), want = getPath(S, "captions.model") || "base";
   if (sel.dataset.sig !== JSON.stringify(c.whisper_models)) {
-    sel.innerHTML = c.whisper_models.map(m => `<option value="${m.key}">${esc(m.title)}${m.ready ? " ✓" : ""}</option>`).join("");
+    sel.innerHTML = c.whisper_models.map(m => `<option value="${m.key}">${esc(m.title)}${m.ready ? " · " + tr("скачана") : ""}</option>`).join("");
     sel.value = sel.dataset.touched ? sel.value : want; sel.dataset.sig = JSON.stringify(c.whisper_models);
   }
   const key = eng === "vosk" ? (document.querySelector('[data-s="captions.lang"]').value === "en" ? "en" : "ru") : sel.value;
   const m = models.find(x => x.key === key) || models[0];
   const dl = c.download;
   $("cap-dl").classList.toggle("hidden", !!(m && m.ready) || dl.active);
-  $("cap-dl").textContent = "⬇ Скачать модель" + (m ? ` (${m.title.split("·")[1] || ""})` : "");
+  $("cap-dl").innerHTML = ICON.download + "<span>" + esc(tr("Скачать модель") + (m ? ` (${(m.title.split("·")[1] || "").trim()})` : "")) + "</span>";
   $("cap-dl-box").innerHTML = dl.active ? `<div class="small muted">Скачиваю модель… ${Math.round(dl.progress * 100)}%</div><div class="bar"><i style="width:${Math.round(dl.progress * 100)}%"></i></div>`
     : dl.error ? `<span class="small" style="color:#f87171">${esc(dl.error)}</span>`
-    : m && m.ready ? `<span class="small" style="color:#22c55e">✓ Модель скачана</span>` : "";
+    : m && m.ready ? `<span class="small ok ic-tx">${ICON.check}<span>Модель скачана</span></span>` : "";
   const ln = (c.lines || []).slice(-3);
   $("cap-live").innerHTML = ln.map(l => `<div>${esc(l.text)}${l.en ? ` <span class="muted">— ${esc(l.en)}</span>` : ""}</div>`).join("")
     + (c.partial ? `<div class="muted"><i>${esc(c.partial)}</i></div>` : "") || '<span class="muted">пока тишина</span>';

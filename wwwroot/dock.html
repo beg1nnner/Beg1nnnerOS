@@ -12,6 +12,13 @@
   .card { padding:16px; margin-bottom:12px; border-radius:16px; }
   .micro { font:500 10.5px var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
   .num { font-family:var(--mono); }
+  #dock-note { position:fixed; left:12px; right:12px; bottom:12px; z-index:140; display:flex; gap:8px; align-items:center; padding:9px 12px; border-radius:12px;
+    background:var(--panel); border:1px solid var(--line); box-shadow:var(--pop-shadow); font-size:12px; opacity:0; transform:translateY(6px); pointer-events:none;
+    transition:opacity var(--t) var(--ease), transform var(--t) var(--ease); }
+  #dock-note.show { opacity:1; transform:none; pointer-events:auto; }
+  #dock-note svg { flex:none; color:var(--ok); } #dock-note.err svg { color:var(--err); }
+  .modal.dlg { padding:18px; } .dlg .dlg-acts { margin-top:16px; }
+  button .ic, .ic-tx .ic { flex:none; } button:has(> .ic) { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
   .dnp-top { display:flex; gap:12px; align-items:center; }
   .dnp-cv { position:relative; width:60px; height:60px; border-radius:12px; flex:none; background:color-mix(in srgb, var(--accent) 14%, var(--bg));
     border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); display:flex; align-items:center; justify-content:center; }
@@ -89,7 +96,7 @@
 <div id="t-hist" class="hidden">
   <div class="card">
     <div class="row"><select id="hscope" class="grow"><option value="stream">Этот стрим</option><option value="today">Сегодня</option><option value="week">7 дней</option></select>
-      <button class="sm" id="hcopy" title="Скопировать список">📋</button></div>
+      <button class="sm" id="hcopy" title="Скопировать список" aria-label="Скопировать список"></button></div>
     <div id="hlist" style="margin-top:8px"></div>
   </div>
 </div>
@@ -99,7 +106,7 @@
     <div class="row"><span class="grow">Общая громкость алертов</span><span id="mv" class="small muted"></span></div>
     <input type="range" min="0" max="100" id="master">
     <div class="small muted" id="apend" style="margin-top:6px"></div>
-    <button class="danger" id="stop" style="margin-top:8px">⏹ Остановить все МедиаАлерты</button>
+    <button class="danger" id="stop" style="margin-top:8px"></button>
   </div>
   <div class="card" id="alist"></div>
 </div>
@@ -120,6 +127,41 @@
   </div>
 </div>
 <script>
+// ---- иконки и диалоги док-панели (без системных alert/confirm: в OBS они выглядят чужеродно) ----
+const svgIc = (d, size = 14) => `<svg class="ic" aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const DI = {
+  check: svgIc('<path d="M20 6L9 17l-5-5"/>'), x: svgIc('<path d="M18 6L6 18M6 6l12 12"/>'),
+  copy: svgIc('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/>'),
+  stop: svgIc('<rect x="6" y="6" width="12" height="12" rx="2"/>'), lock: svgIc('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>'),
+  trophy: svgIc('<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4"/>'),
+  alert: svgIc('<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
+  poll: svgIc('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 12), pred: svgIc('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>', 12),
+};
+const tr2 = s => (window.tr ? window.tr(s) : s);
+/** Короткое сообщение внизу док-панели (вместо alert). */
+function dockNote(text, err) {
+  let n = document.getElementById("dock-note");
+  if (!n) { n = document.createElement("div"); n.id = "dock-note"; n.setAttribute("role", "status"); document.body.appendChild(n); }
+  n.className = err ? "err" : ""; n.innerHTML = (err ? DI.alert : DI.check) + "<span></span>"; n.lastChild.textContent = tr2(text || "");
+  n.classList.add("show"); clearTimeout(n._t); n._t = setTimeout(() => n.classList.remove("show"), err ? 5000 : 2500);
+}
+/** Подтверждение (вместо confirm): Esc/фон — отмена, Enter — да. */
+function dockAsk(text, okLabel, danger) {
+  return new Promise(res => {
+    const back = document.activeElement;
+    const bg = document.createElement("div"); bg.className = "modal-bg dlg-bg";
+    bg.innerHTML = `<div class="modal dlg" role="dialog" aria-modal="true"><h3></h3><div class="dlg-acts"><button type="button" data-c></button><button type="button" class="${danger ? "danger solid" : "primary"}" data-o></button></div></div>`;
+    bg.querySelector("h3").textContent = tr2(text); bg.querySelector("[data-c]").textContent = tr2("Отмена"); bg.querySelector("[data-o]").textContent = tr2(okLabel || "Да");
+    document.body.appendChild(bg);
+    const done = v => { document.removeEventListener("keydown", key, true); bg.remove(); if (back) back.focus(); res(v); };
+    const key = e => { if (e.key === "Escape") done(false); else if (e.key === "Enter") { e.preventDefault(); done(document.activeElement !== bg.querySelector("[data-c]")); } else if (e.key === "Tab") { e.preventDefault(); const b = [...bg.querySelectorAll("button")]; b[(b.indexOf(document.activeElement) + 1) % 2].focus(); } };
+    document.addEventListener("keydown", key, true);
+    bg.onmousedown = e => { if (e.target === bg) done(false); };
+    bg.querySelector("[data-c]").onclick = () => done(false); bg.querySelector("[data-o]").onclick = () => done(true);
+    (danger ? bg.querySelector("[data-c]") : bg.querySelector("[data-o]")).focus();
+  });
+}
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const post = (u, b) => fetch(u, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b||{})}).then(r => r.json());
@@ -142,7 +184,7 @@ setInterval(async () => { try { const j = await (await fetch("/api/captions", {c
 let likeT = null;
 $("like").onclick = async () => {
   const r = await post("/api/music/like");
-  $("likemsg").textContent = r.ok ? (r.data.liked ? "♥ В резервном плейлисте" : "♡ Убран из резервного плейлиста") : r.error;
+  $("likemsg").textContent = r.ok ? (r.data.liked ? tr2("В резервном плейлисте") : tr2("Убран из резервного плейлиста")) : r.error;
   clearTimeout(likeT); likeT = setTimeout(() => $("likemsg").textContent = "", 3000);
   tick();
 };
@@ -151,7 +193,7 @@ $("vol").oninput = e => { volBusy = Date.now(); $("volv").textContent = e.target
 $("master").oninput = e => { masterBusy = Date.now(); $("mv").textContent = e.target.value; post("/api/alerts/volume", {volume:+e.target.value}); };
 $("add").onclick = async () => { const q = $("q").value.trim(); if (!q) return; $("add").disabled = true;
   const r = await post("/api/music/add", {query:q}); $("add").disabled = false;
-  if (r.ok) $("q").value = ""; else alert(r.error); };
+  if (r.ok) $("q").value = ""; else dockNote(r.error, true); };
 $("q").onkeydown = e => { if (e.key === "Enter") $("add").click(); };
 $("stop").onclick = () => post("/api/alerts/stop");
 let WS_OK = false, WS_RETRY = 1000;
@@ -207,23 +249,25 @@ async function hist() {
       const t = HITEMS[+b.dataset.i]; if (!t) return;
       b.disabled = true; b.textContent = "…";
       const r = await post("/api/music/add", {query: t.url || t.title});
-      b.textContent = r.ok ? "✓" : "✗"; if (!r.ok) { b.disabled = false; alert(r.error); }
+      b.innerHTML = r.ok ? DI.check : DI.x; if (!r.ok) { b.disabled = false; dockNote(r.error, true); }
     });
   } catch (e) {}
 }
 $("hscope").onchange = hist;
 $("hcopy").onclick = async () => {
   const text = HITEMS.slice().reverse().map(t => `${t.title}${t.requester ? " (" + t.requester + ")" : ""}${t.url ? " " + t.url : ""}`).join("\n");
-  try { await navigator.clipboard.writeText(text); $("hcopy").textContent = "✓"; } catch (e) { $("hcopy").textContent = "✗"; }
-  setTimeout(() => $("hcopy").textContent = "📋", 1500);
+  try { await navigator.clipboard.writeText(text); $("hcopy").innerHTML = DI.check; dockNote("Список скопирован"); } catch (e) { $("hcopy").innerHTML = DI.x; dockNote("Не получилось скопировать", true); }
+  setTimeout(() => $("hcopy").innerHTML = DI.copy, 1500);
 };
 // Опросы и прогнозы: быстрый запуск по шаблону, живые результаты, управление
 let V = null, VPICK = "", VBUSY = false;
 const vnum = n => Math.round(n).toLocaleString("ru-RU");
 const vleft = t => { const s = Math.max(0, Math.round(t - Date.now() / 1000)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : s + " с"; };
 async function vdo(url, body, ask) {
-  if (VBUSY || (ask && !confirm(ask))) return; VBUSY = true;
-  try { const r = await post("/api/votes/" + url, body); if (!r.ok) alert(r.error); else VPICK = ""; } finally { VBUSY = false; votes(); }
+  if (VBUSY) return;
+  if (ask && !await dockAsk(ask.text || ask, ask.ok, ask.danger)) return;
+  VBUSY = true;
+  try { const r = await post("/api/votes/" + url, body); if (!r.ok) dockNote(r.error, true); else VPICK = ""; } finally { VBUSY = false; votes(); }
 }
 async function votes() {
   if ($("t-votes").classList.contains("hidden")) return;
@@ -232,39 +276,39 @@ async function votes() {
   if (!V.ready) w.push("Войдите в Twitch в программе");
   else if (!V.scopes.polls || !V.scopes.predictions) w.push("Нужны новые права: в программе нажмите «Войти в Twitch заново»");
   [V.poll_error, V.prediction_error].filter(Boolean).forEach(e => w.push(esc(e)));
-  $("vwarn").innerHTML = w.map(x => `<div class="card small">⚠️ ${x}</div>`).join("");
+  $("vwarn").innerHTML = w.map(x => `<div class="notice warn">${DI.alert}<div>${x}</div></div>`).join("");
   $("vtp").innerHTML = V.templates.polls.map((t, i) => `<button data-k="poll" data-i="${i}" title="${esc(t.choices.join(" / "))}">${esc(t.title)}</button>`).join("") || '<span class="muted small">нет шаблонов</span>';
   $("vtr").innerHTML = V.templates.predictions.map((t, i) => `<button data-k="pred" data-i="${i}" title="${esc(t.outcomes.join(" / "))}">${esc(t.title)}</button>`).join("") || '<span class="muted small">нет шаблонов</span>';
   document.querySelectorAll(".vtpl button[data-k]").forEach(b => b.onclick = () => {
     const t = (b.dataset.k === "poll" ? V.templates.polls : V.templates.predictions)[+b.dataset.i];
-    if (b.dataset.k === "poll") vdo("poll/start", {title: t.title, choices: t.choices, duration: t.duration}, `Запустить опрос «${t.title}»?`);
-    else vdo("prediction/start", {title: t.title, outcomes: t.outcomes, window: t.window}, `Запустить прогноз «${t.title}»?`);
+    if (b.dataset.k === "poll") vdo("poll/start", {title: t.title, choices: t.choices, duration: t.duration}, {text: `Запустить опрос «${t.title}»?`, ok: "Запустить"});
+    else vdo("prediction/start", {title: t.title, outcomes: t.outcomes, window: t.window}, {text: `Запустить прогноз «${t.title}»?`, ok: "Запустить"});
   });
   const p = V.poll;
   if (!p) $("vlive-poll").classList.add("hidden");
   else {
     const max = Math.max(...p.choices.map(c => c.votes));
     $("vlive-poll").classList.remove("hidden");
-    $("vlive-poll").innerHTML = `<div class="muted small">📊 Опрос · ${p.active ? "осталось " + vleft(p.ends) : "завершён"} · ${p.total} гол.</div><b>${esc(p.title)}</b>
+    $("vlive-poll").innerHTML = `<div class="muted small ic-tx">${DI.poll}Опрос · ${p.active ? "осталось " + vleft(p.ends) : "завершён"} · ${p.total} гол.</div><b>${esc(p.title)}</b>
       ${p.choices.map(c => `<div class="vr ${!p.active && max > 0 && c.votes === max ? "win" : ""}"><div class="tt"><span>${esc(c.title)}</span><span>${c.pct}% · ${c.votes}</span></div><div class="bb"><i style="width:${c.pct}%"></i></div></div>`).join("")}
-      ${p.active ? `<button class="danger sm" id="vpend">⏹ Завершить</button>` : ""}`;
-    if ($("vpend")) $("vpend").onclick = () => vdo("poll/end", {}, "Завершить опрос досрочно?");
+      ${p.active ? `<button class="danger sm" id="vpend">${DI.stop}<span>Завершить</span></button>` : ""}`;
+    if ($("vpend")) $("vpend").onclick = () => vdo("poll/end", {}, {text: "Завершить опрос досрочно?", ok: "Завершить", danger: true});
   }
   const r = V.prediction, live = r && (r.active || r.locked);
   if (!r) $("vlive-pred").classList.add("hidden");
   else {
     $("vlive-pred").classList.remove("hidden");
-    $("vlive-pred").innerHTML = `<div class="muted small">🔮 Прогноз · ${r.active ? "ставки " + vleft(r.locks) : r.locked ? "ставки закрыты" : r.status === "CANCELED" ? "отменён" : "завершён"} · ${vnum(r.total_points)} баллов</div><b>${esc(r.title)}</b>
-      ${r.outcomes.map(o => `<div class="vr ${live ? "pick" : ""} ${o.id === VPICK ? "sel" : ""} ${r.winner === o.id ? "win" : ""}" data-o="${o.id}"><div class="tt"><span>${r.winner === o.id ? "🏆 " : ""}${esc(o.title)}</span><span>${o.pct}% · ${o.users} чел.</span></div><div class="bb"><i style="width:${o.pct}%"></i></div></div>`).join("")}
-      ${live ? `<div class="row" style="margin-top:6px;flex-wrap:wrap">${r.active ? `<button class="sm" id="vlock">🔒 Закрыть ставки</button>` : ""}
-        <button class="sm primary" id="vwin">🏆 Победитель</button><button class="sm danger" id="vcancel">Отмена</button></div>
+    $("vlive-pred").innerHTML = `<div class="muted small ic-tx">${DI.pred}Прогноз · ${r.active ? "ставки " + vleft(r.locks) : r.locked ? "ставки закрыты" : r.status === "CANCELED" ? "отменён" : "завершён"} · ${vnum(r.total_points)} баллов</div><b>${esc(r.title)}</b>
+      ${r.outcomes.map(o => `<div class="vr ${live ? "pick" : ""} ${o.id === VPICK ? "sel" : ""} ${r.winner === o.id ? "win" : ""}" data-o="${o.id}"><div class="tt"><span>${r.winner === o.id ? DI.trophy + " " : ""}${esc(o.title)}</span><span>${o.pct}% · ${o.users} чел.</span></div><div class="bb"><i style="width:${o.pct}%"></i></div></div>`).join("")}
+      ${live ? `<div class="row" style="margin-top:6px;flex-wrap:wrap">${r.active ? `<button class="sm" id="vlock">${DI.lock}<span>Закрыть ставки</span></button>` : ""}
+        <button class="sm primary" id="vwin">${DI.trophy}<span>Победитель</span></button><button class="sm danger" id="vcancel">Отмена</button></div>
         <div class="muted small" style="margin-top:4px">Нажмите на исход, затем «Победитель»</div>` : ""}`;
     $("vlive-pred").querySelectorAll(".vr.pick").forEach(el => el.onclick = () => { VPICK = el.dataset.o; votes(); });
     if ($("vlock")) $("vlock").onclick = () => vdo("prediction/lock");
-    if ($("vcancel")) $("vcancel").onclick = () => vdo("prediction/cancel", {}, "Отменить прогноз и вернуть баллы?");
+    if ($("vcancel")) $("vcancel").onclick = () => vdo("prediction/cancel", {}, {text: "Отменить прогноз и вернуть баллы?", ok: "Отменить прогноз", danger: true});
     if ($("vwin")) $("vwin").onclick = () => {
-      const o = r.outcomes.find(x => x.id === VPICK); if (!o) return alert("Сначала нажмите на исход-победитель");
-      vdo("prediction/resolve", {outcome_id: o.id}, `Победил «${o.title}»? Баллы будут выплачены.`);
+      const o = r.outcomes.find(x => x.id === VPICK); if (!o) return dockNote("Сначала нажмите на исход-победитель", true);
+      vdo("prediction/resolve", {outcome_id: o.id}, {text: `Победил «${o.title}»? Баллы будут выплачены.`, ok: "Выплатить"});
     };
   }
   $("vstart").classList.toggle("hidden", !!((p && p.active) && live));
@@ -274,6 +318,7 @@ $("vgo").onclick = () => {
   if ($("vkind").value === "poll") vdo("poll/start", {title, choices: opts, duration: d});
   else vdo("prediction/start", {title, outcomes: opts, window: d});
 };
+$("hcopy").innerHTML = DI.copy; $("stop").innerHTML = DI.stop + "<span>" + tr2("Остановить все МедиаАлерты") + "</span>";
 tick(); wsState(); alerts(); setInterval(() => { if (!WS_OK) tick(); }, 1500); setInterval(alerts, 30000); setInterval(hist, 10000); setInterval(votes, 2000);
 </script>
 </body>

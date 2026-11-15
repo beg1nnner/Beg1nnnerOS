@@ -295,3 +295,43 @@ button.danger.solid:hover { background:color-mix(in srgb, var(--err-strong) 86%,
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
 }
+
+/* ---------- иконки в тексте и кнопках ---------- */
+.ic { flex:none; vertical-align:middle; }
+.ic-tx { display:inline-flex; align-items:center; gap:6px; vertical-align:middle; }
+button:has(> .ic), a:has(> .ic) { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+button.ib { width:32px; height:32px; padding:0; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--dim); border-color:var(--hair); }
+button.ib:hover { color:var(--fg); }
+button.ib.danger { color:var(--dim); background:var(--field); border-color:var(--hair); }
+button.ib.danger:hover { color:var(--err); border-color:color-mix(in srgb, var(--err) 40%, transparent); background:color-mix(in srgb, var(--err) 10%, transparent); }
+.spin { display:inline-block; width:14px; height:14px; flex:none; border-radius:50%; border:2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color:currentColor;
+  animation:spin .8s linear infinite; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.src-ic { display:inline-grid; place-items:center; width:22px; height:22px; margin-right:8px; border-radius:6px; font-style:normal; vertical-align:middle;
+  color:var(--dim); background:var(--field); border:1px solid var(--hair); }
+.src-ic svg { width:14px; height:14px; }
+.src-ic.yt { color:var(--err); } .src-ic.ya { color:var(--warn); } .src-ic.sp { color:var(--ok); }
+.prio-ic { display:inline-flex; margin-left:6px; color:var(--warn); vertical-align:middle; }
+.pill.prio { display:inline-flex; padding:2px 6px; margin-left:6px; vertical-align:middle; }
+.liked-mark { display:inline-flex; margin-left:6px; color:var(--accent2); flex:none; }
+.cv.is-liked { color:var(--accent2); }
+.win-pill { display:inline-flex; align-items:center; gap:6px; font-size:13px; }
+.coin { display:inline-flex; vertical-align:-2px; }
+.coin svg { width:13px; height:13px; }
+.gv-ic { display:inline-flex; vertical-align:-3px; margin-right:6px; color:var(--accent2); }
+.tpl-x { display:inline-flex; margin-left:4px; opacity:.55; border-radius:4px; }
+.tpl-x:hover, .tpl-x:focus-visible { opacity:1; color:var(--err); }
+.wz-h { display:flex; align-items:center; gap:12px; }
+.wz-ic { display:grid; place-items:center; width:36px; height:36px; flex:none; border-radius:10px; font-style:normal;
+  color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.wz-ic svg { width:18px; height:18px; }
+.notice { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; margin-bottom:12px; border-radius:12px; font-size:13px; line-height:1.5;
+  border:1px solid var(--line); background:var(--field); }
+.notice > svg { margin-top:1px; }
+.notice.warn { border-color:color-mix(in srgb, var(--warn) 32%, transparent); background:color-mix(in srgb, var(--warn) 8%, transparent); }
+.notice.warn > svg { color:var(--warn); }
+.notice.err { border-color:color-mix(in srgb, var(--err) 32%, transparent); background:color-mix(in srgb, var(--err) 8%, transparent); }
+.notice.err > svg { color:var(--err); }
+.th-sec summary .ic { color:var(--dim); }
+.imp-w { display:flex; gap:6px; align-items:flex-start; }
+.imp-w svg { width:13px; height:13px; margin-top:2px; }
