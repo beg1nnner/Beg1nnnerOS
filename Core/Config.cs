@@ -169,7 +169,7 @@ public static class Config
         "themes": [],
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},
         "giveaway": {"prize": "", "keyword": "!участвую", "reward_title": "", "minutes": 0, "subs_only": false,
-                     "followers_only": false, "sub_luck": 2, "winners": 1}
+                     "followers_only": false, "sub_luck": 1, "winners": 1}
       }
     }
     """;

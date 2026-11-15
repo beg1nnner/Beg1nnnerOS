@@ -78,6 +78,13 @@ public sealed class Hub
             ui["studio_migrated"] = true;
             Settings.Save();
         }
+        // 2.7: в розыгрыше у подписчиков по умолчанию обычный шанс (×1), а не двойной; своё значение, отличное от прежнего ×2, не трогаем
+        if (S.Obj("pro")?.Obj("giveaway") is JsonObject gv && !gv.Bool("luck_migrated"))
+        {
+            if (gv.Int("sub_luck", 1) == 2) gv["sub_luck"] = 1;
+            gv["luck_migrated"] = true;
+            Settings.Save();
+        }
         State = new JsonStore(Path.Combine(Config.Profile, "state.json"),
             new JsonObject { ["announced_stream"] = "", ["autopost_stream"] = "", ["reward_ids"] = new JsonObject() });
         Log = new ActionLog(Config.Profile);

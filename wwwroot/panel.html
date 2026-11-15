@@ -3547,7 +3547,7 @@ async function showStream(id) {
 function gvFill() {
   const g = (S.pro && S.pro.giveaway) || {};
   $("gv-prize").value = g.prize || ""; $("gv-keyword").value = g.keyword ?? "!участвую"; $("gv-reward").value = g.reward_title || "";
-  $("gv-minutes").value = g.minutes ?? 0; $("gv-winners").value = g.winners ?? 1; $("gv-luck").value = g.sub_luck ?? 2;
+  $("gv-minutes").value = g.minutes ?? 0; $("gv-winners").value = g.winners ?? 1; $("gv-luck").value = g.sub_luck ?? 1;
   $("gv-subs").checked = !!g.subs_only; $("gv-follow").checked = !!g.followers_only;
 }
 async function gvStart() {
