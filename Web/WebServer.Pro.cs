@@ -22,7 +22,6 @@ public sealed partial class WebServer
         {
             pro = P.State(),
             giveaway = P.Giveaway.State(),
-            games = P.Games.State(),
             cloud = new { status = P.Cloud.Status, file = P.Cloud.Peek(), folders = CloudSync.DetectFolders() },
             profiles = Profiles.List(Config.Root, Config.ProfileName),
         })));
@@ -31,7 +30,6 @@ public sealed partial class WebServer
         app.MapGet("/api/pro/live", H((c, b) => Ok(new
         {
             giveaway = P.Giveaway.State(),
-            games = P.Games.State(),
         })));
 
         // свои темы оверлеев
@@ -73,14 +71,6 @@ public sealed partial class WebServer
         }));
         app.MapPost("/api/pro/giveaway/finish", H((c, b) => { P.Giveaway.Finish(); return Ok(P.Giveaway.State()); }));
 
-        // мини-игры
-        app.MapPost("/api/pro/games/guess", H(async (c, b) =>
-        {
-            await P.Games.StartGuess(b.Int("max", 100));
-            return Ok(P.Games.State());
-        }));
-        app.MapPost("/api/pro/games/guess/stop", H(async (c, b) => { await P.Games.StopGuess(); return Ok(P.Games.State()); }));
-
         // облачная копия
         app.MapPost("/api/pro/cloud/save", H((c, b) => Ok(P.Cloud.Save(true))));
         app.MapPost("/api/pro/cloud/restore", H((c, b) => Ok(P.Cloud.Restore(b.Str("password")))));
@@ -119,6 +109,7 @@ public sealed partial class WebServer
     {
         nw["themes"] = old?["themes"]?.DeepClone() ?? new JsonArray();
         nw.Remove("tts");   // озвучка удалена из программы
+        nw.Remove("games"); // мини-игры удалены из программы
         var cloud = nw.Obj("cloud");
         if (cloud != null)
         {
@@ -127,13 +118,6 @@ public sealed partial class WebServer
             cloud["folder"] = cloud.Str("folder").Trim().Trim('"');
             if (cloud.Bool("include_secrets") && cloud.Str("password").Length < 6)
                 throw new UserError("Для копии с ключами и входами задайте пароль не короче 6 символов", "pro.cloud.password");
-        }
-        var games = nw.Obj("games");
-        if (games != null)
-        {
-            games["cooldown"] = Math.Max(0, Math.Min(3600, games.Int("cooldown", 30)));
-            games["duel_timeout"] = Math.Max(15, Math.Min(300, games.Int("duel_timeout", 60)));
-            games["guess_max"] = Math.Max(10, Math.Min(1_000_000, games.Int("guess_max", 100)));
         }
     }
 }

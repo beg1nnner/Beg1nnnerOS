@@ -19,7 +19,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         SplashText.Text = L.T(SplashText.Text);
         _app = app;
-        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(15, 15, 20);
+        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(9, 9, 12);
         Loaded += async (s, e) => await InitWeb();
         Closing += OnClosing;
     }

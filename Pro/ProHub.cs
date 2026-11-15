@@ -13,7 +13,7 @@ namespace Beg1nnnerOS.Pro;
 
 /// <summary>
 /// Дополнительные функции: свои темы оверлеев, профили, расширенная статистика,
-/// облачная копия, розыгрыши и мини-игры. Все бесплатные.
+/// облачная копия и розыгрыши. Все бесплатные.
 /// </summary>
 public sealed class ProHub
 {
@@ -22,14 +22,12 @@ public sealed class ProHub
 
     private readonly Hub _hub;
     public readonly Giveaway Giveaway;
-    public readonly Games Games;
     public readonly CloudSync Cloud;
 
     public ProHub(Hub hub)
     {
         _hub = hub;
         Giveaway = new Giveaway(hub);
-        Games = new Games(hub);
         Cloud = new CloudSync(hub);
     }
 
@@ -40,11 +38,10 @@ public sealed class ProHub
     }
 
     // ---------- события ----------
-    /// <summary>Сообщение чата. true — сообщение обработано розыгрышем или игрой (дальше не идёт).</summary>
+    /// <summary>Сообщение чата. true — сообщение обработано розыгрышем (дальше не идёт).</summary>
     public async Task<bool> OnChat(ChatMsg msg)
     {
         if (await Giveaway.OnChat(msg)) return true;
-        if (_hub.S.Bool("pro.games.enabled") && await Games.OnChat(msg)) return true;
         var t = msg.Text.Trim();
         if (t.StartsWith("!"))
         {

@@ -160,11 +160,10 @@ public static class Config
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
                   "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s"},
-      "ui": {"tray": true, "theme": "twitch", "close_action": "ask", "wizard_done": false, "language": "ru"},
+      "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru"},
       "pro": {
         "themes": [],
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},
-        "games": {"enabled": false, "dice": true, "duel": true, "cooldown": 30, "duel_timeout": 60, "guess_max": 100},
         "giveaway": {"prize": "", "keyword": "!участвую", "reward_title": "", "minutes": 0, "subs_only": false,
                      "followers_only": false, "sub_luck": 2, "winners": 1}
       }

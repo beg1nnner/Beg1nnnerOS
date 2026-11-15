@@ -191,7 +191,7 @@ public sealed partial class WebServer
             version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
             next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused,
             alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
-            port = Port, ui_theme = _hub.S.Str("ui.theme", "twitch"),
+            port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
             update = _hub.Updater.State(),
         })));
 

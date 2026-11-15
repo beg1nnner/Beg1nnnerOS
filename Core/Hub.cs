@@ -70,7 +70,14 @@ public sealed class Hub
         Settings = new JsonStore(Path.Combine(Config.Profile, "settings.json"), Config.DefaultSettings());
         ApplyLanguage();
         // озвучка удалена в 2.5.0 — убираем её старые настройки (и ключ Yandex) из профиля
-        if (S.Obj("pro") is JsonObject pro && pro.Remove("tts")) Settings.Save();
+        if (S.Obj("pro") is JsonObject pro && (pro.Remove("tts") | pro.Remove("games"))) Settings.Save();
+        // 2.7: новое оформление «Студия» становится основным; прежняя тема по умолчанию «twitch» остаётся в списке тем
+        if (S.Obj("ui") is JsonObject ui && !ui.Bool("studio_migrated"))
+        {
+            if (ui.Str("theme", "twitch") == "twitch") ui["theme"] = "studio";
+            ui["studio_migrated"] = true;
+            Settings.Save();
+        }
         State = new JsonStore(Path.Combine(Config.Profile, "state.json"),
             new JsonObject { ["announced_stream"] = "", ["autopost_stream"] = "", ["reward_ids"] = new JsonObject() });
         Log = new ActionLog(Config.Profile);
@@ -193,7 +200,7 @@ public sealed class Hub
         Stats.Chat(msg.Login, msg.Name, Stream.Key);
         Timers.OnChatMessage();
         if (await Moderation.OnCommand(msg)) return;   // !разрешить ник
-        if (await Pro.OnChat(msg)) return;   // розыгрыш, мини-игры
+        if (await Pro.OnChat(msg)) return;   // розыгрыш
         if (msg.Text.StartsWith("!"))
         {
             await Commands.Handle(msg);

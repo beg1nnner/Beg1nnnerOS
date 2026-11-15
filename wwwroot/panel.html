@@ -7,26 +7,151 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Beg1nnnerOS</title>
 <link rel="stylesheet" href="/static/style.css">
-<script>try { document.documentElement.dataset.theme = localStorage.getItem("hub-theme") || "twitch"; } catch (e) {}</script>
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("hub-theme") || "studio"; } catch (e) {}</script>
 <style>
   body { display:flex; min-height:100vh; }
-  nav { width:210px; flex:none; background:var(--panel); border-right:1px solid var(--line); padding:18px 12px;
-        position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:4px; }
-  nav .logo { font-weight:800; font-size:18px; padding:0 10px 14px; letter-spacing:.02em; }
-  nav .logo b { color:var(--accent); }
-  nav button { text-align:left; background:none; border:none; padding:10px 12px; border-radius:8px; color:var(--muted); font-size:14.5px; }
-  nav button.on { background:var(--panel2); color:var(--fg); box-shadow:inset 3px 0 0 var(--accent); }
-  nav .ver { margin-top:auto; padding:10px; font-size:11.5px; color:var(--muted); }
-  main { flex:1; padding:24px 28px 60px; max-width:1180px; min-width:0; }
-  .ready { display:flex; flex-direction:column; gap:4px; }
-  .ready .t { font-size:12px; color:var(--muted); } .ready .v { font-weight:600; }
-  .np-title { font-size:18px; font-weight:700; }
-  .upd { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 18px; padding:12px 16px; border-radius:12px;
-         background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 22%, var(--panel)), var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  /* ---------- боковое меню ---------- */
+  nav { width:256px; flex:none; background:var(--bg); border-right:1px solid var(--hair); padding:20px 14px 16px;
+        position:sticky; top:0; height:100vh; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+  nav .logo { display:flex; align-items:center; gap:12px; padding:2px 10px 8px; }
+  .logo-mark { width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent) 16%, var(--bg)); border:1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+    font:600 13px var(--mono); color:var(--accent2); }
+  .logo-txt { display:flex; flex-direction:column; line-height:1.25; }
+  .logo-txt b { font-size:16px; font-weight:600; letter-spacing:-.01em; }
+  .logo-txt small { font:11px var(--mono); color:var(--dim); }
+  .nav-group { font:500 11px var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); padding:18px 12px 8px; }
+  nav button[data-p] { position:relative; display:flex; align-items:center; gap:12px; height:38px; padding:0 12px; border-radius:10px;
+    text-align:left; background:none; border:none; color:var(--muted); font-size:14px; font-weight:500; flex:none; }
+  nav button[data-p] .ic { color:var(--dim); flex:none; }
+  nav button[data-p]:hover { background:var(--hover); color:var(--fg); }
+  nav button[data-p].on { background:color-mix(in srgb, var(--fg) 6%, transparent); color:var(--fg); font-weight:600; box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+  nav button[data-p].on .ic { color:var(--accent2); }
+  nav button[data-p].on::before { content:""; position:absolute; left:-14px; top:10px; width:3px; height:18px; border-radius:0 3px 3px 0; background:var(--accent); }
+  nav button[data-p] span { flex:1; }
+  .nav-badge { font:normal 11px var(--mono); padding:1px 7px; border-radius:999px; background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent2); }
+  .nav-badge:empty { display:none; }
+  .nav-fill { flex:1; min-height:20px; }
+  .nav-link { display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:14px; text-decoration:none; margin-top:8px; transition:transform .15s, box-shadow .15s; }
+  .nav-link:hover { transform:translateY(-1px); }
+  .nav-link .nl-ic { width:34px; height:34px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
+  .nav-link .nl-t { display:flex; flex-direction:column; min-width:0; line-height:1.3; }
+  .nav-link .nl-t b { font-size:13.5px; font-weight:600; }
+  .nav-link .nl-t small { font-size:12px; }
+  .nav-link.twitch { background:color-mix(in srgb, #9146ff 13%, var(--bg)); border:1px solid rgba(145,70,255,.4); color:#ede9fe;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px -14px rgba(145,70,255,.75); }
+  .nav-link.twitch .nl-ic { background:#9146ff; } .nav-link.twitch small { color:#c4b5fd; }
+  .nav-link.thanks { background:color-mix(in srgb, #ec4899 11%, var(--bg)); border:1px solid rgba(244,114,182,.35); color:#fce7f3;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 12px 28px -14px rgba(236,72,153,.7); }
+  .nav-link.thanks .nl-ic { background:#ec4899; } .nav-link.thanks small { color:#f9a8d4; }
+  .nav-link.contact { padding:9px 12px; border:1px solid var(--hair); color:var(--muted); font-size:13px; font-weight:500; }
+  .nav-link.contact:hover { color:var(--fg); border-color:#29a9eb80; }
+  html[data-theme="light"] .nav-link.twitch { color:#4c1d95; } html[data-theme="light"] .nav-link.twitch small { color:#6d28d9; }
+  html[data-theme="light"] .nav-link.thanks { color:#831843; } html[data-theme="light"] .nav-link.thanks small { color:#be185d; }
+  .nav-me { display:flex; align-items:center; gap:10px; padding:10px; margin-top:10px; border-radius:12px; border:1px solid var(--hair); background:var(--field); }
+  .nm-av { position:relative; width:34px; height:34px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent) 22%, var(--bg)); color:var(--accent2); font-weight:700; font-size:14px; text-transform:uppercase; }
+  .nm-av.live::after { content:""; position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; background:#f43f5e; border:2px solid var(--bg); }
+  .nm-t { display:flex; flex-direction:column; min-width:0; line-height:1.3; }
+  .nm-t b { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nm-t small { font-size:12px; color:var(--dim); }
+  main { flex:1; padding:22px 36px 60px; max-width:1360px; min-width:0; }
+  /* ---------- шапка ---------- */
+  .topbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
+  .tb-title { display:flex; flex-direction:column; gap:4px; }
+  .tb-title h1 { margin:0; font-size:30px; font-weight:600; letter-spacing:-.03em; line-height:1.1; }
+  .micro { font:500 11px var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  .micro.acc { color:var(--accent2); }
+  .tb-pill { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:999px; font-size:13px; color:var(--muted); background:none; }
+  .tb-pill i { width:7px; height:7px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); }
+  .tb-pill.bad i { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent); }
+  .tb-pill b { font-family:var(--mono); font-weight:500; color:var(--fg); }
+  .tb-live { display:inline-flex; align-items:center; gap:10px; height:36px; padding:0 14px; border-radius:999px; background:rgba(244,63,94,.1);
+    border:1px solid rgba(244,63,94,.3); font-size:13px; font-weight:600; color:#fda4af; }
+  .tb-live i { width:7px; height:7px; border-radius:50%; background:#f43f5e; box-shadow:0 0 0 3px rgba(244,63,94,.2); animation:livePulse 2s ease-in-out infinite; }
+  .tb-live b { font-family:var(--mono); font-weight:500; color:#ffe4e6; }
+  html[data-theme="light"] .tb-live { color:#9f1239; } html[data-theme="light"] .tb-live b { color:#881337; }
+  @keyframes livePulse { 50% { box-shadow:0 0 0 6px rgba(244,63,94,.05); } }
+  main > section > h2:first-child { display:none; }
+  /* ---------- Эфир ---------- */
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .chip { display:inline-flex; align-items:center; gap:8px; height:auto; min-height:34px; padding:6px 13px; border-radius:999px; border:1px solid var(--line);
+    background:none; font-size:13px; color:var(--fg); cursor:default; text-align:left; white-space:normal; }
+  .chip i { width:8px; height:8px; border-radius:50%; flex:none; background:var(--ok); }
+  .chip.warn i { background:var(--warn); } .chip.err i { background:var(--err); } .chip.muted i { background:var(--dim); }
+  .chip .t { color:var(--muted); } .chip .v { font-weight:600; }
+  .chip.fix { cursor:pointer; border-color:color-mix(in srgb, var(--warn) 45%, transparent); }
+  .chip.fix.err { border-color:color-mix(in srgb, var(--err) 50%, transparent); }
+  .chip .fx { font-size:12px; color:var(--accent2); }
+  .live-grid { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:18px; align-items:stretch; }
+  .live-grid > .card, .live-side > .card { margin-bottom:0; }
+  .live-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  .live-grid + .card { margin-top:18px; }
+  @media (max-width:1100px) { .live-grid { grid-template-columns:1fr; } }
+  .np { padding:26px; display:flex; flex-direction:column; gap:22px; }
+  .np-top { display:flex; gap:28px; align-items:center; flex-wrap:wrap; }
+  .np-cover { position:relative; width:168px; height:168px; flex:none; border-radius:18px; overflow:hidden;
+    background:color-mix(in srgb, var(--accent) 14%, var(--bg)); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 30px 60px -24px color-mix(in srgb, var(--accent) 65%, transparent); }
+  .np-cover span { position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.07); }
+  .np-cover i { position:absolute; left:72px; top:72px; width:24px; height:24px; border-radius:50%; background:var(--accent); box-shadow:0 0 24px color-mix(in srgb, var(--accent) 80%, transparent); }
+  .np.playing .np-cover { animation:none; }
+  .np-meta { flex:1 1 300px; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .np-meta .micro .pill { margin-left:8px; letter-spacing:.04em; color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
+  .np-title { font-size:32px; font-weight:600; letter-spacing:-.035em; line-height:1.1; overflow-wrap:anywhere; }
+  .np-who { font-size:15px; color:var(--muted); }
+  .np-bar { position:relative; height:4px; border-radius:2px; background:color-mix(in srgb, var(--fg) 9%, transparent); margin-top:12px; }
+  .np-bar i { display:block; height:100%; width:0; border-radius:2px; background:var(--accent); position:relative; transition:width .9s linear; }
+  .np-bar i::after { content:""; position:absolute; right:-7px; top:-5px; width:14px; height:14px; border-radius:50%; background:#fff;
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .np-times { display:flex; justify-content:space-between; gap:10px; font:12px var(--mono); color:var(--dim); }
+  .np-ctl { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  button.rnd { width:44px; height:44px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  button.rnd.big { width:56px; height:56px; background:#fff; color:#0b0b0f; border:none; box-shadow:0 10px 30px -10px rgba(255,255,255,.5); }
+  button.rnd.big:hover { background:#e9e9ee; }
+  html[data-theme="light"] button.rnd.big { background:var(--fg); color:#fff; box-shadow:none; }
+  button.pillbtn { display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 16px; border-radius:999px; color:var(--muted); }
+  button.pillbtn.like { color:#fbcfe8; border-color:rgba(244,114,182,.3); background:rgba(244,114,182,.08); }
+  html[data-theme="light"] button.pillbtn.like { color:#be185d; }
+  button.pillbtn.like.liked { background:rgba(244,114,182,.2); }
+  button.pillbtn.like.liked .ic { fill:currentColor; }
+  .np-vol { display:flex; align-items:center; gap:12px; color:var(--dim); font-size:13px; }
+  .np-vol input { width:150px; }
+  .np-vol .num { color:var(--fg); width:24px; }
+  .np-q { border-top:1px solid var(--hair); padding-top:18px; }
+  .np-qh { display:flex; justify-content:space-between; align-items:center; padding:0 8px 8px; }
+  .qrow { display:grid; grid-template-columns:22px 40px minmax(0, 1fr) minmax(0, 160px) 52px; align-items:center; gap:14px; padding:9px 8px; border-radius:12px; }
+  .qrow:first-child { background:color-mix(in srgb, var(--fg) 3.5%, transparent); }
+  .qrow .n { font:12px var(--mono); color:var(--dim); }
+  .qrow .cv { width:40px; height:40px; border-radius:9px; border:1px solid var(--hair); background:var(--field); display:flex; align-items:center; justify-content:center; }
+  .qrow .tt { min-width:0; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qrow .who { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qrow .d { font:12px var(--mono); color:var(--dim); text-align:right; }
+  .av { width:22px; height:22px; border-radius:50%; flex:none; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#0b0b0f; text-transform:uppercase; }
+  .qa { display:flex; flex-direction:column; gap:10px; }
+  .qa-h { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; flex-wrap:wrap; }
+  .qa-timer { font-size:12px; color:var(--dim); text-align:right; }
+  .qa-timer b { color:var(--fg); font-weight:500; }
+  .qa > button { display:flex; align-items:center; gap:12px; width:100%; height:46px; padding:0 14px; text-align:left; border-color:var(--hair); }
+  .qa > button span { flex:1; }
+  .qa > button kbd:empty { display:none; }
+  .qa > button.primary kbd { color:#fff; border-color:rgba(255,255,255,.35); background:transparent; }
+  .chatbox { display:flex; flex-direction:column; gap:8px; flex:1; }
+  .cb-row { display:flex; gap:8px; align-items:center; margin-top:auto; padding:6px 6px 6px 14px; border-radius:14px; border:1px solid var(--line); background:var(--field); }
+  .cb-row input { border:none; background:none; padding:0; min-height:0; box-shadow:none !important; }
+  button.sq { width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:10px; flex:none; }
+  .log-h .micro { font-size:11px; }
+  .ic { flex:none; vertical-align:middle; }
+  .ready { display:flex; flex-direction:column; gap:6px; }
+  .ready .t { font:500 11px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+  .ready .v { font-family:var(--mono); font-weight:500; letter-spacing:-.02em; }
+  .upd { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:0 0 18px; padding:14px 18px; border-radius:16px;
+         background:color-mix(in srgb, var(--accent) 10%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 40%, transparent); box-shadow:var(--shadow); }
   .upd .t { flex:1; min-width:240px; }
   .upd .t b { font-size:15px; }
-  nav .upd-nav { margin-top:auto; margin-bottom:8px; width:100%; padding:11px 12px; border-radius:12px; border:0; cursor:pointer;
-                 font-weight:800; font-size:14px; color:#fff; text-align:left; background:linear-gradient(135deg,#16a34a,#22c55e);
+  nav .upd-nav { margin-top:8px; margin-bottom:0; width:100%; padding:11px 14px; border-radius:14px; border:0; cursor:pointer;
+                 font-weight:700; font-size:14px; color:#fff; text-align:left; background:#16a34a;
                  box-shadow:0 6px 22px rgba(34,197,94,.35); position:relative; }
   nav .upd-nav small { display:block; font-weight:600; font-size:11.5px; opacity:.9; margin-top:2px; }
   nav .upd-nav::after { content:""; position:absolute; top:10px; right:10px; width:9px; height:9px; border-radius:50%; background:#fff;
@@ -55,7 +180,7 @@
   .th-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px 14px; }
   .th-grid .f { margin:0; } .th-grid .switch { margin-top:18px; }
   .th-grid input[type=color] { width:100%; height:34px; padding:2px; }
-  .devcode { font:800 34px/1.1 ui-monospace,Consolas,monospace; letter-spacing:.12em; padding:14px 18px; border-radius:12px;
+  .devcode { font:500 32px/1.1 var(--mono); letter-spacing:.12em; padding:14px 18px; border-radius:12px;
              background:var(--panel); border:1px dashed color-mix(in srgb, var(--accent) 60%, var(--line)); display:inline-block; margin:8px 0 10px; }
   .chk { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); }
   .chk:last-child { border-bottom:0; }
@@ -63,11 +188,11 @@
   .chk .ok { color:#22c55e; } .chk .bad { color:#ef4444; } .chk .wait { color:var(--muted); }
   #wizard { position:fixed; inset:0; background:rgba(5,4,10,.72); backdrop-filter:blur(4px); z-index:60; display:flex; align-items:center; justify-content:center; padding:24px; }
   #wizard.hidden { display:none; }
-  .wz { width:min(760px,100%); max-height:calc(100vh - 48px); overflow:auto; background:var(--bg2, var(--panel)); border:1px solid var(--line); border-radius:18px; padding:26px 28px; box-shadow:0 30px 80px rgba(0,0,0,.5); }
+  .wz { width:min(760px,100%); max-height:calc(100vh - 48px); overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:32px 36px; box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 40px 120px -20px rgba(0,0,0,.9), 0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent); }
   .wz-steps { display:flex; gap:6px; margin:0 0 18px; }
-  .wz-steps i { flex:1; height:5px; border-radius:3px; background:var(--line); }
+  .wz-steps i { flex:1; height:4px; border-radius:2px; background:color-mix(in srgb, var(--fg) 10%, transparent); }
   .wz-steps i.on { background:var(--accent); }
-  .wz h2 { margin:0 0 6px; }
+  .wz h2 { margin:0 0 6px; font-size:26px; letter-spacing:-.03em; }
   .wz-foot { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; align-items:center; }
   .wz-foot .grow { flex:1; }
   .src-row { display:grid; grid-template-columns: 1fr auto auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
@@ -136,64 +261,84 @@
 </head>
 <body>
 <nav>
-  <div class="logo"><img src="/static/icon.png" alt="" style="width:26px;height:26px;vertical-align:-6px;margin-right:8px;border-radius:7px">Beg1nnner<b>OS</b></div>
-  <button data-p="live" class="on">📡 Эфир</button>
-  <button data-p="music">🎵 Музыка</button>
-  <button data-p="chat">💬 Чат</button>
-  <button data-p="alerts">✨ МедиаАлерты</button>
-  <button data-p="events">🔔 События</button>
-  <button data-p="votes">🗳 Опросы и прогнозы</button>
-  <button data-p="captions">💬 Субтитры</button>
-  <button data-p="settings">⚙️ Настройки</button>
-  <button data-p="pro" id="nav-pro">🚀 Дополнительно</button>
+  <div class="logo"><span class="logo-mark">B1</span><span class="logo-txt"><b>Beg1nnnerOS</b><small id="ver"></small></span></div>
+  <div class="nav-group">Эфир</div>
+  <button data-p="live" class="on"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/></svg><span>Эфир</span><i class="nav-badge" id="nb-live"></i></button>
+  <button data-p="music"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Музыка</span><i class="nav-badge" id="nb-music"></i></button>
+  <button data-p="chat"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Чат</span><i class="nav-badge" id="nb-chat"></i></button>
+  <button data-p="alerts"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>МедиаАлерты</span><i class="nav-badge" id="nb-alerts"></i></button>
+  <div class="nav-group">Интерактив</div>
+  <button data-p="events"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>События</span><i class="nav-badge" id="nb-events"></i></button>
+  <button data-p="votes"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опросы и прогнозы</span><i class="nav-badge" id="nb-votes"></i></button>
+  <button data-p="captions"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры</span><i class="nav-badge" id="nb-captions"></i></button>
+  <button data-p="chat" data-sub="mod"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Модерация</span><i class="nav-badge" id="nb-chatmod"></i></button>
+  <div class="nav-group">Система</div>
+  <button data-p="settings"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg><span>Настройки</span><i class="nav-badge" id="nb-settings"></i></button>
+  <button data-p="pro" id="nav-pro"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span>Дополнительно</span><i class="nav-badge" id="nb-pro"></i></button>
+  <div class="nav-fill"></div>
   <button class="upd-nav hidden" id="nav-upd" onclick="updNavClick()"></button>
-  <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" style="margin-top:auto" title="Поддержать разработчика через DonationAlerts">💜 Поблагодарить разработчика</a>
-  <a class="contact-btn" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" style="margin-top:8px" title="Предложения по улучшению и сообщения об ошибках"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#29a9eb"/><path fill="#fff" d="M5.4 11.7l11.2-4.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg> Связь и предложения</a>
-  <div class="ver" id="ver" style="margin-top:0"></div>
+  <a class="nav-link twitch" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener" title="Канал автора программы на Twitch"><span class="nl-ic"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M10 8.5l4 2-4 2z"/></svg></span><span class="nl-t"><b>Мой канал на Twitch</b><small>twitch.tv/beg1nnner</small></span></a>
+  <a class="nav-link thanks" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" title="Поддержать разработчика через DonationAlerts"><span class="nl-ic"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span><span class="nl-t"><b>Поблагодарить разработчика</b><small>через DonationAlerts</small></span></a>
+  <a class="nav-link contact" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" title="Предложения по улучшению и сообщения об ошибках"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-6"/></svg><span>Связь и предложения</span></a>
+  <div class="nav-me" id="nav-me"><span class="nm-av" id="nm-av">?</span><span class="nm-t"><b id="nm-login">Нет входа</b><small id="nm-sub">Twitch</small></span></div>
 </nav>
 <main>
+<header class="topbar">
+  <div class="tb-title"><span class="micro" id="tb-crumb">Панель управления</span><h1 id="tb-h">Эфир</h1></div>
+  <div class="grow"></div>
+  <button class="tb-pill" id="tb-health" onclick="go('live')" title="Состояние подключений"></button>
+  <span class="tb-live hidden" id="tb-live"><i></i><span>В ЭФИРЕ</span><b id="tb-up"></b></span>
+</header>
 <div id="upd-bar" class="upd hidden"></div>
 <div id="upd-notes" class="upd-notes hidden"></div>
 
 <!-- ================= ЭФИР ================= -->
 <section id="p-live">
   <h2>Эфир</h2>
-  <div class="grid" id="ready"></div>
-  <div class="row" style="align-items:stretch">
-    <div class="card grow" style="min-width:320px">
-      <div class="muted small">Сейчас играет</div>
-      <div class="np-title" id="np-title" data-noi18n>—</div>
-      <div class="muted small" id="np-who"></div>
-      <div class="bar"><i id="np-bar"></i></div>
-      <div class="row small muted"><span id="np-pos"></span><span class="grow"></span><span id="np-votes"></span></div>
-      <div class="row" style="margin-top:10px">
-        <button onclick="api('/music/pause',{})">⏯ Пауза</button>
-        <button onclick="api('/music/skip',{})">⏭ Пропуск</button>
-        <button id="np-like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)">♡ Лайк</button>
-        <button onclick="if(confirm('Заблокировать текущий трек и пропустить?')) api('/music/block',{})">🚫 Блок</button>
-        <span class="small muted">Громкость</span>
-        <input type="range" min="0" max="100" id="live-vol" class="grow" style="max-width:220px">
-        <span id="live-volv" class="small"></span>
+  <div class="chips" id="ready"></div>
+  <div class="live-grid">
+    <div class="card np">
+      <div class="np-top">
+        <div class="np-cover" aria-hidden="true"><span style="inset:8px"></span><span style="inset:20px"></span><span style="inset:32px"></span><span style="inset:44px"></span><span style="inset:56px"></span><span style="inset:68px"></span><i></i></div>
+        <div class="np-meta">
+          <div class="micro acc">Сейчас играет <span class="pill hidden" id="np-paid">за баллы</span></div>
+          <div class="np-title" id="np-title" data-noi18n>—</div>
+          <div class="np-who" id="np-who"></div>
+          <div class="np-bar"><i id="np-bar"></i></div>
+          <div class="np-times"><span id="np-pos"></span><span id="np-votes"></span><span id="np-left"></span></div>
+        </div>
       </div>
-      <div style="margin-top:12px"><div class="muted small">Очередь</div><ol id="live-q" style="margin:4px 0 0;padding-left:1.3em"></ol></div>
+      <div class="np-ctl">
+        <button class="rnd big" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button class="rnd" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
+        <button id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
+        <button class="pillbtn" onclick="if(confirm('Заблокировать текущий трек и пропустить?')) api('/music/block',{})" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+        <div class="grow"></div>
+        <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
+      </div>
+      <div class="np-q">
+        <div class="np-qh"><span class="micro">Очередь</span><span class="num muted small" id="live-qn"></span></div>
+        <div id="live-q"></div>
+      </div>
     </div>
-    <div class="card" style="width:320px">
-      <h3>Быстрые действия</h3>
-      <div class="muted small">Ближайший таймер</div>
-      <div id="next-timer" style="margin-bottom:12px">—</div>
-      <div class="row" style="flex-direction:column;align-items:stretch">
-        <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)">⏸ Пауза уведомлений</button>
-        <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))">⏹ Остановить все МедиаАлерты</button>
+    <div class="live-side">
+      <div class="card qa">
+        <div class="qa-h"><span class="micro">Быстрые действия</span><span class="qa-timer" id="next-timer">—</span></div>
+        <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Пауза уведомлений</span><kbd data-hk="pause_events"></kbd></button>
+        <button onclick="api('/captions/toggle',{}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
+        <button onclick="go('votes')"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опрос или прогноз</span></button>
+        <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg><span>Остановить МедиаАлерты</span><kbd data-hk="stop_alerts"></kbd></button>
+        <div class="muted small" id="alerts-q"></div>
       </div>
-      <div class="muted small" id="alerts-q" style="margin-top:10px"></div>
+      <div class="card chatbox">
+        <div class="micro">Сообщение в чат</div>
+        <div class="muted small">Публикуется в Twitch от выбранного отправителя.</div>
+        <div class="cb-row"><input id="chat-msg" placeholder="Написать в чат…" onkeydown="if(event.key==='Enter')sendChat()"><button class="primary sq" onclick="sendChat()" aria-label="Отправить" title="Отправить"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>
+      </div>
     </div>
   </div>
   <div class="card">
-    <h3>Сообщение в чат</h3>
-    <div class="row"><input id="chat-msg" class="grow" placeholder="Текст будет опубликован в Twitch от выбранного отправителя"><button class="primary" onclick="sendChat()">Отправить</button></div>
-  </div>
-  <div class="card">
-    <div class="row"><h3 class="grow" style="margin:0">Журнал действий и ошибок</h3>
+    <div class="row log-h"><span class="micro grow">Журнал действий и ошибок</span>
       <select id="log-kind" style="width:auto" onchange="loadLog()">
         <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
         <option value="command">Команды</option><option value="mod">Модерация</option><option value="event">События</option><option value="timer">Таймеры</option>
@@ -248,7 +393,7 @@
         <label class="f"><span>Где искать сначала (название и Spotify)</span>
           <select data-s="music.search_first"><option value="youtube">YouTube</option><option value="yandex">Яндекс Музыка</option></select></label>
         <span class="small muted" style="margin-top:16px">Для Яндекс Музыки сохраните токен в «Настройках».</span>
-        <button class="sm" style="margin-top:16px" onclick="ytCheck('yt-check')">🩺 Проверить связь с YouTube</button>
+        <button class="sm" style="margin-top:16px" onclick="ytCheck('yt-check')">Проверить связь с YouTube</button>
       </div>
       <div id="yt-check" class="hidden" style="margin:-4px 0 14px"></div>
       <div class="row">
@@ -266,20 +411,20 @@
         <label class="switch"><input type="checkbox" data-s="music.chat_errors"> Писать в чат, если трек не удалось включить</label>
       </div>
       <div class="row" style="margin-top:12px;align-items:flex-end">
-        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.order_sound"> 🔔 Звук при новом заказе</label>
+        <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.order_sound"> Звук при новом заказе</label>
         <label class="f"><span>Звук</span><select data-s="music.order_sound_style" id="chime-style">
           <option value="bell">Колокольчик</option><option value="marimba">Маримба</option><option value="soft">Мягкий аккорд</option><option value="drop">Капля</option>
           <option value="chimes">Колокольчики</option><option value="harp">Арфа</option><option value="kalimba">Калимба</option><option value="glass">Хрусталь</option>
           <option value="pluck">Гитара</option><option value="notify">Уведомление</option><option value="coin">Монетка</option><option value="bubble">Пузырёк</option>
           <option value="magic">Волшебство</option><option value="doorbell">Дверной звонок</option></select></label>
         <label class="f"><span>Громкость звука, %</span><input type="number" min="0" max="100" step="5" data-s="music.order_sound_volume" id="chime-vol"></label>
-        <button class="sm" onclick="api('/music/chime',{style:$('chime-style').value,volume:+$('chime-vol').value})">▶ Прослушать</button>
+        <button class="sm" onclick="api('/music/chime',{style:$('chime-style').value,volume:+$('chime-vol').value})">Прослушать</button>
       </div>
       <div class="muted small" style="margin-top:6px">Звук играет на устройстве вывода музыки, когда зритель заказывает трек за баллы. Ошибки YouTube (18+, видео удалено, недоступно в стране и т. п.) пишутся в чат на русском.</div>
       <label class="f" style="margin-top:12px"><span>Запрещённые слова (по одному в строке; также для запрета исполнителя)</span><textarea data-s="music.banned_words" data-list></textarea></label>
     </div>
     <div class="card">
-      <h3>🔊 Громкость и вывод звука</h3>
+      <h3>Громкость и вывод звука</h3>
       <div class="row" style="align-items:flex-end;margin-bottom:6px">
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.normalize"> Выравнивать громкость треков</label>
         <label class="f"><span>Уровень</span><select data-s="music.normalize_target" data-num>
@@ -302,19 +447,19 @@
       </div>
     </div>
     <div class="card">
-      <h3>🎚 Плавные переходы</h3>
+      <h3>Плавные переходы</h3>
       <div class="row" style="align-items:center;flex-wrap:wrap">
         <label class="f" style="width:230px"><span>Переход между треками: <b id="xf-v"></b></span><input type="range" min="0" max="12" step="1" data-s="music.crossfade" oninput="$('xf-v').textContent=this.value>0?this.value+' сек':'выключен'"></label>
         <span class="muted small grow">Следующий трек скачивается заранее и начинается, пока предыдущий затухает — без тишины между песнями, как на радио. Работает и в программе, и в OBS. Пропуск трека тоже идёт с коротким затуханием, без щелчка.</span>
       </div>
     </div>
     <div class="card">
-      <h3>🟡 Если YouTube не работает</h3>
+      <h3>Если YouTube не работает</h3>
       <label class="switch"><input type="checkbox" data-s="music.yandex_fallback"> Искать этот же трек в Яндекс Музыке, если YouTube не отдал заказ</label>
       <div class="muted small" style="margin-top:6px">Когда YouTube тормозит, недоступен или не даёт скачать видео (18+, блокировка в стране), программа находит трек по названию в Яндекс Музыке и включает его — зритель получает свою песню, а не ошибку. Трек с непохожей длительностью (ремикс, кавер) не подставляется. Нужен токен Яндекс Музыки — сохраните его в «Настройках».</div>
     </div>
     <div class="card">
-      <h3>💾 Очередь после вылета</h3>
+      <h3>Очередь после вылета</h3>
       <div class="row" style="align-items:flex-end;flex-wrap:wrap">
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.restore_queue"> Восстанавливать очередь и текущий трек после перезапуска программы или компьютера</label>
         <label class="f" style="width:200px"><span>если прошло не больше, часов</span><input type="number" min="1" max="168" data-s="music.restore_hours"></label>
@@ -322,7 +467,7 @@
       <div class="muted small">Очередь сохраняется каждые пару секунд. Если программа закрылась или вылетела, после запуска заказы вернутся (вместе с отметкой «за баллы»), а недоигранный трек продолжится с того же места.</div>
     </div>
     <div class="card">
-      <h3>📻 Резервный плейлист</h3>
+      <h3>Резервный плейлист</h3>
       <div class="muted small" style="margin:-4px 0 12px">Когда заказов нет, вместо тишины играет ваш плейлист YouTube. Заказ зрителя всегда важнее.</div>
       <div class="row" style="align-items:flex-end">
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" data-s="music.fallback_enabled"> Включён</label>
@@ -335,7 +480,7 @@
       </div>
       <div class="row" style="margin-top:10px;align-items:center">
         <label class="switch"><input type="checkbox" data-s="music.fallback_liked"> Играть и понравившиеся треки ♥</label>
-        <button class="sm" onclick="openLiked()">♥ Понравившиеся <span id="fb-liked-n"></span></button>
+        <button class="sm" onclick="openLiked()">Понравившиеся <span id="fb-liked-n"></span></button>
         <span class="small muted">Лайк — кнопкой «♡ Лайк» в «Эфире», в док-панели OBS, в истории треков или горячей клавишей (по умолчанию Ctrl+Alt+L, включите в «Настройках»). Ссылку на плейлист можно не указывать — тогда играют только понравившиеся.</span>
       </div>
     </div>
@@ -393,7 +538,7 @@
           <option value="stream">Этот стрим</option><option value="today">Сегодня</option><option value="week">7 дней</option><option value="all">Всё время</option></select></label>
         <label class="f grow"><span>Поиск по названию или нику</span><input id="mh-q" placeholder="например, Imagine Dragons" oninput="clearTimeout(MH_T);MH_T=setTimeout(loadHistory,350)"></label>
         <label class="switch" style="margin-bottom:8px"><input type="checkbox" id="mh-fb" onchange="loadHistory()"> Резервный плейлист</label>
-        <button class="sm" style="margin-bottom:6px" onclick="copyHistory()">📋 Скопировать список</button>
+        <button class="sm" style="margin-bottom:6px" onclick="copyHistory()">Скопировать список</button>
       </div>
       <div class="small muted" id="mh-total" style="margin:10px 0 6px"></div>
       <table><thead><tr><th style="width:110px">Когда</th><th>Трек</th><th>Заказал</th><th style="width:70px">Длина</th><th style="width:110px"></th></tr></thead><tbody id="mh-list"></tbody></table>
@@ -416,7 +561,7 @@
   </div>
   <div data-tab="cmds">
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="sm" onclick="openImport()">⇩ Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
+      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="sm" onclick="openImport()">Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
       <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Ответ</th><th>Доступ</th><th>Кулдаун</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-custom"></tbody></table>
       <div class="row small muted" style="margin-top:10px">Общий лимит запросов одного зрителя:
         <input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" style="width:80px"> сек</div>
@@ -507,7 +652,7 @@
     <div class="card">
       <h3 style="margin-top:0">Правила</h3>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.links.enabled"> <b>🔗 Ссылки</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.links.enabled"> <b>Ссылки</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Любые сайты, кроме разрешённых ниже. Ловит и хитрости вроде «site (dot) com». Модератор может разрешить ссылку: <code>!разрешить ник</code>.</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.links.action" onchange="modActs()">
@@ -516,7 +661,7 @@
         </div>
       </div>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.words.enabled"> <b>🚫 Запрещённые слова</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.words.enabled"> <b>Запрещённые слова</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Список ниже. Находит и «замаскированные» слова: латиница вместо кириллицы, «с.л.о.в.о», «с л о в о».</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.words.action" onchange="modActs()">
@@ -525,7 +670,7 @@
         </div>
       </div>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.repeat.enabled"> <b>🔁 Повторы</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.repeat.enabled"> <b>Повторы</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Одно и то же сообщение от зрителя несколько раз подряд.</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.repeat.action" onchange="modActs()">
@@ -534,7 +679,7 @@
         </div>
       </div>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.caps.enabled"> <b>🔠 Капс</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.caps.enabled"> <b>Капс</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Смайлы не считаются. Короткие сообщения («ЛОЛ», «GG») не трогаются.</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.caps.action" onchange="modActs()">
@@ -543,7 +688,7 @@
         </div>
       </div>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.symbols.enabled"> <b>〰 Флуд символами и смайлами</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.symbols.enabled"> <b>Флуд символами и смайлами</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Один символ много раз подряд («!!!!!!!!!!!!», «аааааааааааа») или слишком много смайлов в одном сообщении.</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.symbols.action" onchange="modActs()">
@@ -552,7 +697,7 @@
         </div>
       </div>
       <div class="mod-rule">
-        <label class="switch"><input type="checkbox" data-s="mod.length.enabled"> <b>📏 Длинные сообщения</b></label>
+        <label class="switch"><input type="checkbox" data-s="mod.length.enabled"> <b>Длинные сообщения</b></label>
         <div class="muted small" style="margin:2px 0 6px 46px">Простыни текста и копипасты.</div>
         <div class="row" style="margin-left:46px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="width:180px"><span>Действие</span><select data-s="mod.length.action" onchange="modActs()">
@@ -563,16 +708,16 @@
     </div>
     <div class="row" style="align-items:stretch;gap:16px;flex-wrap:wrap">
       <div class="card" style="flex:1;min-width:300px">
-        <h3 style="margin-top:0">🔗 Разрешённые сайты</h3>
+        <h3 style="margin-top:0">Разрешённые сайты</h3>
         <label class="f"><span>По одному в строке; поддомены разрешаются тоже (twitch.tv → clips.twitch.tv)</span><textarea data-s="mod.links.allow" data-list rows="6"></textarea></label>
       </div>
       <div class="card" style="flex:1;min-width:300px">
-        <h3 style="margin-top:0">🚫 Запрещённые слова</h3>
+        <h3 style="margin-top:0">Запрещённые слова</h3>
         <label class="f"><span>По одному в строке. Часть слова ловится везде; «=слово» — только целым словом</span><textarea data-s="mod.words.list" data-list rows="6" placeholder="казино&#10;=лох&#10;free followers"></textarea></label>
       </div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">💬 Сообщения бота</h3>
+      <h3 style="margin-top:0">Сообщения бота</h3>
       <label class="switch"><input type="checkbox" data-s="mod.notify"> Писать в чат, за что наказан зритель (не чаще раза в 5 секунд)</label>
       <div class="row" style="margin-top:8px;flex-wrap:wrap">
         <label class="f grow"><span>Предупреждение и удаление — {user}, {reason}</span><input data-s="mod.warn_text"></label>
@@ -580,14 +725,14 @@
       </div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">🧪 Проверить сообщение</h3>
+      <h3 style="margin-top:0">Проверить сообщение</h3>
       <div class="row"><input id="mod-test" class="grow" placeholder="Вставьте сообщение — программа покажет, что с ним будет" onkeydown="if(event.key==='Enter')modTest()">
         <button onclick="modTest()">Проверить</button></div>
       <div id="mod-test-out" class="small" style="margin-top:8px"></div>
       <div class="muted small">Проверка идёт по сохранённым настройкам — сначала нажмите «Сохранить», если меняли правила.</div>
     </div>
     <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">📋 Журнал срабатываний</h3><button class="sm" onclick="loadMod()">Обновить</button></div>
+      <div class="row"><h3 class="grow" style="margin:0">Журнал срабатываний</h3><button class="sm" onclick="loadMod()">Обновить</button></div>
       <div id="mod-list" style="margin-top:10px"></div>
     </div>
   </div>
@@ -651,7 +796,7 @@
     <div class="row" style="margin-top:12px">
       <span class="small muted">Адрес для OBS:</span><code id="al-url"></code><button class="sm" onclick="copy(base()+'/alerts')">Скопировать адрес OBS</button>
       <span class="grow"></span>
-      <button class="danger" onclick="api('/alerts/stop',{})">⏹ Остановить все МедиаАлерты</button>
+      <button class="danger" onclick="api('/alerts/stop',{})">Остановить все МедиаАлерты</button>
       <button class="primary" onclick="editAlert()">+ Добавить алерт</button>
     </div>
     <div class="muted small" style="margin-top:8px">В OBS: отдельный источник «Браузер» 1920×1080 (или размер холста), поверх остальных, с управлением аудио через OBS. Запуск в эфире — только через награду за баллы.</div>
@@ -665,7 +810,7 @@
 <section id="p-events" class="hidden">
   <h2>События</h2>
   <div class="card hl">
-    <h3>📣 Анонсы в Telegram и Discord</h3>
+    <h3>Анонсы в Telegram и Discord</h3>
     <div class="muted small" style="margin:-4px 0 12px">Когда начинается стрим, программа сама публикует пост с превью и ссылкой. Ещё можно отправлять итоги стрима и клипы из чата.</div>
     <div class="row" style="align-items:flex-start;gap:18px;flex-wrap:wrap">
       <div style="flex:1;min-width:300px">
@@ -709,7 +854,7 @@
       <label class="f"><span>Интервал сообщений о событиях, сек (1–60)</span><input type="number" min="1" max="60" data-s="events.interval_sec"></label>
       <label class="f"><span>Окно объединения подаренных подписок, сек (0–30)</span><input type="number" min="0" max="30" data-s="events.gift_merge_sec"></label>
       <span class="grow"></span>
-      <button id="btn-pause-ev2" onclick="api('/events/pause',{}).then(poll)">⏸ Пауза уведомлений</button>
+      <button id="btn-pause-ev2" onclick="api('/events/pause',{}).then(poll)">Пауза уведомлений</button>
     </div>
   </div>
   <div class="card">
@@ -720,7 +865,7 @@
       <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
     </div>
     <div class="row" style="margin-top:10px">
-      <button class="primary" onclick="login('da')">🔑 Войти через DonationAlerts</button>
+      <button class="primary" onclick="login('da')">Войти через DonationAlerts</button>
       <button class="sm danger" onclick="if(confirm('Отключить DonationAlerts?')) api('/logout/da',{}).then(loadSettings)">Выйти</button>
     </div>
     <details style="margin-top:12px" id="da-help"><summary class="small" style="cursor:pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
@@ -797,7 +942,7 @@
     <div class="muted small" style="margin-top:8px">Применяется сразу к панели и док-панели OBS.</div>
   </div>
   <div class="card">
-    <h3>🌐 Язык / Language</h3>
+    <h3>Язык / Language</h3>
     <div class="row" style="align-items:flex-end;flex-wrap:wrap">
       <label class="f" style="width:220px"><span>Язык программы / Program language</span>
         <select data-s="ui.language" data-autosave data-noi18n><option value="ru">Русский</option><option value="en">English</option></select></label>
@@ -834,15 +979,15 @@
       <div class="grow"><b>Beg1nnnerOS</b> <span class="muted" id="about-ver"></span>
         <div class="small" id="upd-status" style="margin:4px 0 6px"></div>
         <div class="row" style="gap:10px;align-items:center;margin-bottom:6px">
-          <button class="sm" onclick="updCheck()">🔄 Проверить обновления</button>
-          <button class="sm" onclick="openWizard(0)">🧭 Мастер настройки</button>
-          <button class="sm" onclick="saveReport()">📄 Сохранить отчёт об ошибке</button>
+          <button class="sm" onclick="updCheck()">Проверить обновления</button>
+          <button class="sm" onclick="openWizard(0)">Мастер настройки</button>
+          <button class="sm" onclick="saveReport()">Сохранить отчёт об ошибке</button>
           <label class="switch"><input type="checkbox" id="upd-auto" onchange="api('/update/auto',{on:this.checked})"> Проверять автоматически</label>
         </div>
         <div class="muted small">Если программа помогает вашему стриму — можно поблагодарить разработчика.</div>
         <div class="muted small">Есть идея, как сделать программу лучше, или нашли ошибку? Напишите в Telegram: опишите, что делали и что пошло не так, и приложите строку из журнала, если она есть.</div></div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener">💜 Поблагодарить разработчика</a>
+        <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener">Поблагодарить разработчика</a>
         <a class="contact-btn" href="https://t.me/Beg1nnner" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#29a9eb"/><path fill="#fff" d="M5.4 11.7l11.2-4.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg> Предложения и ошибки — Telegram</a>
       </div>
     </div>
@@ -856,12 +1001,12 @@
 
 <!-- ================= ОПРОСЫ И ПРОГНОЗЫ ================= -->
 <section id="p-votes" class="hidden">
-  <h2 style="margin:0">🗳 Опросы и прогнозы Twitch</h2>
+  <h2 style="margin:0">Опросы и прогнозы Twitch</h2>
   <div class="muted small" style="margin:4px 0 12px">Запускайте прямо отсюда или из док-панели OBS: зрители голосуют в обычном окне Twitch, а здесь и в оверлее видны живые результаты. Работает на каналах компаньонов (affiliate) и партнёров.</div>
   <div id="vt-warn"></div>
   <div class="vt-grid">
     <div class="card">
-      <h3 style="margin-top:0">📊 Опрос</h3>
+      <h3 style="margin-top:0">Опрос</h3>
       <div id="vt-poll-live"></div>
       <div id="vt-poll-form">
         <div class="small muted">Шаблоны:</div>
@@ -877,13 +1022,13 @@
           <label class="f" style="width:110px"><span>Баллов за голос</span><input id="vt-pptsn" type="number" min="1" value="100" disabled></label>
         </div>
         <div class="vt-acts">
-          <button class="primary" id="vt-pstart" onclick="vtStartPoll()">▶ Запустить опрос</button>
-          <button class="sm" onclick="vtSaveTpl('poll')">☆ Сохранить как шаблон</button>
+          <button class="primary" id="vt-pstart" onclick="vtStartPoll()">Запустить опрос</button>
+          <button class="sm" onclick="vtSaveTpl('poll')">Сохранить как шаблон</button>
         </div>
       </div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">🔮 Прогноз (ставки баллами канала)</h3>
+      <h3 style="margin-top:0">Прогноз (ставки баллами канала)</h3>
       <div id="vt-pred-live"></div>
       <div id="vt-pred-form">
         <div class="small muted">Шаблоны:</div>
@@ -897,22 +1042,22 @@
             <option value="300">5 мин</option><option value="600">10 мин</option><option value="900">15 мин</option><option value="1800">30 мин</option></select></label>
         </div>
         <div class="vt-acts">
-          <button class="primary" id="vt-rstart" onclick="vtStartPred()">▶ Запустить прогноз</button>
-          <button class="sm" onclick="vtSaveTpl('prediction')">☆ Сохранить как шаблон</button>
+          <button class="primary" id="vt-rstart" onclick="vtStartPred()">Запустить прогноз</button>
+          <button class="sm" onclick="vtSaveTpl('prediction')">Сохранить как шаблон</button>
         </div>
       </div>
     </div>
   </div>
   <div class="vt-grid" style="margin-top:16px">
     <div class="card">
-      <h3 style="margin-top:0">💬 Сообщения в чат</h3>
+      <h3 style="margin-top:0">Сообщения в чат</h3>
       <label class="switch"><input type="checkbox" data-s="votes.chat_start"> Бот сообщает о начале опроса или прогноза</label><br>
       <label class="switch"><input type="checkbox" data-s="votes.chat_results"> Бот пишет итоги (проценты, победитель, кто больше всех выиграл)</label><br>
       <label class="switch"><input type="checkbox" data-s="votes.chat_lock"> Сообщать, что ставки закрыты</label>
       <div class="muted small" style="margin-top:8px">Если в «Событиях» включено уведомление «Опрос», итог опроса пишет оно — дубля не будет.</div>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">🎥 Источник для OBS</h3>
+      <h3 style="margin-top:0">Источник для OBS</h3>
       <div class="muted small">Полоски голосов и ставок прямо на стриме. Появляется сам, когда идёт опрос или прогноз.</div>
       <div class="row" style="margin-top:8px"><code id="vt-url"></code><button class="sm" onclick="copy(base()+'/votes')">Скопировать адрес</button></div>
       <div class="muted small">«Источники» → «+» → «Браузер», ширина 600, высота 500. Фон прозрачный.</div>
@@ -926,7 +1071,7 @@
 
 <!-- ================= СУБТИТРЫ ================= -->
 <section id="p-captions" class="hidden">
-  <h2 style="margin:0">💬 Субтитры в OBS</h2>
+  <h2 style="margin:0">Субтитры в OBS</h2>
   <div class="muted small" style="margin:4px 0 12px">Программа слушает ваш микрофон и выводит речь текстом на экран стрима. Распознавание идёт на этом компьютере — без интернета и платных сервисов. Можно сразу показывать перевод на английский.</div>
   <div class="card hl">
     <div class="row" style="justify-content:space-between;flex-wrap:wrap">
@@ -942,7 +1087,7 @@
     <div class="bar" style="height:8px"><i id="cap-level" style="background:linear-gradient(90deg,#22c55e,#eab308)"></i></div>
   </div>
   <div class="card">
-    <h3 style="margin-top:0">🧠 Движок распознавания</h3>
+    <h3 style="margin-top:0">Движок распознавания</h3>
     <div class="row" style="flex-wrap:wrap;gap:12px">
       <label class="opt cap-opt"><input type="radio" name="cap-eng" value="whisper" onchange="capEngine(this.value)"> <b>Точный · Whisper</b><div class="small muted">лучше понимает речь, ставит знаки препинания и сам переводит на английский; задержка 1–3 секунды</div></label>
       <label class="opt cap-opt"><input type="radio" name="cap-eng" value="vosk" onchange="capEngine(this.value)"> <b>Быстрый · Vosk</b><div class="small muted">слова появляются сразу, подходит для слабых ПК; точность ниже, перевод — через локальный переводчик из «Чат → Инструменты»</div></label>
@@ -952,14 +1097,14 @@
       <label class="f" style="width:300px" id="cap-model-f"><span>Модель Whisper</span><select data-s="captions.model" id="cap-model"></select></label>
       <label class="f" style="width:230px" id="cap-gpu-f"><span>Ускорение</span><select data-s="captions.gpu" data-bool>
         <option value="true">Видеокарта (Vulkan)</option><option value="false">Только процессор</option></select></label>
-      <button id="cap-dl" onclick="capDownload()">⬇ Скачать модель</button>
+      <button id="cap-dl" onclick="capDownload()">Скачать модель</button>
       <div class="grow" id="cap-dl-box" style="min-width:220px"></div>
     </div>
     <div class="small" id="cap-accel" style="margin-top:8px"></div>
     <div class="muted small" style="margin-top:6px">Модель скачивается один раз (с GitHub). Whisper работает на видеокарте NVIDIA, AMD или Intel через Vulkan — в несколько раз быстрее, и процессор остаётся игре. Если видеокарта не подойдёт, программа сама перейдёт на процессор. Если субтитры отстают — выберите модель поменьше или режим Vosk.</div>
   </div>
   <div class="card">
-    <h3 style="margin-top:0">🌐 Что показывать</h3>
+    <h3 style="margin-top:0">Что показывать</h3>
     <div class="row" style="flex-wrap:wrap;align-items:flex-end">
       <label class="f" style="width:260px"><span>Текст на экране</span><select data-s="captions.show">
         <option value="orig">Только речь как есть</option><option value="both">Речь + английский перевод</option><option value="en">Только английский</option></select></label>
@@ -969,7 +1114,7 @@
     </div>
   </div>
   <div class="card">
-    <h3 style="margin-top:0">🎥 Источник для OBS</h3>
+    <h3 style="margin-top:0">Источник для OBS</h3>
     <div class="row"><code id="cap-url"></code><button class="sm" onclick="copy(base()+'/captions')">Скопировать адрес</button></div>
     <div class="muted small">«Источники» → «+» → «Браузер», 1920×1080, поверх игры. Фон прозрачный.</div>
     <div class="row" style="margin-top:10px;flex-wrap:wrap;align-items:flex-end">
@@ -987,11 +1132,11 @@
 
 <!-- ================= ДОПОЛНИТЕЛЬНО ================= -->
 <section id="p-pro" class="hidden">
-  <h2 style="margin:0">🚀 Дополнительно</h2>
+  <h2 style="margin:0">Дополнительно</h2>
   <div id="cloud-offer" class="card hl hidden" style="margin-top:12px"></div>
   <div class="tabs" data-group="pro" style="margin-top:14px">
     <button data-t="themes" class="on">Темы оверлеев</button>
-    <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши и игры</button><button data-t="prof">Профили и облако</button>
+    <button data-t="sstats">Статистика стримов</button><button data-t="give">Розыгрыши</button><button data-t="prof">Профили и облако</button>
   </div>
 
   <!-- Темы -->
@@ -999,14 +1144,14 @@
     <div class="card">
       <div class="row"><h3 class="grow" style="margin:0">Свои темы</h3>
         <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button>
-        <button class="sm" onclick="themeImport()">📥 Импорт по коду</button></div>
+        <button class="sm" onclick="themeImport()">Импорт по коду</button></div>
       <table style="margin-top:10px"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list"></tbody></table>
       <div class="small muted" style="margin-top:8px">«Применить» выбирает тему для источника в OBS. Для отдельной сцены адрес с темой: <code>/?theme=custom:ID</code> или <code>/chat?theme=custom:ID</code>.</div>
     </div>
     <div class="card hidden" id="th-editor">
       <div class="row"><h3 class="grow" style="margin:0" id="th-title">Новая тема</h3>
-        <button class="sm" onclick="themeExport()">📤 Код темы</button>
-        <button class="sm" onclick="themeReset()">↺ Сбросить</button>
+        <button class="sm" onclick="themeExport()">Код темы</button>
+        <button class="sm" onclick="themeReset()">Сбросить</button>
         <button class="sm" onclick="closeTheme()">Закрыть</button></div>
       <div class="th-layout">
         <div class="th-form">
@@ -1016,9 +1161,9 @@
           </div>
           <div class="th-pal-wrap"><span class="small muted">Готовые палитры:</span><div id="th-pal" class="th-pal"></div></div>
           <div id="th-fields"></div>
-          <details class="th-sec"><summary>🧩 Свой CSS (для опытных)</summary>
+          <details class="th-sec"><summary>Свой CSS (для опытных)</summary>
             <textarea id="th-css" data-th rows="5" style="font-family:Consolas,monospace;font-size:12.5px;width:100%" placeholder="#wrap .title { letter-spacing: .05em; }"></textarea></details>
-          <div class="row" style="margin-top:12px"><button class="primary" onclick="saveTheme()">💾 Сохранить тему</button>
+          <div class="row" style="margin-top:12px"><button class="primary" onclick="saveTheme()">Сохранить тему</button>
             <button onclick="saveTheme(true)">Сохранить и применить</button><span class="grow"></span><span class="small muted">Предпросмотр меняется сразу</span></div>
         </div>
         <div class="th-prev">
@@ -1058,13 +1203,13 @@
           <label class="switch" style="margin-top:18px"><input type="checkbox" id="gv-subs"> Только подписчики</label>
           <label class="switch" style="margin-top:18px"><input type="checkbox" id="gv-follow"> Только фолловеры</label>
         </div>
-        <div class="row" style="margin-top:8px"><button class="primary" onclick="gvStart()">🎉 Начать розыгрыш</button></div>
+        <div class="row" style="margin-top:8px"><button class="primary" onclick="gvStart()">Начать розыгрыш</button></div>
       </div>
       <div id="gv-run" class="hidden" style="margin-top:12px">
         <div id="gv-info" class="np-title"></div>
         <div class="row" style="margin-top:10px">
           <button onclick="api('/pro/giveaway/close',{}).then(loadGiveaway)" id="gv-close">Закрыть приём заявок</button>
-          <button class="primary" onclick="api('/pro/giveaway/draw',{}).then(loadGiveaway)">🏆 Выбрать победителя</button>
+          <button class="primary" onclick="api('/pro/giveaway/draw',{}).then(loadGiveaway)">Выбрать победителя</button>
           <span class="grow"></span>
           <button class="sm danger" onclick="if(confirm('Завершить розыгрыш и очистить список участников?')) api('/pro/giveaway/finish',{}).then(loadGiveaway)">Завершить</button>
         </div>
@@ -1072,22 +1217,6 @@
         <div class="small muted" style="margin-top:10px">Участники (новые сверху):</div>
         <div id="gv-entries" class="log" style="max-height:220px;margin-top:6px"></div>
       </div>
-    </div>
-    <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Мини-игры в чате</h3><label class="switch"><input type="checkbox" data-s="pro.games.enabled"> Включены</label></div>
-      <div class="row" style="margin-top:10px">
-        <label class="switch"><input type="checkbox" data-s="pro.games.dice"> <code>!кости</code> — бросок против бота</label>
-        <label class="switch"><input type="checkbox" data-s="pro.games.duel"> <code>!дуэль @ник</code> → <code>!принять</code></label>
-        <label class="f"><span>Кулдаун на зрителя, сек</span><input type="number" min="0" data-s="pro.games.cooldown" style="width:100px"></label>
-        <label class="f"><span>Время на принятие дуэли, сек</span><input type="number" min="15" max="300" data-s="pro.games.duel_timeout" style="width:100px"></label>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <b class="grow">«Угадай число»: <span id="gs-state" class="muted"></span></b>
-        <label class="f"><span>от 1 до</span><input type="number" min="10" data-s="pro.games.guess_max" id="gs-max" style="width:110px"></label>
-        <button onclick="api('/pro/games/guess',{max:+$('gs-max').value}).then(loadGames)">Загадать</button>
-        <button class="sm" onclick="api('/pro/games/guess/stop',{}).then(loadGames)">Остановить</button>
-      </div>
-      <div class="small muted">Зрители пишут в чат числа; первый угадавший побеждает. Баллы канала программа начислять не может — так устроен Twitch.</div>
     </div>
   </div>
 
@@ -1188,9 +1317,18 @@ const getPath = (o, p) => p.split(".").reduce((a, k) => a == null ? a : a[k], o)
 const setPath = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k] ??= {}, o)[last] = v; };
 
 // ---------- навигация ----------
-document.querySelectorAll("nav button[data-p]").forEach(b => b.onclick = () => go(b.dataset.p));
+document.querySelectorAll("nav button[data-p]").forEach(b => b.onclick = () => go(b.dataset.p, b.dataset.sub || (b.dataset.p === "chat" ? "cmds" : "")));
+const CRUMBS = {live:"Панель управления", music:"Эфир", chat:"Эфир", alerts:"Эфир", events:"Интерактив", votes:"Интерактив", captions:"Интерактив", settings:"Система", pro:"Система"};
+function navMark() {
+  const sec = document.querySelector("main > section:not(.hidden)"); if (!sec) return;
+  const p = sec.id.slice(2);
+  const modOn = p === "chat" && !document.querySelector('#p-chat [data-tab="mod"]').classList.contains("hidden");
+  let cur = null;
+  document.querySelectorAll("nav button[data-p]").forEach(x => { const on = x.dataset.p === p && (x.dataset.sub === "mod") === modOn; x.classList.toggle("on", on); if (on) cur = x; });
+  $("tb-h").textContent = cur ? cur.querySelector("span").textContent : "";
+  $("tb-crumb").textContent = modOn ? "Интерактив" : (CRUMBS[p] || "");
+}
 function go(p, sub) {
-  document.querySelectorAll("nav button[data-p]").forEach(x => x.classList.toggle("on", x.dataset.p === p));
   document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "p-" + p));
   if (sub) { const g = document.querySelector(`#p-${p} .tabs button[data-t="${sub}"]`); if (g) g.click(); }
   if (p === "chat") { loadCommands(); loadTimers(); }
@@ -1200,6 +1338,7 @@ function go(p, sub) {
   if (p === "pro") loadPro();
   if (p === "votes") vtOpen();
   if (p === "captions") capOpen();
+  navMark();
   try { history.replaceState(null, "", "#" + p); } catch (e) {}
 }
 document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelectorAll("button").forEach(b => b.onclick = () => {
@@ -1214,6 +1353,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   if (b.dataset.t === "mhist") loadHistory();
   if (b.dataset.t === "mod") { loadMod(); modActs(); }
   if (["themes", "give", "prof"].includes(b.dataset.t)) loadPro();
+  navMark();
 }));
 
 // ---------- настройки (data-s) ----------
@@ -1234,7 +1374,7 @@ async function loadSettings() {
   $("hk-list").innerHTML = Object.entries(j.hotkey_actions).map(([k, t]) => `<tr><td>${t}</td>
     <td style="width:220px"><input data-s="hotkeys.${k}" value="${esc(S.hotkeys[k])}"></td><td class="small" id="hk-${k}"></td></tr>`).join("");
   $("savebar").classList.add("hidden");
-  applyUiTheme(S.ui.theme || "twitch"); renderUiThemes(); renderChatThemes(true); renderOut();
+  applyUiTheme(S.ui.theme || "studio"); fillHotkeyHints(); renderUiThemes(); renderChatThemes(true); renderOut();
   if (window.i18nInputs) window.i18nInputs();
   renderEvents(); fitOverlay();
 }
@@ -1272,10 +1412,17 @@ $("live-vol").oninput = e => { volBusy = Date.now(); $("live-volv").textContent 
 let masterBusy = 0;
 $("al-master").oninput = e => { masterBusy = Date.now(); $("al-masterv").textContent = e.target.value; api("/alerts/volume", {volume:+e.target.value}); };
 function card(title, value, cls, fix, note) {
-  return `<div class="card ready"><span class="t">${title}</span><span class="v ${cls}">${value}</span>
-    ${note ? `<span class="small muted">${note}</span>` : ""}
-    ${fix ? `<button class="sm" style="align-self:flex-start;margin-top:4px" onclick="go('${fix[0]}','${fix[1] || ""}')">Исправить</button>` : ""}</div>`;
+  const tip = note ? ` title="${String(note).replace(/<[^>]+>/g, "").replace(/"/g, "&quot;")}"` : "";
+  return fix ? `<button class="chip fix ${cls}"${tip} onclick="go('${fix[0]}','${fix[1] || ""}')"><i></i><span class="t">${title}</span><span class="v">${value}</span><span class="fx">Исправить</span></button>`
+    : `<span class="chip ${cls}"${tip}><i></i><span class="t">${title}</span><span class="v">${value}</span></span>`;
 }
+function fmtKey(k) { return String(k || "").split("+").map(x => ({ctrl:"Ctrl", alt:"Alt", shift:"Shift", win:"Win", right:"→", left:"←", up:"↑", down:"↓", backspace:"Backspace", space:"Space"}[x.toLowerCase()] || (x.length === 1 ? x.toUpperCase() : x[0].toUpperCase() + x.slice(1)))).join("+"); }
+function fillHotkeyHints() {
+  document.querySelectorAll("kbd[data-hk]").forEach(k => k.textContent = S && S.hotkeys && S.hotkeys.enabled && S.hotkeys[k.dataset.hk] ? fmtKey(S.hotkeys[k.dataset.hk]) : "");
+}
+const AV_COLORS = ["#F59E0B", "#34D399", "#38BDF8", "#F472B6", "#A78BFA", "#FB923C", "#2DD4BF"];
+function avColor(name) { let h = 0; for (const ch of String(name || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AV_COLORS[h % AV_COLORS.length]; }
+const ICO_MUSIC = '<svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
 let UPD_HIDE = "", UPD_NOTES = false, UPD_CHECKED = false;
 function updNavClick() {
   const u = ST.update || {};
@@ -1548,7 +1695,7 @@ function renderOut() {
 async function poll() {
   try { ST = (await api("/state")); } catch (e) { return; }
   const r = ST.ready, m = ST.music;
-  $("ver").textContent = "Версия " + ST.version;
+  $("ver").textContent = "v" + ST.version;
   $("about-ver").textContent = "версия " + ST.version;
   renderUpdate(ST.update);
   const cards = [];
@@ -1576,9 +1723,17 @@ async function poll() {
     esc([r.stream.title, r.stream.category].filter(Boolean).join(" · "))));
   cards.push(card("Награды за баллы", esc(r.rewards), /ошибк|нет|не /.test(r.rewards) ? "warn" : "ok", null));
   $("ready").innerHTML = cards.join("");
+  const bad = cards.filter(x => /chip (fix )?(warn|err)/.test(x)).length, total = cards.filter(x => !/chip (fix )?muted/.test(x)).length;
+  $("tb-health").classList.toggle("bad", bad > 0);
+  $("tb-health").innerHTML = bad ? `<i></i>Требует внимания <b>${bad}</b>` : `<i></i>Всё в норме <b>${total}/${total}</b>`;
+  $("tb-live").classList.toggle("hidden", !r.stream.live); $("tb-up").textContent = r.stream.live ? r.stream.uptime : "";
+  $("nm-login").textContent = r.streamer.ok ? r.streamer.login : "Нет входа";
+  $("nm-av").textContent = r.streamer.ok ? r.streamer.login[0] : "?"; $("nm-av").classList.toggle("live", !!r.stream.live);
+  $("nm-sub").textContent = r.streamer.ok ? (r.stream.live ? "Twitch · в эфире" : "Twitch · не в эфире") : "Войдите в «Настройках»";
   const c = m.current;
   $("np-title").textContent = c ? c.title : "—";
-  $("np-like").textContent = c && c.liked ? "♥ Нравится" : "♡ Лайк";
+  $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
+  $("np-paid").classList.toggle("hidden", !(c && c.paid));
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
   if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast("💾 " + m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
@@ -1587,21 +1742,30 @@ async function poll() {
   MUS_OBS = m.obs_connected; renderOut();
   $("fb-status").textContent = m.fallback_status ? "Сейчас: " + m.fallback_status : "";
   $("np-bar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";
-  $("np-pos").textContent = c ? fmt(c.position) + " / " + fmt(c.duration) : "";
-  $("np-votes").textContent = c && m.votes ? `Голосов за пропуск: ${m.votes}/${m.votes_needed}` : "";
+  $("np-pos").textContent = c ? fmt(c.position) : "";
+  $("np-left").textContent = c && c.duration ? "−" + fmt(Math.max(0, c.duration - c.position)) : "";
+  $("np-votes").textContent = c && m.votes ? `пропуск: ${m.votes} из ${m.votes_needed} голосов` : "";
   if (Date.now() - volBusy > 1500) { $("live-vol").value = m.volume; $("live-volv").textContent = m.volume; }
   if (Date.now() - masterBusy > 1500) { $("al-master").value = ST.alerts.volume; $("al-masterv").textContent = ST.alerts.volume; }
-  $("live-q").innerHTML = m.queue.slice(0, 8).map(t => `<li>${esc(t.title)} <span class="muted small">${esc(t.requester)}</span></li>`).join("") || '<span class="muted small">Пусто</span>';
-  if (m.queue.length > 8) $("live-q").innerHTML += `<span class="muted small">…и ещё ${m.queue.length - 8}</span>`;
+  $("live-q").innerHTML = m.queue.slice(0, 6).map((t, i) => { const col = avColor(t.requester);
+    return `<div class="qrow"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="cv" style="color:${col}">${ICO_MUSIC}</span>
+    <span class="tt" data-noi18n title="${esc(t.title)}">${esc(t.title)}${t.priority === 3 ? ' <span class="pill warn">⚡</span>' : ""}</span>
+    <span class="who">${t.requester ? `<span class="av" style="background:${col}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span>` : '<span class="muted">вручную</span>'}</span>
+    <span class="d">${fmt(t.duration)}</span></div>`; }).join("") || '<div class="muted small" style="padding:8px">Очередь пуста — закажите трек за баллы или добавьте вручную в «Музыке»</div>';
+  if (m.queue.length > 6) $("live-q").innerHTML += `<div class="muted small" style="padding:8px">…и ещё ${m.queue.length - 6}</div>`;
+  const qsec = m.queue.reduce((a, t) => a + (t.duration || 0), 0);
+  $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
+  $("nb-music").textContent = m.queue.length || "";
   $("m-queue").innerHTML = m.queue.map((t, i) => `<tr><td>${i + 1}${t.priority === 3 ? " ⚡" : t.priority ? " ★" : ""}</td>
     <td><a href="${esc(t.page_url)}" target="_blank">${esc(t.title)}</a></td><td>${fmt(t.duration)}</td><td>${esc(t.requester) || '<span class="muted">вручную</span>'}</td>
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:-1})">↑</button><button class="sm" onclick="api('/music/move',{id:'${t.id}',delta:1})">↓</button>
     <button class="sm danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">✕${t.paid ? " ↩" : ""}</button></td></tr>`).join("")
     || '<tr><td colspan="5" class="muted">Очередь пуста</td></tr>';
   const nt = ST.next_timer;
-  $("next-timer").innerHTML = nt ? `<b>${esc(nt.name)}</b> через ${fmt(nt.seconds)}${nt.messages_left ? ` · ждёт ещё ${nt.messages_left} сообщ. чата` : ""}` : '<span class="muted">Нет активных (таймеры работают во время эфира)</span>';
+  $("next-timer").innerHTML = nt ? `<span data-noi18n>${esc(nt.name)}</span> · <b class="mono" style="background:none;padding:0;color:var(--fg)">${fmt(nt.seconds)}</b>${nt.messages_left ? ` · ждёт ${nt.messages_left} сообщ.` : ""}` : 'таймеры — во время эфира';
   const pe = ST.paused_events;
-  ["btn-pause-ev", "btn-pause-ev2"].forEach(id => { $(id).textContent = pe ? "▶ Возобновить уведомления" : "⏸ Пауза уведомлений"; $(id).classList.toggle("primary", pe); });
+  $("btn-pause-ev").querySelector("span").textContent = pe ? "Возобновить уведомления" : "Пауза уведомлений"; $("btn-pause-ev").classList.toggle("primary", pe);
+  $("btn-pause-ev2").textContent = pe ? "▶ Возобновить уведомления" : "⏸ Пауза уведомлений"; $("btn-pause-ev2").classList.toggle("primary", pe);
   $("alerts-q").textContent = `Алертов в очереди: ${ST.alerts.pending}` + (ST.alerts.current ? ` · показ: ${ST.alerts.current.name}` : "");
   $("acc-streamer").innerHTML = r.streamer.ok ? `<span class="pill ok">Подключён</span> <b>${esc(r.streamer.login)}</b>` +
     (r.streamer.missing_scopes.length ? ` <span class="pill warn">не хватает прав: ${r.streamer.missing_scopes.length}</span>` : "") : '<span class="pill err">Не подключён</span>';
@@ -1876,7 +2040,8 @@ function prev() {
 
 // ---------- темы ----------
 const UI_THEMES = {
-  twitch:   ["Twitch (тёмная)", ["#0f0f14", "#17171f", "#9146ff", "#e8e8ef"]],
+  studio:   ["Студия", ["#09090c", "#111116", "#8b5cf6", "#f4f4f7"]],
+  twitch:   ["Twitch (классика)", ["#0f0f14", "#17171f", "#9146ff", "#e8e8ef"]],
   light:    ["Светлая", ["#f4f4f8", "#ffffff", "#7c3aed", "#1b1b24"]],
   midnight: ["Полночь", ["#0b1020", "#111a30", "#3b82f6", "#e3e9f7"]],
   neon:     ["Неон", ["#07070d", "#151526", "#ff2bd6", "#2de2ff"]],
@@ -1898,7 +2063,7 @@ function applyUiTheme(t) {
   try { localStorage.setItem("hub-theme", t); } catch (e) {}
 }
 function renderUiThemes() {
-  const cur = S.ui.theme || "twitch";
+  const cur = S.ui.theme || "studio";
   $("ui-themes").innerHTML = Object.entries(UI_THEMES).map(([k, [name, sw]]) => `<button class="theme-card ${k === cur ? "on" : ""}" onclick="setUiTheme('${k}')">
     <div class="sw">${sw.map(c => `<i style="background:${c}"></i>`).join("")}</div>${name}</button>`).join("");
 }
@@ -2022,7 +2187,7 @@ const CHAT_BASE_NAMES = {classic:"Классика", cards:"Карточки", b
 async function loadPro() {
   try { PRO = await api("/pro"); } catch (e) { return; }
   if (!S) return;
-  renderThemes(); renderGiveaway(PRO.giveaway); renderGames(PRO.games); renderProfiles(); renderCloud();
+  renderThemes(); renderGiveaway(PRO.giveaway); renderProfiles(); renderCloud();
 }
 
 // ---------- свои темы ----------
@@ -2341,10 +2506,6 @@ function renderGiveaway(g) {
     `<span class="pill ok" style="font-size:13px">🏆 ${esc(w.name)}${w.sub ? " ⭐" : ""}</span> <button class="sm" onclick="api('/pro/giveaway/reroll',{login:'${esc(w.login)}'}).then(loadGiveaway)">Перевыбрать</button>`).join(" ") : "";
   $("gv-entries").innerHTML = g.entries.map(e => `<div>${esc(e.name)}${e.sub ? ' <span class="pill">подписчик</span>' : ""}${e.tickets > 1 ? ` <span class="muted">×${e.tickets}</span>` : ""}</div>`).join("") || '<span class="muted">Пока никого</span>';
 }
-async function loadGames() { try { renderGames((await api("/pro/live")).games); } catch (e) {} }
-function renderGames(g) {
-  $("gs-state").textContent = g.guess.active ? `идёт игра (1–${g.guess.max}), попыток в чате: ${g.guess.tries}` : (g.guess.last_winner ? `последний победитель — ${g.guess.last_winner}` : "не запущена");
-}
 
 // ---------- профили и облако ----------
 function renderProfiles() {
@@ -2401,7 +2562,7 @@ setInterval(async () => {
   if (tab !== "give") return;
   try {
     const L = await api("/pro/live");
-    renderGiveaway(L.giveaway); renderGames(L.games);
+    renderGiveaway(L.giveaway);
   } catch (e) {}
 }, 2000);
 // при запуске: предложение восстановить облачную копию
