@@ -179,6 +179,26 @@
   .ab-mark { width:60px; height:60px; border-radius:18px; font-size:20px; }
   .ab-name { font-size:22px; font-weight:600; letter-spacing:-.02em; }
   .twitch-btn { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; background:#9146ff; color:#fff !important; font-weight:600; text-decoration:none; }
+  .ev-top { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:18px; margin-bottom:18px; align-items:start; }
+  .ev-top > .card, .ev-side > .card { margin:0; }
+  .ev-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  @media (max-width:1150px) { .ev-top { grid-template-columns:1fr; } }
+  .evl-h, .evl { display:grid; grid-template-columns:36px minmax(150px, 190px) minmax(0, 1fr) 64px 72px 32px; gap:14px; align-items:center; }
+  .evl-h { font-size:12px; color:var(--dim); padding:14px 0 8px; }
+  .evl-h span:nth-child(4), .evl-h span:nth-child(5) { text-align:center; }
+  .evl { padding:11px 0; border-top:1px solid var(--hair); }
+  .evl-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:var(--field); border:1px solid var(--hair); }
+  .evl-n { display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .evl-n b { font-size:14px; font-weight:500; } .evl-n small { font:11px var(--mono); color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  button.evl-t { height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--line); background:var(--field); font-size:13px; font-weight:400; color:var(--muted);
+    text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  button.evl-t:hover { color:var(--fg); }
+  .evl-c { display:flex; justify-content:center; }
+  button.evl-e { width:32px; height:32px; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--dim); border-color:var(--hair); }
+  @media (max-width:800px) { .evl-h { display:none; } .evl { grid-template-columns:36px 1fr 48px 48px 32px; } .evl-t { grid-column:2 / -1; grid-row:2; } }
+  .ev-q { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin:14px 0; }
+  .ev-pause { display:flex; align-items:center; gap:12px; width:100%; padding-top:12px; border-top:1px solid var(--hair); }
+  .ev-pause kbd:empty { display:none; }
   .ev-obs-grid { display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:22px; margin-top:16px; }
   @media (max-width:1100px) { .ev-obs-grid { grid-template-columns:1fr; } }
   .ev-stage { border-radius:14px; overflow:hidden; border:1px solid var(--hair); aspect-ratio:16/9; background:#0c0d12; }
@@ -940,16 +960,52 @@
 <!-- ================= СОБЫТИЯ ================= -->
 <section id="p-events" class="hidden">
   <h2>События</h2>
+  <div class="ev-top">
+    <div class="card ev-list-card">
+      <div class="row"><span class="micro grow">События канала</span><button class="sm" onclick="api('/events/test',{type:'follow'}).then(()=>toast('Тестовое событие показано в OBS'))"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg> Показать тест</button></div>
+      <div class="evl-h"><span></span><span>Событие</span><span>Сообщение в чат</span><span>В чат</span><span>На экран</span><span></span></div>
+      <div id="ev-list"></div>
+      <div class="muted small" style="margin-top:12px">Нажмите на текст, чтобы изменить шаблон. Предпросмотр использует демо-данные и ничего не отправляет в чат. Доступность событий зависит от прав аккаунта и статуса канала.</div>
+    </div>
+    <div class="ev-side">
+      <div class="card">
+        <div class="micro">Очередь уведомлений</div>
+        <div class="ev-q">
+          <label class="f mf"><span>Пауза между</span><span class="inp-u"><input type="number" min="1" max="60" data-s="events.interval_sec"><span class="u">с</span></span></label>
+          <label class="f mf"><span>Склеивать подарки</span><span class="inp-u"><input type="number" min="0" max="30" data-s="events.gift_merge_sec"><span class="u">с</span></span></label>
+        </div>
+        <label class="switch rev ev-pause"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg><span class="grow">Пауза уведомлений</span><kbd data-hk="pause_events"></kbd><input type="checkbox" id="ev-pause-sw" onchange="api('/events/pause',{}).then(poll)"></label>
+        <button id="btn-pause-ev2" class="hidden" onclick="api('/events/pause',{}).then(poll)"></button>
+      </div>
   <div class="card">
-    <table><thead><tr><th>Событие</th><th>Шаблон</th><th style="text-align:center">В чат</th><th style="text-align:center">На экран</th><th></th></tr></thead><tbody id="ev-list"></tbody></table>
-    <div class="muted small" style="margin-top:8px">Предпросмотр использует демонстрационные данные и ничего не отправляет в чат. Доступность событий зависит от прав аккаунта и статуса канала.</div>
+    <div class="row"><span class="micro grow">DonationAlerts</span><span id="da-status" class="pill"></span></div>
+    <p class="small muted" style="margin:6px 0 10px">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в списке слева).</p>
+    <div class="row">
+      <label class="f grow"><span>ID приложения</span><input data-s="donationalerts.client_id" autocomplete="off" placeholder="например 12345"></label>
+      <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" onclick="login('da')">Войти через DonationAlerts</button>
+      <button class="sm danger" onclick="if(confirm('Отключить DonationAlerts?')) api('/logout/da',{}).then(loadSettings)">Выйти</button>
+    </div>
+    <details style="margin-top:12px" id="da-help"><summary class="small" style="cursor:pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
+      <li>Откройте <a href="https://www.donationalerts.com/application/clients" target="_blank">страницу приложений DonationAlerts</a> (войдите в свой аккаунт) и нажмите «Создать приложение».
+        Название — любое, например <code>Beg1nnnerOS</code>. URL перенаправления: <code>http://localhost:4343/da</code> <button class="sm" onclick="copy('http://localhost:4343/da')">Копировать</button></li>
+      <li>Скопируйте из созданного приложения <b>ID приложения</b> и <b>API-ключ</b> в поля выше.</li>
+      <li>Нажмите «Войти через DonationAlerts» и в открывшемся окне браузера разрешите доступ. Статус справа сверху сменится на «подключено».</li></ol>
+      <p class="small muted">Программа сама продлевает доступ. Ключ браузерного виджета («Секретный токен» из настроек виджетов) здесь не нужен.</p></details>
+    <details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
+      <label class="f" style="margin-top:8px"><span>OAuth access token (права oauth-user-show и oauth-donation-subscribe)</span>
+        <input type="password" data-s="donationalerts.token" data-secret="donationalerts.has_token" autocomplete="new-password"></label></details>
+  </div>
+    </div>
   </div>
   <div class="card ev-obs">
-    <div class="row"><h3 class="grow" style="margin:0">События на экране (оверлей в OBS)</h3><button class="sm" onclick="evScreenPrev()">Обновить предпросмотр</button></div>
+    <div class="row"><span class="micro">События на экране</span><h3 class="grow" style="margin:0">Оверлей в OBS</h3><button class="sm" onclick="evScreenPrev()">Обновить предпросмотр</button></div>
     <div class="ev-obs-grid">
       <div class="ev-stage"><iframe id="evs-prev" title="Предпросмотр событий" src="/events?preview=1"></iframe></div>
       <div class="ev-set">
-        <div class="muted small">Новый фолловер, подписка, донат, рейд — красивой карточкой поверх стрима, с коротким звуком. Какие события показывать — переключатели «На экран» в таблице выше.</div>
+        <div class="muted small">Новый фолловер, подписка, донат, рейд — красивой карточкой поверх стрима, с коротким звуком. Какие события показывать — переключатели «На экран» в списке выше.</div>
         <div class="row"><code id="evs-url"></code><button class="sm" onclick="copy(base()+'/events')">Скопировать адрес</button></div>
         <div class="small muted">В OBS: «Источники» → «+» → «Браузер», 1920×1080, поверх сцены. Включите «Управлять аудио через OBS», чтобы звук шёл отдельной дорожкой.</div>
         <div class="row" style="align-items:flex-end">
@@ -965,9 +1021,9 @@
       </div>
     </div>
   </div>
-  <div class="masonry">
-  <div class="card hl">
-    <h3>Анонсы в Telegram и Discord</h3>
+  <div class="card">
+    <div class="micro">Анонсы о начале стрима</div>
+    <h3 style="margin:10px 0 4px">Telegram и Discord</h3>
     <div class="muted small" style="margin:-4px 0 12px">Когда начинается стрим, программа сама публикует пост с превью и ссылкой. Ещё можно отправлять итоги стрима и клипы из чата.</div>
     <div class="row" style="align-items:flex-start;gap:18px;flex-wrap:wrap">
       <div style="flex:1;min-width:300px">
@@ -1005,36 +1061,6 @@
       <label class="switch"><input type="checkbox" data-s="announce.clips_post"> Публиковать клипы из чата (!клип)</label>
     </div>
     <div class="small muted" style="margin-top:8px">Анонс публикуется один раз за стрим. Telegram и Discord могут быть недоступны у провайдера — тогда нужен VPN или zapret.</div>
-  </div>
-  <div class="card">
-    <div class="row">
-      <label class="f"><span>Интервал сообщений о событиях, сек (1–60)</span><input type="number" min="1" max="60" data-s="events.interval_sec"></label>
-      <label class="f"><span>Окно объединения подаренных подписок, сек (0–30)</span><input type="number" min="0" max="30" data-s="events.gift_merge_sec"></label>
-      <span class="grow"></span>
-      <button id="btn-pause-ev2" onclick="api('/events/pause',{}).then(poll)">Пауза уведомлений</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="row"><h3 class="grow" style="margin:0">Подключение DonationAlerts</h3><span id="da-status" class="pill"></span></div>
-    <p class="small muted" style="margin:6px 0 10px">Донаты будут сразу появляться в чате (событие «Донат DonationAlerts» в таблице ниже).</p>
-    <div class="row">
-      <label class="f grow"><span>ID приложения</span><input data-s="donationalerts.client_id" autocomplete="off" placeholder="например 12345"></label>
-      <label class="f grow"><span>API-ключ приложения</span><input type="password" data-s="donationalerts.client_secret" data-secret="donationalerts.has_client_secret" autocomplete="new-password"></label>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button class="primary" onclick="login('da')">Войти через DonationAlerts</button>
-      <button class="sm danger" onclick="if(confirm('Отключить DonationAlerts?')) api('/logout/da',{}).then(loadSettings)">Выйти</button>
-    </div>
-    <details style="margin-top:12px" id="da-help"><summary class="small" style="cursor:pointer"><b>Как подключить — 3 шага (один раз)</b></summary><ol class="small muted">
-      <li>Откройте <a href="https://www.donationalerts.com/application/clients" target="_blank">страницу приложений DonationAlerts</a> (войдите в свой аккаунт) и нажмите «Создать приложение».
-        Название — любое, например <code>Beg1nnnerOS</code>. URL перенаправления: <code>http://localhost:4343/da</code> <button class="sm" onclick="copy('http://localhost:4343/da')">Копировать</button></li>
-      <li>Скопируйте из созданного приложения <b>ID приложения</b> и <b>API-ключ</b> в поля выше.</li>
-      <li>Нажмите «Войти через DonationAlerts» и в открывшемся окне браузера разрешите доступ. Статус справа сверху сменится на «подключено».</li></ol>
-      <p class="small muted">Программа сама продлевает доступ. Ключ браузерного виджета («Секретный токен» из настроек виджетов) здесь не нужен.</p></details>
-    <details style="margin-top:6px"><summary class="small muted" style="cursor:pointer">Для опытных: вставить готовый OAuth-токен вручную</summary>
-      <label class="f" style="margin-top:8px"><span>OAuth access token (права oauth-user-show и oauth-donation-subscribe)</span>
-        <input type="password" data-s="donationalerts.token" data-secret="donationalerts.has_token" autocomplete="new-password"></label></details>
-  </div>
   </div>
 </section>
 
@@ -1936,7 +1962,7 @@ async function poll() {
   $("next-timer").innerHTML = nt ? `<span data-noi18n>${esc(nt.name)}</span> · <b class="mono" style="background:none;padding:0;color:var(--fg)">${fmt(nt.seconds)}</b>${nt.messages_left ? ` · ждёт ${nt.messages_left} сообщ.` : ""}` : 'таймеры — во время эфира';
   const pe = ST.paused_events;
   $("btn-pause-ev").querySelector("span").textContent = pe ? "Возобновить уведомления" : "Пауза уведомлений"; $("btn-pause-ev").classList.toggle("primary", pe);
-  $("btn-pause-ev2").textContent = pe ? "▶ Возобновить уведомления" : "⏸ Пауза уведомлений"; $("btn-pause-ev2").classList.toggle("primary", pe);
+  if ($("ev-pause-sw")) $("ev-pause-sw").checked = !!pe;
   $("alerts-q").textContent = `Алертов в очереди: ${ST.alerts.pending}` + (ST.alerts.current ? ` · показ: ${ST.alerts.current.name}` : "");
   $("acc-streamer").innerHTML = r.streamer.ok ? `<span class="pill ok">Подключён</span> <b>${esc(r.streamer.login)}</b>` +
     (r.streamer.missing_scopes.length ? ` <span class="pill warn">не хватает прав: ${r.streamer.missing_scopes.length}</span>` : "") : '<span class="pill err">Не подключён</span>';
@@ -2201,17 +2227,33 @@ function editTimer(id) {
 }
 
 // ---------- События ----------
+const EV_ICO = {
+  donation:['<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h3.5a1.5 1.5 0 0 1 0 3h-2a1.5 1.5 0 0 0 0 3h3.5"/>', "#fb923c"],
+  follow:['<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/>', "#c4b5fd"],
+  sub:['<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/>', "#fbbf24"],
+  cheer:['<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18"/>', "#a78bfa"],
+  reward:['<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13"/>', "#f472b6"],
+  raid:['<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>', "#38bdf8"],
+  hype:['<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>', "#f97316"],
+  poll:['<path d="M18 20V10M12 20V4M6 20v-6"/>', "#60a5fa"],
+  ad:['<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 15l2-6 2 6M8.7 13h2.6M15 9v6"/>', "#94a3b8"],
+  online:['<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4"/>', "#f87171"],
+  update:['<path d="M4 20h4L19 9l-4-4L4 16z"/>', "#34d399"],
+};
 function renderEvents() {
   if (!S || !META.events) return;
   if ($("evs-type") && !$("evs-type").options.length) $("evs-type").innerHTML = Object.entries(META.events).map(([k, e]) => `<option value="${k}">${e.title}</option>`).join("");
   if ($("evs-url")) $("evs-url").textContent = base() + "/events";
   $("ev-list").innerHTML = Object.entries(META.events).map(([k, e]) => {
-    const t = S.events.templates[k] || {enabled:false, text:""};
-    return `<tr><td><b>${e.title}</b><div class="small muted">${e.vars.map(v => "{" + v + "}").join(" ")}</div></td>
-      <td class="ellipsis" style="max-width:420px">${esc(t.text)}</td>
-      <td style="text-align:center"><input type="checkbox" aria-label="В чат" ${t.enabled ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'enabled')"></td>
-      <td style="text-align:center"><input type="checkbox" aria-label="На экран" ${(t.screen ?? e.screen_default) ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'screen')"></td>
-      <td><button class="sm" onclick="editEvent('${k}')">Настроить</button></td></tr>`;
+    const t = S.events.templates[k] || {enabled:false, text:""}, [ico, col] = EV_ICO[k] || EV_ICO.online;
+    return `<div class="evl">
+      <span class="evl-ic" style="color:${col}"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ico}</svg></span>
+      <span class="evl-n"><b>${e.title}</b><small>${e.vars.map(v => "{" + v + "}").join(" ")}</small></span>
+      <button class="evl-t" onclick="editEvent('${k}')" title="Изменить шаблон" data-noi18n>${esc(t.text) || '<span class="muted">пусто</span>'}</button>
+      <span class="evl-c"><input type="checkbox" aria-label="В чат" ${t.enabled ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'enabled')"></span>
+      <span class="evl-c"><input type="checkbox" aria-label="На экран" ${(t.screen ?? e.screen_default) ? "checked" : ""} onchange="toggleEvent('${k}',this.checked,'screen')"></span>
+      <button class="evl-e" onclick="api('/events/test',{type:'${k}'}).then(()=>toast('Показано в OBS: ${esc(e.title)}'))" title="Показать в OBS" aria-label="Показать в OBS"><svg class="ic" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></button>
+    </div>`;
   }).join("");
 }
 async function toggleEvent(k, on, field) {
