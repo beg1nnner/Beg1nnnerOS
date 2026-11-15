@@ -180,6 +180,38 @@
   .ab-name { font-size:22px; font-weight:600; letter-spacing:-.02em; }
   .twitch-btn { display:flex; align-items:center; justify-content:center; padding:10px 14px; border-radius:12px; background:#9146ff; color:#fff !important; font-weight:600; text-decoration:none; }
   #p-chat.mod-mode > .tabs { display:none; }
+  .hint { display:none !important; }
+  .hint.open { display:block !important; margin-top:6px; }
+  button.hint-t { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; width:auto; height:auto; padding:3px 0; margin:2px 0; border:none; background:none;
+    color:var(--dim); font-size:12.5px; font-weight:500; }
+  button.hint-t:hover { background:none; color:var(--accent2); }
+  button.hint-t[aria-expanded="true"] { color:var(--accent2); }
+  .ch-top { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:18px; margin-bottom:18px; align-items:start; }
+  .ch-top > .card, .ch-side > .card { margin:0; }
+  .ch-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
+  @media (max-width:1150px) { .ch-top { grid-template-columns:1fr; } }
+  .cl-h, .cl { display:grid; grid-template-columns:minmax(110px, 150px) minmax(0, 1fr) 110px 64px 44px 72px; gap:14px; align-items:center; }
+  .cl-h { font-size:12px; color:var(--dim); padding:16px 0 8px; }
+  .cl { padding:11px 0; border-top:1px solid var(--hair); font-size:14px; }
+  .cl-n { font:500 14px var(--mono); color:var(--accent2); display:flex; flex-direction:column; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .cl-n small { font-size:11px; color:var(--dim); }
+  .cl-r { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cl .pill { justify-self:start; } .pill.acc { color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
+  .cl-a { display:flex; gap:6px; justify-content:flex-end; }
+  button.ib { width:32px; height:32px; padding:0; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--dim); border-color:var(--hair); }
+  button.ib:hover { color:var(--fg); }
+  @media (max-width:800px) { .cl-h { display:none; } .cl { grid-template-columns:1fr auto auto; } .cl-r { grid-column:1 / -1; } }
+  .cl-vars { display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding-top:14px; border-top:1px solid var(--hair); }
+  .cl-vars .pill { color:var(--muted); }
+  .cl-lim { display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .tm-mini { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; border:1px solid var(--hair); background:var(--field); margin-bottom:8px; }
+  .tm-ic { color:var(--accent2); display:flex; }
+  button.tm-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; text-align:left; background:none; border:none; padding:0; font-weight:400; }
+  button.tm-b:hover { background:none; } .tm-b b { font-size:14px; font-weight:500; } .tm-b small { font-size:12px; color:var(--dim); }
+  .std-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:10px; margin-top:14px; }
+  .std { display:flex; align-items:center; gap:10px; padding:10px 12px 10px 14px; border-radius:12px; border:1px solid var(--hair); background:var(--field); }
+  button.std-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; text-align:left; background:none; border:none; padding:0; font-weight:400; }
+  button.std-b:hover { background:none; } .std-b .num { font-size:13px; color:var(--accent2); } .std-b small { font-size:12px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ev-top { display:grid; grid-template-columns:minmax(0, 2fr) minmax(300px, 1fr); gap:18px; margin-bottom:18px; align-items:start; }
   .ev-top > .card, .ev-side > .card { margin:0; }
   .ev-side { display:flex; flex-direction:column; gap:18px; min-width:0; }
@@ -741,23 +773,32 @@
     <button data-t="cmds" class="on">Команды</button><button data-t="vtimers">Таймеры</button><button data-t="obschat">Чат в OBS</button><button data-t="tools">Инструменты</button><button data-t="cstats">Активность</button><button data-t="mod" class="hidden">Модерация</button>
   </div>
   <div data-tab="cmds">
-    <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Свои команды</h3><button class="sm" onclick="openImport()">Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()">+ Добавить команду</button></div>
-      <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Ответ</th><th>Доступ</th><th>Кулдаун</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-custom"></tbody></table>
-      <div class="row small muted" style="margin-top:10px">Общий лимит запросов одного зрителя:
-        <input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" style="width:80px"> сек</div>
+    <div class="ch-top">
+      <div class="card">
+        <div class="row"><span class="micro grow">Свои команды</span><button class="sm" onclick="openImport()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Импорт из Nightbot, StreamElements, moo.bot</button><button class="primary sm" onclick="editCustom()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Команда</button></div>
+        <div class="cl-h"><span>Команда</span><span>Ответ</span><span>Доступ</span><span>Кулдаун</span><span>Вкл.</span><span></span></div>
+        <div id="c-custom"></div>
+        <div class="cl-vars"><span class="small muted">Переменные:</span><span id="c-vars"></span></div>
+        <div class="cl-lim"><span class="small muted">Общий лимит запросов одного зрителя</span><span class="inp-u sm"><input type="number" min="0" max="60" data-s="chat.user_rate_limit_sec" aria-label="Общий лимит запросов одного зрителя, сек"><span class="u">с</span></span></div>
+      </div>
+      <div class="ch-side">
+        <div class="card">
+          <div class="row"><span class="micro grow">Таймеры</span><button class="sm" onclick="editTimer()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Таймер</button></div>
+          <div id="c-timers-mini" style="margin-top:12px"></div>
+          <div class="muted small" style="margin-top:10px">Срабатывают в эфире, когда прошёл интервал и набралось нужное число новых сообщений.</div>
+        </div>
+        <div class="card">
+          <div class="row"><span class="micro grow">Автосообщение в начале стрима</span></div>
+          <label class="switch" style="margin:12px 0"><input type="checkbox" data-s="autopost.enabled"> Включено</label>
+          <textarea data-s="autopost.text" placeholder="Например: Правила чата — !правила. Заказ музыки — за баллы канала"></textarea>
+          <div class="muted small" style="margin-top:8px">Публикуется выбранным отправителем один раз за стрим, в том числе при запуске приложения посреди эфира. Публичного API закрепления у Twitch нет — закрепите сообщение в чате вручную, если нужно.</div>
+        </div>
+      </div>
     </div>
     <div class="card">
-      <h3>Автосообщение в начале стрима</h3>
-      <div class="muted small" style="margin-bottom:8px">Публикуется выбранным отправителем один раз за стрим, в том числе при запуске приложения посреди эфира.
-        Публичного API закрепления у Twitch нет — закрепите сообщение в чате вручную, если нужно.</div>
-      <div class="row"><textarea data-s="autopost.text" class="grow" placeholder="Например: Правила чата — !правила. Заказ музыки — за баллы канала"></textarea></div>
-      <label class="switch" style="margin-top:8px"><input type="checkbox" data-s="autopost.enabled"> Включено</label>
-    </div>
-    <div class="card">
-      <div class="row"><h3 class="grow" style="margin:0">Стандартные команды</h3>
-        <button class="sm" onclick="if(confirm('Вернуть весь стандартный набор? Имена, шаблоны и доступ сбросятся. Свои команды не удаляются.')) api('/commands/reset',{}).then(loadCommands)">Восстановить стандартные команды</button></div>
-      <table style="margin-top:8px"><thead><tr><th>Команда</th><th>Назначение</th><th>Доступ</th><th>Кулдаун на зрителя</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-std"></tbody></table>
+      <div class="row"><span class="micro grow">Стандартные команды</span>
+        <button class="sm" onclick="if(confirm('Вернуть весь стандартный набор? Имена, шаблоны и доступ сбросятся. Свои команды не удаляются.')) api('/commands/reset',{}).then(loadCommands)">Восстановить стандартные</button></div>
+      <div class="std-grid" id="c-std"></div>
     </div>
   </div>
   <div data-tab="vtimers" class="hidden">
@@ -2008,6 +2049,24 @@ function fitOverlay() {
   f.src = "/?demo&t=" + Date.now();
   renderOverlayThemes();
 }
+// ---------- свёрнутые пояснения ----------
+// Длинные пояснения под настройками прячутся под «Подробнее» — пользователь раскрывает их сам.
+const HINT_IC = '<svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg>';
+function hintify(root) {
+  (root || document).querySelectorAll("main > section .muted.small, main > section .small.muted, main > section p.small, main > section div.muted").forEach(el => {
+    if (el.classList.contains("hint") || el.id || el.querySelector("[id], input, select, textarea, button")) return;
+    if (el.closest("details, table, .log, .chips, .metrics, .np, .qa, .mod-it, .evl, .cl, .tm-mini, .std, nav, .topbar, .hint, .al-card, [id='live-q']")) return;
+    const txt = el.textContent.replace(/\s+/g, " ").trim();
+    if (txt.length < 100) return;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "hint-t"; b.setAttribute("aria-expanded", "false");
+    const lbl = () => (window.tr || (x => x))(el.classList.contains("open") ? "Скрыть" : "Подробнее");
+    b.innerHTML = HINT_IC + `<span data-noi18n>${lbl()}</span>`;
+    b.onclick = () => { el.classList.toggle("open"); b.setAttribute("aria-expanded", el.classList.contains("open")); b.querySelector("span").textContent = lbl(); };
+    el.classList.add("hint"); el.before(b);
+  });
+}
+hintify();
 // ---------- что нового ----------
 let CHL_DONE = false;
 async function loadChangelog() {
@@ -2151,15 +2210,17 @@ let CMDS = {custom:[], standard:{}};
 async function loadCommands() {
   CMDS = await api("/commands");
   const tog = (kind, id, on) => `<input type="checkbox" ${on ? "checked" : ""} onchange="api('/commands/toggle',{kind:'${kind}',id:'${id}',enabled:this.checked})">`;
-  $("c-custom").innerHTML = CMDS.custom.map(c => `<tr><td><b>${esc(c.name)}</b> <span class="muted small">${esc(c.aliases.join(" "))}</span></td>
-    <td class="ellipsis" style="max-width:340px" data-noi18n>${esc(c.response)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("custom", c.id, c.enabled)}</td>
-    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editCustom('${c.id}')">Изменить</button>
-    <button class="sm danger" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">✕</button></td></tr>`).join("")
-    || '<tr><td colspan="6" class="muted">Своих команд пока нет. Пример: !привет → «Привет, {user}! Добро пожаловать на канал»</td></tr>';
-  $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<tr><td><b>${esc(c.name)}</b> <span class="muted small">${esc(c.aliases.join(" "))}</span></td>
-    <td class="muted">${esc(c.desc)}</td><td>${ACCESS[c.access]}</td><td>${c.cooldown} с</td><td>${tog("standard", k, c.enabled)}</td>
-    <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editStd('${k}')">Изменить</button>
-    <button class="sm danger" onclick="if(confirm('Удалить ${esc(c.name)}? Обработка команды отключится.')) api('/commands/standard/${k}',undefined,'DELETE').then(loadCommands)">✕</button></td></tr>`).join("");
+  const EDIT_IC = '<svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+  const DEL_IC = '<svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+  const acc = a => `<span class="pill${a === "everyone" ? "" : " acc"}">${ACCESS[a] || a}</span>`;
+  $("c-custom").innerHTML = CMDS.custom.map(c => `<div class="cl">
+    <span class="cl-n" data-noi18n>${esc(c.name)}${c.aliases.length ? `<small>${esc(c.aliases.join(" "))}</small>` : ""}</span>
+    <span class="cl-r" data-noi18n title="${esc(c.response)}">${esc(c.response)}</span>${acc(c.access)}<span class="num muted small">${c.cooldown} с</span>${tog("custom", c.id, c.enabled)}
+    <span class="cl-a"><button class="ib" title="Изменить" aria-label="Изменить ${esc(c.name)}" onclick="editCustom('${c.id}')">${EDIT_IC}</button><button class="ib" title="Удалить" aria-label="Удалить ${esc(c.name)}" onclick="if(confirm('Удалить ${esc(c.name)}?')) api('/commands/custom/${c.id}',undefined,'DELETE').then(loadCommands)">${DEL_IC}</button></span></div>`).join("")
+    || '<div class="muted small" style="padding:14px 0">Своих команд пока нет. Пример: !привет → «Привет, {user}! Добро пожаловать на канал»</div>';
+  $("c-vars").innerHTML = VARS.map(v => `<span class="pill">${v}</span>`).join(" ");
+  $("c-std").innerHTML = Object.entries(CMDS.standard).filter(([k, c]) => !c.deleted).map(([k, c]) => `<div class="std">
+    <button class="std-b" onclick="editStd('${k}')" title="Изменить"><span class="num">${esc(c.name)}</span><small>${esc(c.desc)}</small></button>${tog("standard", k, c.enabled)}</div>`).join("");
 }
 function cmdForm(c, isStd) {
   return `<div class="row">
@@ -2209,6 +2270,11 @@ async function loadTimers() {
     <td class="row" style="flex-wrap:nowrap"><button class="sm" onclick="editTimer('${t.id}')">Изменить</button>
     <button class="sm danger" onclick="if(confirm('Удалить таймер?')) api('/timers/${t.id}',undefined,'DELETE').then(loadTimers)">✕</button></td></tr>`).join("")
     || '<tr><td colspan="6" class="muted">Таймеров нет</td></tr>';
+  if ($("c-timers-mini")) $("c-timers-mini").innerHTML = TIMERS.repeating.map(t => `<div class="tm-mini">
+    <span class="tm-ic"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
+    <button class="tm-b" onclick="editTimer('${t.id}')"><b data-noi18n>${esc(t.name)}</b><small>каждые ${t.interval} мин · от ${t.min_messages} сообщ.</small></button>
+    <input type="checkbox" aria-label="Включить таймер" ${t.enabled ? "checked" : ""} onchange="api('/timers',{...TIMERS.repeating.find(x=>x.id==='${t.id}'),enabled:this.checked}).then(loadTimers)"></div>`).join("")
+    || '<div class="muted small">Таймеров нет</div>';
   const now = Date.now() / 1000;
   $("c-vtimers").innerHTML = TIMERS.viewer.map(t => `<tr><td><code>${t.id}</code></td><td data-noi18n>${esc(t.name)}</td><td data-noi18n>${esc(t.text)}</td>
     <td>${fmt(t.due - now)}</td><td><button class="sm danger" onclick="api('/viewer_timers/${t.id}',undefined,'DELETE').then(loadTimers)">Отменить</button></td></tr>`).join("")
