@@ -2,7 +2,7 @@
 ; Сборка: build.bat (сначала dotnet publish в папку publish, затем этот скрипт).
 
 #ifndef AppVersion
-  #define AppVersion "2.6.1"
+  #define AppVersion "2.6.2"
 #endif
 #define AppName "Beg1nnnerOS"
 #define AppExe "Beg1nnnerOS.exe"
