@@ -129,6 +129,9 @@
   .np { padding:var(--sp-7); display:flex; flex-direction:column; gap:var(--sp-6); }
   .np-top { display:flex; gap:var(--sp-7); align-items:center; flex-wrap:wrap; }
   .np-cover { position:relative; width:168px; height:168px; flex:none; border-radius:var(--r-lg); overflow:hidden; background:color-mix(in srgb, var(--accent) 14%, var(--bg)); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); box-shadow:inset 0 1px 0 var(--inset-hi), 0 30px 60px -24px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .np-cover img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
+  .cv img, .cv-sm img { width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
+  .qrow .cv:has(img), .cv-sm:has(img) { overflow:hidden; padding:0; }
   .np-cover span { position:absolute; border-radius:var(--r-full); border:1px solid color-mix(in srgb, var(--fg) 7%, transparent); }
   .np-cover i { position:absolute; left:72px; top:72px; width:24px; height:24px; border-radius:var(--r-full); background:var(--accent); box-shadow:0 0 24px color-mix(in srgb, var(--accent) 80%, transparent); }
   .np.playing .np-cover { animation:none; }
@@ -730,7 +733,7 @@
   <div class="live-grid">
     <div class="card np idle">
       <div class="np-top">
-        <div class="np-cover" aria-hidden="true"><span class="u-inset-8px"></span><span class="u-inset-20px"></span><span class="u-inset-32px"></span><span class="u-inset-44px"></span><span class="u-inset-56px"></span><span class="u-inset-68px"></span><i></i></div>
+        <div class="np-cover" aria-hidden="true"><span class="u-inset-8px"></span><span class="u-inset-20px"></span><span class="u-inset-32px"></span><span class="u-inset-44px"></span><span class="u-inset-56px"></span><span class="u-inset-68px"></span><i></i><img id="np-art" alt="" referrerpolicy="no-referrer" hidden></div>
         <div class="np-meta">
           <div class="micro acc">Сейчас играет <span class="pill hidden" id="np-paid">за баллы</span></div>
           <div class="np-title" id="np-title" data-noi18n>—</div>
@@ -971,6 +974,7 @@
           <label class="switch"><input type="checkbox" data-s="overlay.show_queue"> Показывать очередь</label>
           <label class="switch"><input type="checkbox" data-s="overlay.show_requester"> Показывать заказавшего</label>
           <label class="switch"><input type="checkbox" data-s="overlay.show_progress"> Полоса прогресса</label>
+          <label class="switch"><input type="checkbox" data-s="overlay.show_cover"> Обложка трека</label>
           <label class="switch"><input type="checkbox" data-s="overlay.toasts"> Уведомление о новом треке</label>
         </div>
         <div class="row u-mt-4">
@@ -2622,6 +2626,10 @@ async function poll(pushed) {
   $("nm-sub").textContent = r.streamer.ok ? (r.stream.live ? "Twitch · в эфире" : "Twitch · не в эфире") : "Войдите в «Настройках»";
   const c = m.current; window.LAST_CUR = c;
   $("np-title").textContent = c ? c.title : "—";
+  // обложка: превью YouTube или обложка Яндекса; не загрузилась — остаются «кольца»
+  const art = c && c.cover && !ART_BAD.has(c.cover) ? c.cover : "";
+  if ($("np-art").dataset.src !== art) { $("np-art").dataset.src = art; if (art) $("np-art").src = art; }
+  $("np-art").hidden = !art;
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
@@ -2641,7 +2649,7 @@ async function poll(pushed) {
   if (Date.now() - volBusy > 1500) { $("live-vol").value = m.volume; $("live-volv").textContent = m.volume; }
   if (Date.now() - masterBusy > 1500) { $("al-master").value = ST.alerts.volume; $("al-masterv").textContent = ST.alerts.volume; }
   setHTML("live-q", (m.queue.slice(0, 6).map((t, i) => { const col = avColor(t.requester);
-    return `<div class="qrow"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="cv" style="color:${col}">${ICO_MUSIC}</span>
+    return `<div class="qrow"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="cv" style="color:${col}">${artImg(t) || ICO_MUSIC}</span>
     <span class="tt" data-noi18n title="${esc(t.title)}">${esc(t.title)}${t.priority === 3 ? `<span class="pill warn prio" title="${tr("Вне очереди")}">${ICON.zap}</span>` : ""}</span>
     <span class="who">${t.requester ? `<span class="av" style="background:${col}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span>` : '<span class="muted">вручную</span>'}</span>
     <span class="d">${fmt(t.duration)}</span></div>`; }).join("") || emptyBox("Очередь пуста", "Зрители заказывают музыку за баллы канала. Трек можно добавить и вручную в «Музыке»."))
@@ -2650,7 +2658,7 @@ async function poll(pushed) {
   $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
   $("nb-music").textContent = m.queue.length || "";
   setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted u-w-56px u-ws-nowrap">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? `<span class="prio-ic" title="${tr("Вне очереди")}">${ICON.zap}</span>` : t.priority ? `<span class="prio-ic" title="${tr("Приоритет")}">${ICON.star}</span>` : ""}</td>
-    <td><span class="u-d-flex u-ai-center u-gap-3"><span class="cv-sm" style="color:${avColor(t.requester)}">${ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
+    <td><span class="u-d-flex u-ai-center u-gap-3"><span class="cv-sm" style="color:${avColor(t.requester)}">${artImg(t) || ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
     <td>${t.requester ? `<span class="u-d-inline-flex u-ai-center u-gap-2"><span class="av" style="background:${avColor(t.requester)}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span></span>` : '<span class="muted">вручную</span>'}</td>
     <td class="row u-fw-nowrap"><button class="ib" title="Выше" aria-label="Переместить выше" onclick="api('/music/move',{id:'${t.id}',delta:-1})">${ICON.up}</button><button class="ib" title="Ниже" aria-label="Переместить ниже" onclick="api('/music/move',{id:'${t.id}',delta:1})">${ICON.down}</button>
     <button class="ib danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}" aria-label="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">${t.paid ? ICON.undo : ICON.trash}</button></td></tr>`).join("")
@@ -2990,6 +2998,10 @@ function insertVar(id, v) {
 // ---------- Команды ----------
 let CMDS = {custom:[], standard:{}};
 // «Заблокировать» в «Эфире»: трек, его исполнителя или канал YouTube
+// обложки треков; адреса, которые не загрузились, запоминаем и больше не показываем
+const ART_BAD = new Set();
+const artImg = t => t && t.cover && !ART_BAD.has(t.cover) ? `<img src="${esc(t.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="ART_BAD.add(this.getAttribute('src'));this.remove()">` : "";
+document.addEventListener("DOMContentLoaded", () => { const a = $("np-art"); if (a) a.onerror = () => { ART_BAD.add(a.dataset.src); a.hidden = true; }; });
 function blockNow() {
   const c = window.LAST_CUR; if (!c) return;
   const opt = (what, title, sub, dis) => `<button class="blk-opt" ${dis ? "disabled" : ""} onclick="blockDo('${what}')"><b>${title}</b><span>${sub}</span></button>`;

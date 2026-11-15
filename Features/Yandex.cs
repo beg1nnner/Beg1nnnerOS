@@ -17,7 +17,7 @@ public sealed class YandexException : Exception
     public YandexException(string message) : base(message) { }
 }
 
-public sealed record YandexTrack(string Id, string Title, int Duration, string Url, bool Available, string Artists = "");
+public sealed record YandexTrack(string Id, string Title, int Duration, string Url, bool Available, string Artists = "", string Cover = "");
 
 /// <summary>Яндекс Музыка: поиск и прямые ссылки на аудио через API api.music.yandex.net.</summary>
 public sealed class YandexMusic
@@ -52,13 +52,21 @@ public sealed class YandexMusic
         return J.ParseLoose(text)?["result"];
     }
 
+    /// <summary>coverUri Яндекса выглядит как «avatars.yandex.net/get-music-content/…/%%» — подставляем размер.</summary>
+    private static string CoverUrl(string uri)
+    {
+        if (string.IsNullOrWhiteSpace(uri)) return "";
+        uri = uri.Replace("%%", "400x400");
+        return uri.StartsWith("http") ? uri : "https://" + uri.TrimStart('/');
+    }
+
     private static YandexTrack Info(JsonNode t)
     {
         var artists = string.Join(", ", (t["artists"] as JsonArray ?? new JsonArray()).Select(a => a.Str("name")).Where(n => n != ""));
         var title = artists != "" ? $"{artists} — {t.Str("title")}" : t.Str("title");
         var id = t.Str("id");
         return new YandexTrack(id, title, (int)(t.Num("durationMs") / 1000), $"https://music.yandex.ru/track/{id}",
-            t.Bool("available", true), artists);
+            t.Bool("available", true), artists, CoverUrl(t.Str("coverUri", t.Str("ogImage"))));
     }
 
     public async Task<YandexTrack> Track(string id)

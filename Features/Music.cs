@@ -28,6 +28,7 @@ public sealed class Track
     public string Artist = "";        // исполнитель(и), если источник его знает (YouTube Music, Яндекс)
     public string Channel = "";       // канал YouTube
     public string ChannelId = "";     // UC… и @псевдоним канала — для чёрного списка
+    public string Cover = "";         // обложка (Яндекс); у YouTube берётся превью видео по ID
     public long Views = -1;   // просмотры на YouTube (-1 — неизвестно)
     public (string RewardId, string RedemptionId, int Cost)? Redemption;
     public bool Fallback;   // трек из резервного плейлиста (играет, когда заказов нет)
@@ -37,7 +38,7 @@ public sealed class Track
     {
         id = Id, vid = Vid, title = Title, page_url = PageUrl, duration = Duration, requester = Requester,
         login = Login, priority = Priority, source = Source, paid = Redemption != null, views = Views, fallback = Fallback,
-        artist = string.Join(", ", Music.ArtistsOf(this)), channel = Channel,
+        artist = string.Join(", ", Music.ArtistsOf(this)), channel = Channel, cover = Music.CoverOf(this),
     };
 }
 
@@ -251,14 +252,14 @@ public sealed class Music
         ["vid"] = t.Vid, ["title"] = t.Title, ["url"] = t.PageUrl, ["duration"] = t.Duration, ["requester"] = t.Requester,
         ["login"] = t.Login, ["priority"] = t.Priority, ["source"] = t.Source, ["views"] = t.Views,
         ["reward_id"] = t.Redemption?.RewardId ?? "", ["redemption_id"] = t.Redemption?.RedemptionId ?? "",
-        ["cost"] = t.Redemption?.Cost ?? 0, ["position"] = Math.Round(pos, 1),
+        ["cost"] = t.Redemption?.Cost ?? 0, ["position"] = Math.Round(pos, 1), ["cover"] = t.Cover,
     };
 
     private static Track TrackFrom(JsonNode n) => new()
     {
         Vid = n.Str("vid"), Title = n.Str("title"), PageUrl = n.Str("url"), Duration = n.Int("duration"),
         Requester = n.Str("requester"), Login = n.Str("login"), Priority = n.Int("priority"), Source = n.Str("source", "youtube"),
-        Views = (long)n.Num("views", -1), ResumeAt = n.Num("position"),
+        Views = (long)n.Num("views", -1), ResumeAt = n.Num("position"), Cover = n.Str("cover"),
         Redemption = n.Str("redemption_id") != "" ? (n.Str("reward_id"), n.Str("redemption_id"), n.Int("cost")) : null,
     };
 
@@ -944,7 +945,7 @@ public sealed class Music
     private static Track FromYandex(YandexTrack y, string source)
     {
         if (!y.Available) throw new ResolveException("трек недоступен в Яндекс Музыке");
-        return new Track { Vid = "ym:" + y.Id, Title = y.Title, PageUrl = y.Url, Duration = y.Duration, Source = source, Artist = y.Artists };
+        return new Track { Vid = "ym:" + y.Id, Title = y.Title, PageUrl = y.Url, Duration = y.Duration, Source = source, Artist = y.Artists, Cover = y.Cover };
     }
 
     private Task<Track> YtByUrl(string url, string source) => _hub.YtDlp.ByUrl(url, source);
@@ -1079,6 +1080,15 @@ public sealed class Music
             .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    private static readonly Regex YtId = new(@"^[A-Za-z0-9_-]{11}$", RegexOptions.Compiled);
+
+    /// <summary>Обложка трека: сохранённая (Яндекс) или превью видео YouTube (16:9, без чёрных полос).</summary>
+    public static string CoverOf(Track t)
+    {
+        if (!string.IsNullOrEmpty(t.Cover)) return t.Cover;
+        return YtId.IsMatch(t.Vid ?? "") ? $"https://i.ytimg.com/vi/{t.Vid}/mqdefault.jpg" : "";
+    }
+
     private JsonArray CfgList(string k)
     {
         if (Cfg[k] is not JsonArray a) Cfg[k] = a = new JsonArray();
@@ -1156,7 +1166,7 @@ public sealed class Music
                 paid = cur.Redemption != null, position = Math.Round(Position, 1), paused = IsPaused,
                 gain_db = GainDb(cur.Vid), in_obs = _obsActive,
                 loading = Loading, views = cur.Views, liked = IsLiked(cur.Vid),
-                artist = string.Join(", ", ArtistsOf(cur)), channel = cur.Channel,
+                artist = string.Join(", ", ArtistsOf(cur)), channel = cur.Channel, cover = CoverOf(cur),
             };
         return new
         {

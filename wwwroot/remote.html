@@ -36,6 +36,8 @@
     color:color-mix(in srgb, var(--live) 70%, var(--fg)); background:color-mix(in srgb, var(--live) 12%, transparent); border:1px solid color-mix(in srgb, var(--live) 30%, transparent); }
   .live.on { display:inline-flex; } .live i { width:7px; height:7px; border-radius:var(--r-full); background:var(--live); }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:var(--sp-4); }
+  .np-top { display:flex; flex-direction:column; gap:var(--sp-3); }
+  #art { width:100%; aspect-ratio:16 / 9; object-fit:cover; border-radius:var(--r-md); background:var(--panel2); }
   .ovl { font:500 var(--fs-xs) var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--accent2); }
   .np-t { font-size:var(--fs-xl); font-weight:600; letter-spacing:-.02em; line-height:1.2; margin:var(--sp-2) 0 var(--sp-1); overflow-wrap:anywhere; }
   .np-w { color:var(--muted); font-size:var(--fs-md); min-height:18px; }
@@ -93,7 +95,7 @@
   <div id="lost" class="card off" hidden><b>Нет связи с программой</b><p class="muted">Проверьте, что Beg1nnnerOS запущена, а телефон подключён к той же сети Wi-Fi.</p></div>
 
   <section class="card" aria-label="Сейчас играет">
-    <div class="ovl">Сейчас играет</div>
+    <div class="np-top"><img id="art" alt="" referrerpolicy="no-referrer" hidden onerror="this.hidden=true;ART_BAD.add(this.dataset.src)"><div class="ovl">Сейчас играет</div></div>
     <div class="np-t" id="title" data-noi18n>—</div>
     <div class="np-w" id="who"></div>
     <div class="bar"><i id="bar"></i></div>
@@ -128,6 +130,7 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <script>
 const $ = id => document.getElementById(id);
+const ART_BAD = new Set();
 const T = s => (window.tr ? window.tr(s) : s);
 const KEY = new URLSearchParams(location.search).get("k") || "";
 const fmt = s => { s = Math.max(0, Math.round(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -154,6 +157,9 @@ async function tick() {
   $("live").classList.toggle("on", !!d.live); $("up").textContent = d.live ? d.uptime : "";
   const m = d.music, c = m.current;
   $("title").textContent = c ? c.title : T("Сейчас ничего не играет");
+  const art = c && c.cover && !ART_BAD.has(c.cover) ? c.cover : "";
+  if ($("art").dataset.src !== art) { $("art").dataset.src = art; if (art) $("art").src = art; }
+  $("art").hidden = !art;
   $("who").textContent = c ? (c.requester ? T("Заказ: ") + c.requester : T("Добавлен вручную")) + (c.paused ? " · " + T("пауза") : "") : "";
   $("bar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";
   $("pos").textContent = c ? fmt(c.position) : ""; $("left").textContent = c && c.duration ? "−" + fmt(c.duration - c.position) : "";

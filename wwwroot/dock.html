@@ -19,6 +19,7 @@
   button .ic, .ic-tx .ic { flex:none; } button:has(> .ic) { display:inline-flex; align-items:center; justify-content:center; gap:var(--sp-2); }
   .dnp-top { display:flex; gap:var(--sp-3); align-items:center; }
   .dnp-cv { position:relative; width:60px; height:60px; border-radius:var(--r-md); flex:none; background:color-mix(in srgb, var(--accent) 14%, var(--bg)); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); display:flex; align-items:center; justify-content:center; }
+  .dnp-cv { overflow:hidden; } .dnp-cv img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .dnp-cv i { width:14px; height:14px; border-radius:var(--r-full); background:var(--accent); box-shadow:0 0 14px color-mix(in srgb, var(--accent) 80%, transparent); }
   .dnp-meta { min-width:0; display:flex; flex-direction:column; gap:3px; }
   .dnp-meta .micro { color:var(--accent2); }
@@ -69,7 +70,7 @@
 
 <div id="t-music">
   <div class="card dnp">
-    <div class="dnp-top"><div class="dnp-cv" aria-hidden="true"><i></i></div>
+    <div class="dnp-top"><div class="dnp-cv" aria-hidden="true"><i></i><img id="dnp-art" alt="" referrerpolicy="no-referrer" hidden onerror="this.hidden=true;ART_BAD.add(this.dataset.src)"></div>
       <div class="dnp-meta"><span class="micro">Сейчас играет</span><div class="now-title" id="now" data-noi18n>—</div><div class="muted small" id="who"></div></div></div>
     <div class="dbar"><i id="dbar"></i></div>
     <div class="dtimes"><span id="dpos"></span><span id="dvotes"></span><span id="ddur"></span></div>
@@ -133,6 +134,7 @@ const DI = {
   alert: svgIc('<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
   poll: svgIc('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', 12), pred: svgIc('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>', 12),
 };
+const ART_BAD = new Set();   // обложки, которые не загрузились
 const tr2 = s => (window.tr ? window.tr(s) : s);
 /** Короткое сообщение внизу док-панели (вместо alert). */
 function dockNote(text, err) {
@@ -207,6 +209,9 @@ async function tick(pushed) {
     if (document.documentElement.dataset.theme !== s.ui_theme) document.documentElement.dataset.theme = s.ui_theme;
     const m = s.music, c = m.current;
     $("now").textContent = c ? c.title : "—";
+    const art = c && c.cover && !ART_BAD.has(c.cover) ? c.cover : "";
+    if ($("dnp-art").dataset.src !== art) { $("dnp-art").dataset.src = art; if (art) $("dnp-art").src = art; }
+    $("dnp-art").hidden = !art;
     $("like").classList.toggle("on", !!(c && c.liked)); $("like").disabled = !c;
     const fm = x => { x = Math.max(0, Math.round(x || 0)); return Math.floor(x / 60) + ":" + String(x % 60).padStart(2, "0"); };
     $("dbar").style.width = c && c.duration ? Math.min(100, c.position / c.duration * 100) + "%" : "0";

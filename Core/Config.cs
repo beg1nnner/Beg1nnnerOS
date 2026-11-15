@@ -143,7 +143,7 @@ public static class Config
         "theme": "studio", "custom_colors": false, "width": 700, "height": 460,
         "accent": "#9146ff", "background": "rgba(16,16,22,0.78)", "text_color": "#ffffff",
         "font_size": 20, "show_queue": true, "queue_size": 5, "queue_position": "below", "show_requester": true,
-        "show_progress": true, "toasts": true
+        "show_progress": true, "show_cover": true, "toasts": true
       },
       "alerts": {"enabled": true, "volume": 80},
       "chat_overlay": {
