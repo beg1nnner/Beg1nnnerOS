@@ -204,7 +204,7 @@ button.danger.solid:hover { background:var(--err-strong); border-color:transpare
 /* ---------- иконки в тексте и кнопках ---------- */
 .ic { flex:none; vertical-align:middle; }
 .ic-tx { display:inline-flex; align-items:center; gap:var(--sp-2); vertical-align:middle; }
-button:has(> .ic), a:has(> .ic) { display:inline-flex; align-items:center; justify-content:center; gap:var(--sp-2); }
+button:has(> .ic), a:has(> .ic) { display:inline-flex; align-items:center; gap:var(--sp-2); }
 button.ib { width:32px; height:32px; padding:0; border-radius:var(--r-sm); display:inline-flex; align-items:center; justify-content:center; color:var(--dim); border-color:var(--hair); }
 button.ib:hover { color:var(--fg); }
 button.ib.danger { color:var(--dim); background:var(--field); border-color:var(--hair); }

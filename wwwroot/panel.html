@@ -70,7 +70,7 @@
   .acc-on, .acc-on-only { display:none !important; }
   .acc.is-on .acc-on { display:flex !important; } .acc.is-on .acc-on-only { display:inline-flex !important; }
   .acc.is-on .acc-off, .acc.is-on .acc-off-only { display:none !important; }
-  .acc-off { flex:1 1 260px; } .acc-full { flex-basis:100%; }
+  .acc-off { flex:1 1 260px; } .acc-full, .acc-note { flex-basis:100%; }
   .acc-on { flex:1; align-items:center; gap:var(--sp-3); min-width:0; }
   .acc-av { width:40px; height:40px; flex:none; border-radius:var(--r-full); display:grid; place-items:center; font-weight:600; font-size:var(--fs-base); text-transform:uppercase;
     color:var(--accent2); background:color-mix(in srgb, var(--accent) 16%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
@@ -87,6 +87,7 @@
   .tb-pill i { width:7px; height:7px; border-radius:var(--r-full); background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent); }
   .tb-pill.bad i { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 20%, transparent); }
   .tb-pill:empty { display:none; }
+  html.hosted .tb-live { display:none !important; }
   .tb-pill b { font-family:var(--mono); font-weight:500; color:var(--fg); }
   .tb-live { display:inline-flex; align-items:center; gap:var(--sp-3); height:36px; padding:0 var(--sp-4); border-radius:var(--r-full); background:color-mix(in srgb, var(--live) 10%, transparent); border:1px solid color-mix(in srgb, var(--live) 30%, transparent); font-size:var(--fs-md); font-weight:600; color:color-mix(in srgb, var(--live) 65%, var(--fg)); }
   .tb-live i { width:7px; height:7px; border-radius:var(--r-full); background:var(--live); box-shadow:0 0 0 3px color-mix(in srgb, var(--live) 20%, transparent); animation:livePulse 2s ease-in-out infinite; }
@@ -122,6 +123,7 @@
   .np.idle .np-empty { display:flex; }
   .np.idle .np-title, .np.idle .np-who, .np.idle .np-bar, .np.idle .np-times, .np.idle .micro.acc { display:none; }
   .np.idle .np-cover > i { animation:none; opacity:.4; }
+  .np-ctl button:disabled { opacity:.4; box-shadow:none; }
   .np-title { font-size:var(--fs-3xl); font-weight:600; letter-spacing:-.035em; line-height:1.1; overflow-wrap:anywhere; }
   .np-who { font-size:var(--fs-lg); color:var(--muted); }
   .np-bar { position:relative; height:4px; border-radius:var(--r-sm); background:color-mix(in srgb, var(--fg) 9%, transparent); margin-top:var(--sp-3); }
@@ -222,7 +224,10 @@
   .empty-ic { width:44px; height:44px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; background:var(--field); border:1px solid var(--line); color:var(--dim); margin-bottom:var(--sp-2); }
   .empty b { color:var(--fg); font-weight:600; font-size:var(--fs-base); } .empty span { font-size:var(--fs-md); max-width:420px; } .empty button { margin-top:var(--sp-2); }
   tr:hover td .empty { background:none; }
-  table:has(> tbody .empty) > thead, table:has(> tbody > tr > td > .empty) th { display:none; }
+  /* шапку таблицы показываем только когда есть строки: не при загрузке, не при ошибке и не в пустом списке */
+  table:has(> tbody:empty) > thead, table:has(> tbody .empty) > thead, table:has(> tbody .skel) > thead, table:has(> tbody .load-err) > thead { display:none; }
+  .ev-list-card:has(#ev-list:empty, #ev-list .skel, #ev-list .load-err, #ev-list .empty) .evl-h { display:none; }
+  .skel-tr td, .err-tr td { padding:0; border:0; } .skel-tr:hover td, .err-tr:hover td { background:none; }
   #live-q .empty { padding:var(--sp-5) var(--sp-4); }
   .load-err { display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--sp-2); padding:var(--sp-6) var(--sp-4); color:var(--muted); grid-column:1 / -1; flex:1; }
   .load-err .empty-ic { color:var(--err); background:color-mix(in srgb, var(--err) 10%, transparent); border-color:color-mix(in srgb, var(--err) 25%, transparent); }
@@ -324,6 +329,9 @@
   .inp-u:focus-within { border-color:color-mix(in srgb, var(--accent) 70%, transparent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
   .inp-u input { border:none !important; background:none; box-shadow:none !important; min-width:0; width:100%; }
   .inp-u .u { font:var(--fs-sm) var(--mono); color:var(--dim); flex:none; }
+  /* пустое поле — без «повисшей» единицы; пустой список — без подписи над ним */
+  .inp-u:has(input:placeholder-shown) .u { visibility:hidden; }
+  .small.muted:has(+ .vt-tpls:empty), .cl-vars:has(#c-vars:empty) { display:none; }
   .inp-u.sm input { width:56px; min-height:34px; padding:var(--sp-2) var(--sp-3); }
   .mod-rules { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--sp-5); margin-bottom:var(--sp-5); }
   @media (max-width:1250px) { .mod-rules { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
@@ -698,7 +706,7 @@
   <div class="chips" id="ready"></div>
   <div class="metrics" id="live-metrics"></div>
   <div class="live-grid">
-    <div class="card np">
+    <div class="card np idle">
       <div class="np-top">
         <div class="np-cover" aria-hidden="true"><span class="u-inset-8px"></span><span class="u-inset-20px"></span><span class="u-inset-32px"></span><span class="u-inset-44px"></span><span class="u-inset-56px"></span><span class="u-inset-68px"></span><i></i></div>
         <div class="np-meta">
@@ -712,10 +720,10 @@
         </div>
       </div>
       <div class="np-ctl">
-        <button class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
-        <button class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
-        <button id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
-        <button class="pillbtn" id="np-block" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
+        <button disabled class="rnd big" id="np-pause" onclick="api('/music/pause',{})" title="Пауза / продолжить" aria-label="Пауза"><svg class="ic" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button disabled class="rnd" id="np-skip" onclick="api('/music/skip',{})" title="Пропустить трек" aria-label="Пропустить"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
+        <button disabled id="np-like" class="pillbtn like" onclick="likeNow()" title="Понравился — добавить в резервный плейлист (горячая клавиша Ctrl+Alt+L)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.3l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg><span>В избранное</span></button>
+        <button disabled class="pillbtn" id="np-block" onclick="confirmDlg({title:'Заблокировать трек?',text:'Текущий трек попадёт в список блокировок и сразу будет пропущен.',okLabel:'Заблокировать',danger:1}).then(ok=>ok&&api('/music/block',{}))" title="Заблокировать трек и пропустить"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg><span>Заблокировать</span></button>
         <div class="grow"></div>
         <label class="np-vol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="live-vol" aria-label="Громкость"><span id="live-volv" class="num"></span></label>
       </div>
@@ -748,7 +756,7 @@
         <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
       </select>
       <button class="sm" onclick="api('/log/clear',{}).then(loadLog)">Очистить</button></div>
-    <div class="log u-mt-3" id="log"></div>
+    <div class="log u-mt-3" id="log" data-skel></div>
   </div>
 </section>
 
@@ -769,7 +777,7 @@
     </div>
     <div class="card"><div class="row"><h3 class="grow u-m-0">Очередь</h3>
       <button class="sm danger" onclick="confirmDlg({title:'Очистить очередь?',text:'Все треки из очереди будут удалены.',okLabel:'Очистить очередь',danger:1}).then(ok=>ok&&api('/music/clear',{}))">Очистить</button></div>
-      <table class="u-mt-2"><thead><tr><th>#</th><th>Трек</th><th>Длит.</th><th>Заказ</th><th></th></tr></thead><tbody id="m-queue"></tbody></table>
+      <table class="u-mt-2"><thead><tr><th>#</th><th>Трек</th><th>Длит.</th><th>Заказ</th><th></th></tr></thead><tbody id="m-queue" data-skel></tbody></table>
     </div>
   </div>
   <div data-tab="orders" class="hidden masonry">
@@ -952,7 +960,7 @@
         <button class="sm u-mb-2" onclick="copyHistory()">Скопировать список</button>
       </div>
       <div class="small muted u-m-3-0-2" id="mh-total"></div>
-      <table><thead><tr><th class="u-w-110px">Когда</th><th>Трек</th><th>Заказал</th><th class="u-w-70px">Длина</th><th class="u-w-110px"></th></tr></thead><tbody id="mh-list"></tbody></table>
+      <table><thead><tr><th class="u-w-110px">Когда</th><th>Трек</th><th>Заказал</th><th class="u-w-70px">Длина</th><th class="u-w-110px"></th></tr></thead><tbody data-skel id="mh-list"></tbody></table>
       <div class="u-ta-center u-mt-3"><button class="sm hidden" id="mh-more" onclick="loadHistory(true)">Показать ещё</button></div>
     </div>
   </div>
@@ -960,7 +968,7 @@
   <div data-tab="mstats" class="hidden">
     <div class="card"><div class="row"><h3 class="grow u-m-0">Статистика музыки</h3>
       <select id="ms-period" class="u-w-auto" onchange="loadStats()" data-seg><option value="stream">Стрим / сеанс</option><option value="week">7 дней</option><option value="all">Всё время</option></select></div>
-      <div id="ms-body" class="u-mt-3"></div></div>
+      <div id="ms-body" class="u-mt-3" data-skel></div></div>
   </div>
 </section>
 
@@ -1003,7 +1011,7 @@
     <div class="card">
       <div class="row"><h3 class="grow u-m-0">Таймеры</h3><button class="primary sm" onclick="editTimer()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Добавить таймер</span></button></div>
       <div class="muted small u-mt-1">Срабатывают во время эфира, когда выполнены оба условия: прошёл интервал и набралось нужное число новых сообщений (0 — без условия активности).</div>
-      <table class="u-mt-2"><thead><tr><th>Название</th><th>Текст</th><th>Интервал</th><th>Мин. сообщений</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-timers"></tbody></table>
+      <table class="u-mt-2"><thead><tr><th>Название</th><th>Текст</th><th>Интервал</th><th>Мин. сообщений</th><th>Вкл.</th><th></th></tr></thead><tbody id="c-timers" data-skel></tbody></table>
     </div>
     <div class="card"><h3>Разовые таймеры зрителей</h3>
       <div class="muted small">Создаются командой <code>!timer 15м текст</code> (от 5 секунд до 24 часов). Просроченные более чем на час после перезапуска не отправляются.</div>
@@ -1204,7 +1212,7 @@
     <div class="card ev-list-card">
       <div class="row"><h3 class="card-t grow">События канала</h3><button class="sm" onclick="api('/events/test',{type:'follow'}).then(()=>toast('Тестовое событие показано в OBS'))"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg> Показать тест</button></div>
       <div class="evl-h"><span></span><span>Событие</span><span>Сообщение в чат</span><span>В чат</span><span>На экран</span><span></span></div>
-      <div id="ev-list"></div>
+      <div id="ev-list" data-skel></div>
       <div class="muted small u-mt-3">Нажмите на текст, чтобы изменить шаблон. Предпросмотр использует демо-данные и ничего не отправляет в чат. Доступность событий зависит от прав аккаунта и статуса канала.</div>
     </div>
     <div class="ev-side">
@@ -1261,7 +1269,7 @@
           <label class="f u-w-110px"><span>Акцент</span><input type="color" data-s="events.screen.accent"></label>
         </div>
         <label class="switch"><input type="checkbox" data-s="events.screen.sound"> Короткий звук при показе</label>
-        <div class="row"><select id="evs-type" class="u-w-auto"></select><button onclick="evScreenTest()">▶ Показать тест в OBS</button></div>
+        <div class="row"><select id="evs-type" class="u-w-auto"></select><button onclick="evScreenTest()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg><span>Показать тест в OBS</span></button></div>
       </div>
     </div>
   </div>
@@ -1319,12 +1327,12 @@
   <div class="card">
     <h3>Аккаунт Twitch</h3>
     <div class="acc" id="acc-tw">
-      <div class="acc-off"><p class="small muted u-m-0">Войдите своим аккаунтом стримера: программа будет читать чат, создавать награды за баллы и показывать события канала.</p></div>
       <div class="acc-on"><span class="acc-av" id="acc-tw-av"></span><span class="acc-who"><b id="acc-tw-nick"></b><span id="acc-streamer"></span></span></div>
       <div class="acc-acts">
         <button class="primary" onclick="twLogin('streamer')" id="tw-login-btn">Войти через Twitch</button>
-        <button id="tw-logout" class="sm quiet" onclick="confirmDlg({title:'Выйти из аккаунта стримера?',text:'Программа перестанет работать с вашим каналом, пока вы не войдёте снова.',okLabel:'Выйти',danger:1}).then(ok=>ok&&api('/logout/streamer',{}).then(poll))">Выйти</button>
+        <button id="tw-logout" class="sm quiet acc-on-only" onclick="confirmDlg({title:'Выйти из аккаунта стримера?',text:'Программа перестанет работать с вашим каналом, пока вы не войдёте снова.',okLabel:'Выйти',danger:1}).then(ok=>ok&&api('/logout/streamer',{}).then(poll))">Выйти</button>
       </div>
+      <div class="acc-off acc-note"><p class="small muted u-m-0">Войдите своим аккаунтом стримера: программа будет читать чат, создавать награды за баллы и показывать события канала.</p></div>
     </div>
   </div>
   <div class="card">
@@ -1336,12 +1344,12 @@
       <label class="switch u-mt-4"><input type="checkbox" data-s="twitch.allow_send"> Разрешить отправку сообщений в чат Twitch</label>
     </div>
     <div class="acc u-mt-4" id="acc-botbox">
-      <div class="acc-off"><p class="small muted u-m-0">Чтобы писать от имени отдельного бота, войдите его аккаунтом. Перед входом переключитесь в браузере на аккаунт бота — программа проверит, что ник совпадает.</p></div>
       <div class="acc-on"><span class="acc-av" id="acc-bot-av"></span><span class="acc-who"><b id="acc-bot-nick"></b><span id="acc-bot"></span></span></div>
       <div class="acc-acts">
         <button class="acc-off-only" onclick="twLogin('bot')">Войти в аккаунт бота</button>
         <button class="sm quiet acc-on-only" onclick="api('/logout/bot',{}).then(poll)">Выйти</button>
       </div>
+      <div class="acc-off acc-note"><p class="small muted u-m-0">Чтобы писать от имени отдельного бота, войдите его аккаунтом. Перед входом переключитесь в браузере на аккаунт бота — программа проверит, что ник совпадает.</p></div>
     </div>
   </div>
   <div class="card">
@@ -1482,7 +1490,7 @@
           <label class="f u-w-110px"><span>Баллов за голос</span><input id="vt-pptsn" type="number" min="1" value="100" disabled></label>
         </div>
         <div class="vt-acts">
-          <button class="primary cta" id="vt-pstart" onclick="vtStartPoll()">Запустить опрос</button>
+          <button class="primary" id="vt-pstart" onclick="vtStartPoll()">Запустить опрос</button>
           <button class="sm" onclick="vtSaveTpl('poll')">Сохранить как шаблон</button>
         </div>
       </div>
@@ -1608,7 +1616,7 @@
       <div class="row"><h3 class="card-t grow">Свои темы</h3>
         <button class="sm" onclick="editTheme(null,'player')">+ Тема плеера</button><button class="sm" onclick="editTheme(null,'chat')">+ Тема чата</button>
         <button class="sm" onclick="themeImport()">Импорт по коду</button></div>
-      <table class="u-mt-3"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list"></tbody></table>
+      <table class="u-mt-3"><thead><tr><th>Название</th><th>Для чего</th><th>Основа</th><th>Используется</th><th></th></tr></thead><tbody id="th-list" data-skel></tbody></table>
       <div class="small muted u-mt-2">«Применить» выбирает тему для источника в OBS. Для отдельной сцены адрес с темой: <code>/?theme=custom:ID</code> или <code>/chat?theme=custom:ID</code>.</div>
     </div>
     <div class="card hidden" id="th-editor">
@@ -1645,7 +1653,7 @@
     <div class="metrics" id="ss-total"><div class="skel"></div></div>
     <div class="card" id="ss-chart-card"><h3 class="card-t">Средний онлайн по стримам</h3><div id="ss-chart" class="u-mt-3"></div></div>
     <div class="card"><table><thead><tr><th>Дата</th><th>Стрим</th><th>Длит.</th><th>Пик</th><th>Сред.</th><th>Сообщ.</th><th>Чаттеров</th><th>Фолловы</th><th>Подписки</th><th>Биты</th><th>Донаты</th><th>Заказы</th></tr></thead>
-      <tbody id="ss-list"></tbody></table></div>
+      <tbody id="ss-list" data-skel></tbody></table></div>
     <div class="card hidden" id="ss-detail"></div>
   </div>
 
@@ -1678,7 +1686,7 @@
         </div>
         <div id="gv-winners-list" class="u-mt-3"></div>
         <div class="small muted u-mt-3">Участники (новые сверху):</div>
-        <div id="gv-entries" class="log u-maxh-220px u-mt-2"></div>
+        <div id="gv-entries" class="log u-maxh-220px u-mt-2" data-skel></div>
       </div>
     </div>
   </div>
@@ -1732,6 +1740,8 @@
 <script>
 // ---------- утилиты ----------
 const $ = id => document.getElementById(id);
+const HOSTED = !!(window.chrome && window.chrome.webview);   // открыто внутри программы (а не в браузере)
+if (HOSTED) document.documentElement.classList.add("hosted");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 // ---------- линейные иконки (вместо эмодзи в интерфейсе): viewBox 24, обводка currentColor, скруглённые концы ----------
@@ -1797,23 +1807,29 @@ let LAST_BTN = null, LAST_BTN_T = 0;
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("button"); if (b) { LAST_BTN = b; LAST_BTN_T = performance.now(); } }, true);
 async function api(path, body, method) {
   // запрос из нажатия кнопки: показываем на ней индикатор загрузки, если ответ задерживается
-  const btn = body !== undefined && LAST_BTN && performance.now() - LAST_BTN_T < 400 ? LAST_BTN : null;
-  if (btn) LAST_BTN = null;
+  const clicked = LAST_BTN && performance.now() - LAST_BTN_T < 400 ? LAST_BTN : null;
+  const btn = body !== undefined ? clicked : null;
+  if (clicked) LAST_BTN = null;
+  // фоновая загрузка (GET не по нажатию) ошибку во всплывающем окне не показывает — её видно в самой карточке
+  const ctx = {quiet: !clicked && (body === undefined || /^\/(votes\/refresh|stats\/|log)/.test(path)), label: clicked ? (clicked.getAttribute("aria-label") || clicked.title || clicked.textContent || "").trim().replace(/\s+/g, " ") : ""};
   const bt = btn && setTimeout(() => { if (btn.isConnected) { btn.classList.add("busy"); btn.setAttribute("aria-busy", "true"); } }, 250);
-  try { return await apiRaw(path, body, method); }
+  try { return await apiRaw(path, body, method, ctx); }
   finally { if (btn) { clearTimeout(bt); btn.classList.remove("busy"); btn.removeAttribute("aria-busy"); } }
 }
-async function apiRaw(path, body, method) {
+async function apiRaw(path, body, method, ctx) {
+  ctx = ctx || {};
   const opt = {method: method || (body === undefined ? "GET" : "POST"), headers:{}};
   if (body instanceof FormData) opt.body = body;
   else if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
   const retry = {label: "Повторить", run: () => api(path, body, method)};
   let r;
   try { r = await fetch("/api" + path, opt); }
-  catch (e) { toast(tr("Нет связи с программой — проверьте, что Beg1nnnerOS запущена"), true, retry); throw e; }
+  catch (e) { if (!ctx.quiet) toast(tr("Нет связи с программой — проверьте, что Beg1nnnerOS запущена"), true, retry); throw e; }
   const j = await r.json().catch(() => ({ok:false, error: r.status >= 500 ? tr("Программа не смогла выполнить действие (ошибка сервера)") : r.statusText}));
   if (!j.ok) {
-    toast(j.error || tr("Не получилось выполнить действие"), true, r.status >= 500 ? retry : null);
+    // без текста от программы называем само действие: «Не получилось: «Очистить очередь»»
+    const what = ctx.label ? `${tr("Не получилось")}: «${ctx.label.slice(0, 60)}»` : tr("Не получилось выполнить действие");
+    if (!ctx.quiet) toast(j.error ? (ctx.label ? `${ctx.label.slice(0, 60)}: ${j.error}` : j.error) : what, true, r.status >= 500 ? retry : null);
     if (j.field) showFieldError(j.field);
     throw new Error(j.error);
   }
@@ -2447,6 +2463,9 @@ async function poll(pushed) {
   $("tb-health").classList.toggle("bad", bad > 0);
   $("tb-health").innerHTML = bad ? `<i></i>Требует внимания <b>${bad}</b>` : `<i></i>Всё в норме <b>${total}/${total}</b>`;
   $("tb-live").classList.toggle("hidden", !r.stream.live); $("tb-up").textContent = r.stream.live ? r.stream.uptime : "";
+  // в программе статус эфира с таймером показывает заголовок окна
+  const liveKey = r.stream.live ? "1" + r.stream.uptime : "0";
+  if (HOSTED && liveKey !== window.LIVE_SENT) { window.LIVE_SENT = liveKey; try { chrome.webview.postMessage({type: "live", live: !!r.stream.live, uptime: r.stream.live ? r.stream.uptime : ""}); } catch (e) {} }
   $("nm-login").textContent = r.streamer.ok ? r.streamer.login : "Нет входа";
   $("nm-av").textContent = r.streamer.ok ? r.streamer.login[0] : "?"; $("nm-av").classList.toggle("live", !!r.stream.live);
   $("nm-sub").textContent = r.streamer.ok ? (r.stream.live ? "Twitch · в эфире" : "Twitch · не в эфире") : "Войдите в «Настройках»";
@@ -2457,7 +2476,7 @@ async function poll(pushed) {
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
   // ничего не играет: вместо прочерка — пустое состояние, полоса прогресса скрыта, кнопки управления треком неактивны
   document.querySelector("#p-live .np").classList.toggle("idle", !c);
-  ["np-pause", "np-skip", "np-block"].forEach(id => $(id).disabled = !c);
+  ["np-pause", "np-skip", "np-block", "np-like"].forEach(id => $(id).disabled = !c);
   if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast(m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
@@ -2479,7 +2498,7 @@ async function poll(pushed) {
   const qsec = m.queue.reduce((a, t) => a + (t.duration || 0), 0);
   $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
   $("nb-music").textContent = m.queue.length || "";
-  setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted u-w-56px">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? `<span class="prio-ic" title="${tr("Вне очереди")}">${ICON.zap}</span>` : t.priority ? `<span class="prio-ic" title="${tr("Приоритет")}">${ICON.star}</span>` : ""}</td>
+  setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted u-w-56px u-ws-nowrap">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? `<span class="prio-ic" title="${tr("Вне очереди")}">${ICON.zap}</span>` : t.priority ? `<span class="prio-ic" title="${tr("Приоритет")}">${ICON.star}</span>` : ""}</td>
     <td><span class="u-d-flex u-ai-center u-gap-3"><span class="cv-sm" style="color:${avColor(t.requester)}">${ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
     <td>${t.requester ? `<span class="u-d-inline-flex u-ai-center u-gap-2"><span class="av" style="background:${avColor(t.requester)}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span></span>` : '<span class="muted">вручную</span>'}</td>
     <td class="row u-fw-nowrap"><button class="ib" title="Выше" aria-label="Переместить выше" onclick="api('/music/move',{id:'${t.id}',delta:-1})">${ICON.up}</button><button class="ib" title="Ниже" aria-label="Переместить ниже" onclick="api('/music/move',{id:'${t.id}',delta:1})">${ICON.down}</button>
@@ -2606,25 +2625,36 @@ document.addEventListener("input", e => {
 new MutationObserver(() => { clearTimeout(window.DECO_T); window.DECO_T = setTimeout(() => decorateInputs(), 80); }).observe(document.body, {childList: true, subtree: true});
 setInterval(() => document.querySelectorAll("input[type=range]").forEach(rangeFill), 1000);
 // ---------- скелетоны → состояние ошибки ----------
-// Если блок так и остался «скелетом» (сервер не ответил), через 8 секунд показываем понятную ошибку с кнопкой «Повторить».
-const SKEL_LOAD = {"fb-next": () => loadFbNext(), "c-custom": () => loadCommands(), "c-std": () => loadCommands(), "c-timers-mini": () => loadTimers(),
-  "mod-list": () => loadMod(), "al-list": () => loadAlerts(), "ss-total": () => loadStreams()};
+// Пока данных нет — «скелет». Упала загрузка — сразу «Не удалось загрузить» + «Повторить» (а не всплывающее сообщение).
+// Сторож через 8 секунд — запасной вариант для списков, которые приходят из общего состояния.
+const SKEL_LOAD = {"fb-next": () => loadFbNext(), "c-custom": () => loadCommands(), "c-std": () => loadCommands(), "c-timers-mini": () => loadTimers(), "c-timers": () => loadTimers(),
+  "mod-list": () => loadMod(true), "al-list": () => loadAlerts(), "ss-total": () => loadStreams(), "ss-list": () => loadStreams(), "log": () => loadLog(), "mh-list": () => loadHistory(),
+  "ms-body": () => loadStats(), "ev-list": () => loadSettings(), "th-list": () => loadSettings(), "m-queue": () => poll(), "gv-entries": () => loadGiveaway()};
 const SKEL_HTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+const skelFill = el => el.tagName === "TBODY" ? `<tr class="skel-tr"><td colspan="12">${SKEL_HTML}</td></tr>` : SKEL_HTML;
 function skelError(id) {
-  const el = $(id); if (!el || !el.querySelector(":scope > .skel")) return;
-  el.innerHTML = `<div class="load-err" role="alert"><span class="empty-ic">${ICON.alert}</span><b>${tr("Не удалось загрузить")}</b>
+  const el = $(id); if (!el || !el.querySelector(".skel")) return;
+  const box = `<div class="load-err" role="alert"><span class="empty-ic">${ICON.alert}</span><b>${tr("Не удалось загрузить")}</b>
     <span>${tr("Программа не ответила. Проверьте, что Beg1nnnerOS запущена, и попробуйте ещё раз.")}</span>
     <button class="sm" onclick="skelRetry('${id}')">${tr("Повторить")}</button></div>`;
+  el.innerHTML = el.tagName === "TBODY" ? `<tr class="err-tr"><td colspan="12">${box}</td></tr>` : box;
 }
 function skelRetry(id) {
   const el = $(id); if (!el) return;
-  el.innerHTML = SKEL_HTML; el.dataset.skelSince = Date.now();
+  el.innerHTML = skelFill(el); el.dataset.skelSince = Date.now();
   Promise.resolve().then(SKEL_LOAD[id]).catch(() => skelError(id));
 }
+// загрузчик упал — все его «скелеты» сразу превращаются в ошибку
+function skelGuard(name, ids) {
+  const fn = window[name]; if (typeof fn !== "function") return;
+  window[name] = function (...a) { return Promise.resolve().then(() => fn.apply(this, a)).catch(e => { ids.forEach(skelError); throw e; }); };
+}
+document.querySelectorAll("[data-skel]").forEach(el => el.innerHTML = skelFill(el));
+document.querySelectorAll(".inp-u input:not([placeholder])").forEach(el => el.placeholder = "—");
 function skelWatch() {
   Object.keys(SKEL_LOAD).forEach(id => {
     const el = $(id); if (!el) return;
-    if (!el.offsetParent || !el.querySelector(":scope > .skel")) { delete el.dataset.skelSince; return; }
+    if (!el.offsetParent || !el.querySelector(".skel")) { delete el.dataset.skelSince; return; }
     const since = +el.dataset.skelSince || (el.dataset.skelSince = Date.now());
     if (Date.now() - since > 8000) { delete el.dataset.skelSince; skelError(id); }
   });
@@ -2766,7 +2796,7 @@ function wordCloud(words) {
 }
 async function loadFbNext() {
   if (!$("fb-next")) return;
-  let r; try { r = await api("/music/fallback/next"); } catch (e) { $("fb-next").innerHTML = '<span class="muted small">Недоступно</span>'; return; }
+  let r; try { r = await api("/music/fallback/next"); } catch (e) { $("fb-next").innerHTML = SKEL_HTML; skelError("fb-next"); return; }
   $("fb-next-st").textContent = r.status || "";
   $("fb-next").innerHTML = (r.items || []).map((t, i) => `<div class="qrow u-gtc-22px-40px-minmax-0-1fr-52px"><span class="n">${i + 1}</span>
     <span class="cv ${t.liked ? "is-liked" : ""}">${ICO_MUSIC}</span><span class="tt"><span data-noi18n>${esc(t.title)}</span>${t.liked ? `<span class="liked-mark" title="${tr("В избранном")}">${ICON.heartFill}</span>` : ""}</span><span class="d">${fmt(t.duration)}</span></div>`).join("")
@@ -2994,7 +3024,7 @@ function editAlert(id) {
       <label class="f grow"><span>Название награды Twitch (до 45)</span><input id="a-rt" maxlength="45" value="${esc(a.reward_title)}"></label>
       <label class="f u-minw-100px"><span>Цена</span><input type="number" id="a-cost" min="1" value="${a.cost}"></label></div>
     <div class="row u-mt-3"><h3 class="grow u-m-0">Предпросмотр (1920×1080)</h3>
-      <label class="switch small"><input type="checkbox" id="a-psound"> со звуком</label><button class="sm" onclick="prev()">▶ Повторить</button></div>
+      <label class="switch small"><input type="checkbox" id="a-psound"> со звуком</label><button class="sm" onclick="prev()"><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg><span>Повторить</span></button></div>
     <div class="preview-wrap u-mt-2" id="a-pw"><div class="preview-stage" id="a-stage"></div></div>
     <div class="row u-mt-4 u-jc-fend"><button onclick="closeModal()">Отмена</button><button class="primary" id="a-save">Сохранить алерт</button></div>`);
   $("a-mode").value = a.duration_mode;
@@ -3448,7 +3478,7 @@ const statCard = (t, v, note) => `<div><span class="micro">${t}</span><b>${v}</b
 async function loadStreams() {
   let r;
   try { r = await api("/pro/streams?days=" + $("ss-days").value); }
-  catch (e) { $("ss-list").innerHTML = '<tr><td colspan="12" class="muted">Не удалось загрузить статистику</td></tr>'; $("ss-total").innerHTML = ""; return; }
+  catch (e) { $("ss-list").innerHTML = skelFill($("ss-list")); $("ss-total").innerHTML = SKEL_HTML; skelError("ss-list"); skelError("ss-total"); return; }
   const t = r.total;
   $("ss-total").innerHTML = statCard("Стримов", t.count, `${t.hours} ч в эфире`) + statCard("Пик зрителей", t.peak, `в среднем ${t.avg}`) +
     statCard("Сообщений в чате", t.messages.toLocaleString("ru-RU")) + statCard("Новых фолловеров", t.follows) +
@@ -3526,7 +3556,7 @@ async function gvStart() {
     subs_only: $("gv-subs").checked, followers_only: $("gv-follow").checked});
   toast("Розыгрыш начат — объявление отправлено в чат"); renderGiveaway(g);
 }
-async function loadGiveaway() { try { renderGiveaway((await api("/pro/live")).giveaway); } catch (e) {} }
+async function loadGiveaway() { try { renderGiveaway((await api("/pro/live")).giveaway); } catch (e) { skelError("gv-entries"); } }
 function renderGiveaway(g) {
   const st = {idle: ["нет розыгрыша", ""], open: ["идёт приём заявок", "ok"], closed: ["приём закрыт", "warn"]}[g.status] || [g.status, ""];
   $("gv-status").textContent = st[0]; $("gv-status").className = "pill " + st[1];
@@ -3544,7 +3574,7 @@ function renderGiveaway(g) {
 // ---------- профили и облако ----------
 function renderProfiles() {
   $("pf-list").innerHTML = PRO.profiles.map(p => `<div class="row list-item u-p-2-0">
-    <b class="grow">${p.active ? "▶ " : ""}${esc(p.name)}${p.active ? ' <span class="pill ok">открыт</span>' : ""}</b>
+    <b class="grow ic-tx">${p.active ? `<span class="pf-on" title="${tr("Открытый профиль")}">${ICON.check}</span>` : ""}<span>${esc(p.name)}</span>${p.active ? ' <span class="pill ok">открыт</span>' : ""}</b>
     ${p.active ? "" : `<button class="sm" onclick="pfSwitch('${esc(p.id)}','${esc(p.name)}')">Открыть</button>`}
     ${p.id && !p.active ? `<button class="sm danger" onclick="pfDelete('${esc(p.id)}')">Удалить</button>` : ""}</div>`).join("");
 }
@@ -3763,7 +3793,7 @@ async function modUnban(id, btn) {
   try { const r = await api("/mod/unban", {user_id: id}); toast(r.message); btn.innerHTML = icTx("check", tr("снят")); } catch (e) { btn.disabled = false; }
 }
 async function loadMod() {
-  let m; try { m = await api("/mod"); } catch (e) { return; }
+  let m; try { m = await api("/mod"); } catch (e) { skelError("mod-list"); return; }
   $("mod-warn").innerHTML = !m.ready ? `<div class="notice warn">${ICON.alert}<div>Сначала войдите в Twitch.</div></div>`
     : !m.scopes ? `<div class="notice warn">${ICON.alert}<div>Чтобы удалять сообщения и давать таймауты, программе нужны права модератора. <button class="sm" onclick="twLogin('streamer')">Войти в Twitch заново</button></div></div>` : "";
   $("mod-count").textContent = m.count ? `Срабатываний сегодня: ${m.count}` : "Сегодня нарушений не было";
@@ -3906,6 +3936,10 @@ async function capDownload() {
   try { const r = await api("/captions/download", {engine: eng, model}); toast(r.message); } catch (e) {}
   capLoad();
 }
+
+// ---------- загрузчики: ошибка → сразу в карточку ----------
+[["loadAlerts", ["al-list"]], ["loadCommands", ["c-custom", "c-std"]], ["loadTimers", ["c-timers", "c-timers-mini"]], ["loadHistory", ["mh-list"]],
+ ["loadLog", ["log"]], ["loadStats", ["ms-body"]], ["loadSettings", ["ev-list", "th-list"]]].forEach(([n, ids]) => skelGuard(n, ids));
 </script>
 </body>
 </html>

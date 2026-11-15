@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         SplashText.Text = L.T(SplashText.Text);
+        LiveText.Text = L.T(LiveText.Text);
         MinBtn.ToolTip = L.T("Свернуть");
         CloseBtn.ToolTip = L.T("Закрыть");
         System.Windows.Automation.AutomationProperties.SetName(MinBtn, L.T("Свернуть"));
@@ -46,18 +47,6 @@ public partial class MainWindow : Window
     }
 
     // ---------- заголовок окна ----------
-    private sealed record ChromePalette(string Bg, string Fg, string Muted, string Accent, string AccentText, bool Light);
-    private static readonly Dictionary<string, ChromePalette> Palettes = new()
-    {
-        ["studio"] = new("#09090C", "#F4F4F7", "#9D9DAE", "#8B5CF6", "#C4B5FD", false),
-        ["twitch"] = new("#0F0F14", "#E8E8EF", "#9A9AAB", "#9146FF", "#B38BFF", false),
-        ["light"] = new("#F5F4F0", "#1B1B20", "#5A5A66", "#6D28D9", "#5B21B6", true),
-        ["midnight"] = new("#0B1020", "#E3E9F7", "#8A97B5", "#3B82F6", "#7CB0FF", false),
-        ["neon"] = new("#07070D", "#F2EAFF", "#9C8FBF", "#FF2BD6", "#2DE2FF", false),
-        ["graphite"] = new("#121212", "#ECECEC", "#9A9A9A", "#D4D4D4", "#FFFFFF", false),
-        ["sunset"] = new("#1A1013", "#FBEEE6", "#C09A92", "#FF7A45", "#FFB38A", false),
-        ["forest"] = new("#0D1411", "#E4F1E8", "#8FAB9A", "#22C55E", "#86EFAC", false),
-    };
     private bool _light;
 
     private static Color C(string hex) => (Color)ColorConverter.ConvertFromString(hex);
@@ -66,7 +55,8 @@ public partial class MainWindow : Window
     /// <summary>Цвета заголовка и заставки под тему панели (панель сообщает о смене темы через postMessage).</summary>
     public void ApplyChromeTheme(string theme)
     {
-        var p = Palettes.TryGetValue(theme ?? "", out var x) ? x : Palettes["studio"];
+        Desktop.ChromeTheme.Set(theme);
+        var p = Desktop.ChromeTheme.Current;
         var fg = C(p.Fg);
         Resources["BarBg"] = new SolidColorBrush(C(p.Bg));
         Resources["BarFg"] = new SolidColorBrush(fg);
@@ -183,7 +173,14 @@ public partial class MainWindow : Window
                 try
                 {
                     var msg = JsonNode.Parse(e.WebMessageAsJson);
-                    if (msg?["type"]?.GetValue<string>() == "theme") ApplyChromeTheme(msg["theme"]?.GetValue<string>());
+                    var type = msg?["type"]?.GetValue<string>();
+                    if (type == "theme") ApplyChromeTheme(msg["theme"]?.GetValue<string>());
+                    else if (type == "live")
+                    {
+                        var live = msg["live"]?.GetValue<bool>() == true;
+                        LiveBadge.Visibility = live ? Visibility.Visible : Visibility.Collapsed;
+                        LiveTime.Text = msg["uptime"]?.GetValue<string>() ?? "";
+                    }
                 }
                 catch { }
             };

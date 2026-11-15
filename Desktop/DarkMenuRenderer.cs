@@ -3,19 +3,20 @@ using System.Windows.Forms;
 
 namespace Beg1nnnerOS.Desktop;
 
-/// <summary>Тёмное меню значка в трее в цветах панели (вместо светлого системного).</summary>
+/// <summary>Меню значка в трее в цветах текущей темы панели (вместо системного).</summary>
 public sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
 {
-    public static readonly Color Bg = Color.FromArgb(0x11, 0x11, 0x16);
-    public static readonly Color Fg = Color.FromArgb(0xF4, 0xF4, 0xF7);
-    public static readonly Color Muted = Color.FromArgb(0x9D, 0x9D, 0xAE);
-    public static readonly Color Hover = Color.FromArgb(0x24, 0x22, 0x33);
-    public static readonly Color Line = Color.FromArgb(0x26, 0x26, 0x31);
-    public static readonly Color Accent = Color.FromArgb(0x8B, 0x5C, 0xF6);
+    private static Color H(string hex) => ColorTranslator.FromHtml(hex);
+    public static Color Bg => H(ChromeTheme.Current.Panel);
+    public static Color Fg => H(ChromeTheme.Current.Fg);
+    public static Color Muted => H(ChromeTheme.Current.Muted);
+    public static Color Hover => H(ChromeTheme.Mix(ChromeTheme.Current.Panel, ChromeTheme.Current.Accent, ChromeTheme.Current.Light ? 0.10 : 0.16));
+    public static Color Line => H(ChromeTheme.Mix(ChromeTheme.Current.Panel, ChromeTheme.Current.Fg, 0.12));
+    public static Color Accent => H(ChromeTheme.Current.Accent);
 
     public DarkMenuRenderer() : base(new Palette()) { RoundedEdges = false; }
 
-    /// <summary>Применяет оформление к меню и всем пунктам.</summary>
+    /// <summary>Применяет оформление к меню и всем пунктам (вызывать заново при смене темы).</summary>
     public static void Apply(ContextMenuStrip menu)
     {
         menu.Renderer = new DarkMenuRenderer();
@@ -23,12 +24,13 @@ public sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
         menu.ForeColor = Fg;
         menu.ShowImageMargin = true;
         menu.Padding = new Padding(4, 6, 4, 6);
-        menu.Font = new Font("Segoe UI", 9.75f);
+        if (menu.Font.Name != "Segoe UI") menu.Font = new Font("Segoe UI", 9.75f);
         foreach (ToolStripItem it in menu.Items)
         {
             it.ForeColor = Fg;
             if (it is ToolStripMenuItem) it.Padding = new Padding(4, 5, 4, 5);
         }
+        menu.Invalidate();
     }
 
     protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
@@ -53,7 +55,6 @@ public sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
 
     protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
     {
-        // галочка — акцентным цветом
         var r = e.ImageRectangle;
         using var p = new Pen(Accent, 2f) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
         e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;

@@ -15,11 +15,18 @@ public sealed class CloseDialog : Window
     public string Choice = "cancel";
     public bool Remember;
 
-    // палитра панели (тема «Студия»)
-    private const string Bg = "#111116", Line = "#262631", Fg = "#F4F4F7", Muted = "#B6B6C4", Accent = "#8B5CF6", AccentHover = "#9D74F8", Field = "#1B1B22", FieldHover = "#24242D";
+    // палитра — по текущей теме панели (светлая тема → светлый диалог)
+    private static ChromePalette Pal => ChromeTheme.Current;
+    private static string Bg => Pal.Panel;
+    private static string Fg => Pal.Fg;
+    private static string Muted => Pal.Muted;
+    private static string Accent => Pal.Accent;
+    private static string Line => ChromeTheme.Mix(Pal.Panel, Pal.Fg, Pal.Light ? 0.14 : 0.12);
+    private static string Field => ChromeTheme.Mix(Pal.Panel, Pal.Fg, Pal.Light ? 0.04 : 0.05);
+    private static string Track => ChromeTheme.Mix(Pal.Panel, Pal.Fg, Pal.Light ? 0.22 : 0.18);
 
     // кнопки и переключатель — шаблоны в XAML, чтобы были наведение, нажатие и рамка фокуса
-    private static readonly string ButtonXaml = $@"
+    private static string ButtonXaml => $@"
 <Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='Button'>
   <Setter Property='Foreground' Value='{Fg}'/>
   <Setter Property='FontSize' Value='13'/>
@@ -39,14 +46,14 @@ public sealed class CloseDialog : Window
         <ControlTemplate.Triggers>
           <Trigger Property='IsMouseOver' Value='True'><Setter TargetName='Bd' Property='Opacity' Value='0.88'/></Trigger>
           <Trigger Property='IsPressed' Value='True'><Setter TargetName='Bd' Property='Opacity' Value='0.72'/></Trigger>
-          <Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='Ring' Property='BorderBrush' Value='#C4B5FD'/></Trigger>
+          <Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='Ring' Property='BorderBrush' Value='{Pal.AccentText}'/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate>
     </Setter.Value>
   </Setter>
 </Style>";
 
-    private static readonly string ToggleXaml = $@"
+    private static string ToggleXaml => $@"
 <Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='CheckBox'>
   <Setter Property='Foreground' Value='{Fg}'/>
   <Setter Property='Cursor' Value='Hand'/>
@@ -57,7 +64,7 @@ public sealed class CloseDialog : Window
         <StackPanel Orientation='Horizontal' Background='Transparent'>
           <Grid Width='40' Height='24' VerticalAlignment='Center'>
             <Border x:Name='Ring' CornerRadius='14' Margin='-3' BorderThickness='2' BorderBrush='Transparent'/>
-            <Border x:Name='Track' CornerRadius='12' Background='#2E2E38'/>
+            <Border x:Name='Track' CornerRadius='12' Background='{Track}'/>
             <Ellipse x:Name='Thumb' Width='18' Height='18' Fill='White' HorizontalAlignment='Left' Margin='3,0,0,0'/>
           </Grid>
           <ContentPresenter Margin='12,0,0,0' VerticalAlignment='Center'/>
@@ -68,7 +75,7 @@ public sealed class CloseDialog : Window
             <Setter TargetName='Thumb' Property='Margin' Value='19,0,0,0'/>
           </Trigger>
           <Trigger Property='IsMouseOver' Value='True'><Setter TargetName='Track' Property='Opacity' Value='0.9'/></Trigger>
-          <Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='Ring' Property='BorderBrush' Value='#C4B5FD'/></Trigger>
+          <Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='Ring' Property='BorderBrush' Value='{Pal.AccentText}'/></Trigger>
         </ControlTemplate.Triggers>
       </ControlTemplate>
     </Setter.Value>
@@ -97,7 +104,7 @@ public sealed class CloseDialog : Window
         {
             Background = B(Bg), BorderBrush = B(Line), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18),
             Margin = new Thickness(24), MaxWidth = 520,
-            Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 40, ShadowDepth = 10, Opacity = 0.6 },
+            Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 40, ShadowDepth = 10, Opacity = Pal.Light ? 0.18 : 0.6 },
         };
         var root = new StackPanel();
         card.Child = root;
@@ -109,9 +116,9 @@ public sealed class CloseDialog : Window
         var brand = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         brand.Children.Add(new Border
         {
-            Width = 20, Height = 20, CornerRadius = new CornerRadius(6), Background = B("#2A8B5CF6"), BorderBrush = B(Accent), BorderThickness = new Thickness(1),
+            Width = 20, Height = 20, CornerRadius = new CornerRadius(6), Background = new SolidColorBrush(Color.FromArgb(0x2A, ((SolidColorBrush)B(Accent)).Color.R, ((SolidColorBrush)B(Accent)).Color.G, ((SolidColorBrush)B(Accent)).Color.B)), BorderBrush = B(Accent), BorderThickness = new Thickness(1),
             Child = new TextBlock { Text = "B1", FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 9, FontWeight = FontWeights.SemiBold,
-                Foreground = B("#C4B5FD"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                Foreground = B(Pal.AccentText), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
         });
         brand.Children.Add(new TextBlock { Text = "Beg1nnnerOS", Foreground = B(Muted), FontSize = 12, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         head.Children.Add(brand);
@@ -154,7 +161,7 @@ public sealed class CloseDialog : Window
                 Style = btnStyle, Content = text, Margin = new Thickness(8, 0, 0, 0), MinWidth = 110,
                 Background = primary ? B(Accent) : B(Field),
                 BorderBrush = primary ? Brushes.Transparent : B(Line), BorderThickness = new Thickness(primary ? 0 : 1),
-                Foreground = primary ? Brushes.White : B(Fg), IsDefault = primary, IsCancel = choice == "cancel",
+                Foreground = primary ? B(Pal.OnAccent) : B(Fg), IsDefault = primary, IsCancel = choice == "cancel",
             };
             b.Click += (s, e) =>
             {

@@ -146,6 +146,8 @@ public partial class App : Application
             menu.Items.Add(L.T("Выход"), null, async (s, e) => await ExitApp());
             menu.Opening += (s, e) => pauseEvents.Checked = Hub.Events.Paused;
             Desktop.DarkMenuRenderer.Apply(menu);
+            // тема панели сменилась — перекрашиваем меню (событие приходит из окна, поток UI)
+            Desktop.ChromeTheme.Changed += () => { try { Desktop.DarkMenuRenderer.Apply(menu); } catch { } };
             _tray = new WinForms.NotifyIcon
             {
                 Icon = new System.Drawing.Icon(Path.Combine(AppContext.BaseDirectory, "app.ico")),
@@ -182,7 +184,7 @@ public partial class App : Application
                 });
                 _tray.ContextMenuStrip.Items.Insert(0, _trayUpdate);
                 _tray.ContextMenuStrip.Items.Insert(1, new WinForms.ToolStripSeparator());
-                _trayUpdate.ForeColor = Desktop.DarkMenuRenderer.Fg;
+                Desktop.DarkMenuRenderer.Apply(_tray.ContextMenuStrip);
             }
             _trayUpdate.Text = L.T($"Обновить до версии {version}");
             _tray.BalloonTipClicked -= OnUpdateBalloon;
