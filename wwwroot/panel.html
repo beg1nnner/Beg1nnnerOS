@@ -99,6 +99,14 @@
   .pc-tx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .pc-tx b { font-weight:600; font-size:var(--fs-base); } .pc-tx span { font-size:var(--fs-md); color:var(--muted); }
   .pc-info { display:flex; flex-direction:column; gap:var(--sp-1); margin-top:var(--sp-3); padding-top:var(--sp-3); border-top:1px solid var(--hair); font-size:var(--fs-md); color:var(--muted); }
+  /* демо-режим */
+  #demo-bar { position:sticky; top:0; z-index:90; display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; padding:var(--sp-2) var(--sp-4); margin-bottom:var(--sp-4); border-radius:var(--r-md);
+    background:color-mix(in srgb, var(--warn) 16%, var(--panel)); border-bottom:1px solid color-mix(in srgb, var(--warn) 40%, transparent); color:var(--fg); font-size:var(--fs-md); }
+  #demo-bar > svg { color:var(--warn); } #demo-bar span { color:var(--muted); flex:1; min-width:200px; }
+  .demo-cta { display:flex; align-items:center; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-4); }
+  .demo-cta > .grow { display:flex; flex-direction:column; gap:var(--sp-1); min-width:240px; }
+  .demo-cta-ic { width:40px; height:40px; flex:none; display:grid; place-items:center; border-radius:var(--r-md); color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .wz-demo { display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; margin-top:var(--sp-5); padding-top:var(--sp-4); border-top:1px solid var(--hair); }
   .card-t { font:600 var(--fs-lg)/1.3 var(--font); letter-spacing:-.01em; color:var(--fg); margin:0 0 var(--sp-3); }
   .row > .card-t, .card-t.grow { margin:0; }
   .tb-pill { display:inline-flex; align-items:center; gap:var(--sp-2); height:36px; padding:0 var(--sp-4); border-radius:var(--r-full); font-size:var(--fs-md); color:var(--muted); background:none; }
@@ -729,6 +737,11 @@
 <section id="p-live">
   <h2>Эфир</h2>
   <div class="chips" id="ready"></div>
+  <div class="card demo-cta hidden" id="demo-cta">
+    <span class="demo-cta-ic"><svg class="ic" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>
+    <div class="grow"><b>Посмотрите, как выглядит программа во время стрима</b><span class="muted small">Пока вы не вошли в Twitch, карточки пустые. Пример заполнит их вымышленными треками, заказами, событиями и опросом — ничего не сохранится и никуда не отправится.</span></div>
+    <button class="primary" onclick="demoStart()">Показать на примере</button>
+  </div>
   <div class="metrics" id="live-metrics"></div>
   <div class="live-grid">
     <div class="card np idle">
@@ -1510,6 +1523,11 @@
     </div>
   </div>
   <div class="card">
+    <h3>Пример работающей программы</h3>
+    <div class="muted small">Панель заполнится вымышленными треками, заказами, событиями и опросом — так выглядит программа во время стрима. Ничего не сохраняется и никуда не отправляется.</div>
+    <div class="row u-mt-4"><button onclick="demoStart()">Показать на примере</button></div>
+  </div>
+  <div class="card">
     <h3>Подсказки по интерфейсу</h3>
     <div class="muted small">Короткая экскурсия: где меню, очередь, поиск, уведомления и состояние подключений.</div>
     <div class="row u-mt-4"><button onclick="startTour(true)">Показать подсказки</button></div>
@@ -1789,6 +1807,7 @@
 
 <script src="/static/alert-render.js"></script>
 <script src="/static/qr.js"></script>
+<script src="/static/demo.js"></script>
 <script>
 // ---------- утилиты ----------
 const $ = id => document.getElementById(id);
@@ -1870,6 +1889,8 @@ async function api(path, body, method) {
 }
 async function apiRaw(path, body, method, ctx) {
   ctx = ctx || {};
+  // демо-режим: ответы подменяются вымышленными, изменения не отправляются (см. demo.js)
+  if (DEMO.on && !ctx.real) return demoApi(path, body, method, p => apiRaw(p, undefined, undefined, {quiet: true, real: true}));
   const opt = {method: method || (body === undefined ? "GET" : "POST"), headers:{}};
   if (body instanceof FormData) opt.body = body;
   else if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
@@ -2503,7 +2524,8 @@ function wzRender() {
         <button class="sm ${(S && S.ui && S.ui.language === "en") ? "primary" : ""}" onclick="wzLang('en')">English</button></div>
       <h2 class="wz-h"><i class="wz-ic">${ICON.wave}</i>Добро пожаловать в Beg1nnnerOS</h2>
       <div class="muted">Четыре коротких шага — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
-      <div id="wz-tw" class="u-mt-4"></div>`;
+      <div id="wz-tw" class="u-mt-4"></div>
+      <div class="wz-demo"><span class="muted small">Сначала хотите посмотреть, как всё работает?</span><button class="sm" onclick="demoStart()">Показать на примере</button></div>`;
   } else if (k === "bot") {
     body = `<h2 class="wz-h"><i class="wz-ic">${ICON.chat}</i>От чьего имени писать в чат</h2>
       <div class="muted">Бот отвечает на команды, благодарит за фолловы и донаты.</div>
@@ -2586,6 +2608,7 @@ async function poll(pushed) {
   if (pushed) ST = pushed;
   else { try { ST = (await api("/state")); } catch (e) { return; } }
   const r = ST.ready, m = ST.music;
+  $("demo-cta").classList.toggle("hidden", DEMO.on || !!(r.streamer && r.streamer.ok));
   $("ver").textContent = "v" + ST.version;
   $("about-ver").textContent = "версия " + ST.version;
   renderUpdate(ST.update);
@@ -2742,7 +2765,7 @@ function wsState() {
   let ws;
   try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/state"); } catch (e) { return; }
   ws.onopen = () => { WS_OK = true; WS_RETRY = 1000; };
-  ws.onmessage = e => { try { const j = JSON.parse(e.data); if (j.ok) poll(j.data); } catch (x) {} };
+  ws.onmessage = e => { if (DEMO.on) return; try { const j = JSON.parse(e.data); if (j.ok) poll(j.data); } catch (x) {} };
   ws.onclose = () => { WS_OK = false; setTimeout(wsState, WS_RETRY); WS_RETRY = Math.min(15000, WS_RETRY * 2); };
   ws.onerror = () => { try { ws.close(); } catch (x) {} };
 }
@@ -2904,6 +2927,8 @@ function ckIndex() {
       out.push({t: txt, where: pn.trim() + (tb ? " → " + tb.textContent.trim() : ""), p, sub: tab ? tab.dataset.tab : "", el: h});
     });
   });
+  // действия (не разделы): выполняются сразу
+  out.push({t: tr(DEMO.on ? "Выйти из примера" : "Показать на примере"), where: tr("Действие"), run: () => DEMO.on ? demoStop() : demoStart()});
   const seen = new Set();
   return out.filter(x => { const k = x.t + "|" + x.where; if (seen.has(k)) return false; seen.add(k); return true; });
 }
@@ -2919,6 +2944,7 @@ function ckRender() {
 }
 function ckGo(i) {
   const x = CK_ITEMS[i]; if (!x) return;
+  if (x.run) { closeCmdk(); x.run(); return; }
   closeCmdk(); go(x.p, x.sub);
   if (x.el) setTimeout(() => { const c = x.el.closest(".card") || x.el; c.scrollIntoView({block: "center", behavior: "smooth"}); c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); }, 80);
 }
