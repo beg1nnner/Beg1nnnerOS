@@ -248,6 +248,15 @@
   main > section:not(.hidden), [data-tab]:not(.hidden) { animation:fadeUp .18s ease-out; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(4px); } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+  a.btn-link { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:11px; border:1px solid var(--line); background:var(--field); color:var(--fg); text-decoration:none; font-weight:500; font-size:14px; }
+  a.btn-link.primary { background:var(--accent); border-color:transparent; color:#fff; font-weight:600; }
+  #tour { position:fixed; inset:0; z-index:80; }
+  #tour.hidden { display:none; }
+  .tour-hole { position:fixed; border-radius:16px; box-shadow:0 0 0 9999px rgba(5,4,10,.66), 0 0 0 2px var(--accent); transition:all .3s cubic-bezier(.2,.8,.2,1); pointer-events:none; }
+  .tour-card { position:fixed; width:340px; box-sizing:border-box; padding:18px 20px; border-radius:18px; background:var(--panel); border:1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.9); display:flex; flex-direction:column; gap:8px; transition:top .3s, left .3s; }
+  .tour-card b { font-size:17px; font-weight:600; letter-spacing:-.01em; } .tour-card > span { font-size:13.5px; color:var(--muted); line-height:1.5; }
+  .tour-a { display:flex; gap:8px; align-items:center; margin-top:8px; }
   .hint { display:none !important; }
   .hint.open { display:block !important; margin-top:6px; }
   button.hint-t { display:inline-flex; align-items:center; gap:6px; align-self:flex-start; width:auto; height:auto; padding:3px 0; margin:2px 0; border:none; background:none;
@@ -1297,6 +1306,20 @@
     <div class="muted small" style="margin:6px 0">В копию входят настройки, команды, таймеры и файлы алертов. Ключи, входы и статистика не входят.</div>
     <div id="backups"></div>
   </div>
+  <div class="card">
+    <h3>Перенос на другой компьютер</h3>
+    <div class="muted small">Один файл со всеми настройками, командами, таймерами и МедиаАлертами (вместе с картинками и звуками). Ключи и входы в Twitch, DonationAlerts и Telegram в файл не попадают — на новом компьютере войдите заново.</div>
+    <div class="row" style="margin-top:14px">
+      <a class="btn-link primary" href="/api/settings/export" download>Экспорт в файл</a>
+      <button onclick="$('imp-file').click()">Импорт из файла</button>
+      <input type="file" id="imp-file" accept=".zip" class="hidden" onchange="importSettings(this)">
+    </div>
+  </div>
+  <div class="card">
+    <h3>Подсказки по интерфейсу</h3>
+    <div class="muted small">Короткая экскурсия: где меню, очередь, поиск, уведомления и состояние подключений.</div>
+    <div class="row" style="margin-top:14px"><button onclick="startTour(true)">Показать подсказки</button></div>
+  </div>
   </div>
   </div>
 </section>
@@ -1424,7 +1447,7 @@
     <div class="muted small">«Источники» → «+» → «Браузер», 1920×1080, поверх игры. Фон прозрачный.</div>
     <div class="row" style="margin-top:10px;flex-wrap:wrap;align-items:flex-end">
       <label class="f" style="width:200px"><span>Оформление</span><select data-s="captions.style" onchange="capPreview()">
-        <option value="classic">Классика (плашка)</option><option value="outline">Обводка без фона</option><option value="neon">Неон</option><option value="light">Светлая плашка</option></select></label>
+        <option value="studio">Студия (как программа)</option><option value="classic">Классика (плашка)</option><option value="outline">Обводка без фона</option><option value="neon">Неон</option><option value="light">Светлая плашка</option></select></label>
       <label class="f" style="width:150px"><span>Размер шрифта, px</span><input type="number" min="14" max="80" data-s="captions.font_size" onchange="capPreview()"></label>
       <label class="f" style="width:150px"><span>Положение</span><select data-s="captions.position" onchange="capPreview()" data-seg><option value="bottom">Снизу</option><option value="top">Сверху</option></select></label>
     </div>
@@ -1967,7 +1990,7 @@ const WZ_STEPS = ["twitch", "bot", "music", "obs"];
 function openWizard(step) { WZ.open = true; WZ.step = step || 0; $("wizard").classList.remove("hidden"); wzRender(); }
 async function closeWizard(done) {
   WZ.open = false; clearInterval(DEV_T); $("wizard").classList.add("hidden");
-  if (done) { try { await api("/wizard", {done: true}); } catch (e) {} toast("Настройка завершена — удачного стрима!"); }
+  if (done) { try { await api("/wizard", {done: true}); } catch (e) {} toast("Настройка завершена — удачного стрима!"); setTimeout(() => startTour(), 900); }
 }
 function wzGo(d) { WZ.step = Math.max(0, Math.min(WZ_STEPS.length - 1, WZ.step + d)); wzRender(); }
 async function wzLang(l) {
@@ -2063,8 +2086,9 @@ function renderOut() {
                                          : '<span style="color:var(--warn,#f59e0b)">● OBS-плеер не открыт — музыка играет из программы</span>') : "";
 }
 
-async function poll() {
-  try { ST = (await api("/state")); } catch (e) { return; }
+async function poll(pushed) {
+  if (pushed) ST = pushed;
+  else { try { ST = (await api("/state")); } catch (e) { return; } }
   const r = ST.ready, m = ST.music;
   $("ver").textContent = "v" + ST.version;
   $("about-ver").textContent = "версия " + ST.version;
@@ -2199,6 +2223,17 @@ function hintify(root) {
   });
 }
 hintify();
+// ---------- мгновенные обновления (WebSocket) ----------
+// Программа сама присылает состояние, как только что-то изменилось; если соединения нет — панель опрашивает её как раньше.
+let WS_OK = false, WS_RETRY = 1000;
+function wsState() {
+  let ws;
+  try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/state"); } catch (e) { return; }
+  ws.onopen = () => { WS_OK = true; WS_RETRY = 1000; };
+  ws.onmessage = e => { try { const j = JSON.parse(e.data); if (j.ok) poll(j.data); } catch (x) {} };
+  ws.onclose = () => { WS_OK = false; setTimeout(wsState, WS_RETRY); WS_RETRY = Math.min(15000, WS_RETRY * 2); };
+  ws.onerror = () => { try { ws.close(); } catch (x) {} };
+}
 // ---------- плавные числа ----------
 const COUNT_PREV = {};
 function countUp(root) {
@@ -2215,6 +2250,42 @@ function emptyBox(title, text, btn, onclick) {
   return `<div class="empty"><span class="empty-ic"><svg class="ic" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M5 7l1 13h12l1-13M9 7V4h6v3"/></svg></span>
     <b>${title}</b>${text ? `<span>${text}</span>` : ""}${btn ? `<button class="sm primary" onclick="${onclick}">${btn}</button>` : ""}</div>`;
 }
+// ---------- подсказки по интерфейсу (тур) ----------
+const TOUR = [
+  {sel: "nav", title: "Все разделы — здесь", text: "Эфир, музыка, чат, алерты, события и настройки. Кнопкой вверху меню его можно свернуть до иконок."},
+  {sel: ".np", title: "Сейчас играет и очередь", text: "Пауза, пропуск, лайк трека и громкость. Ниже — очередь заказов зрителей с тем, кто заказал.", page: "live"},
+  {sel: ".tb-search", title: "Поиск по программе", text: "Найдите любую настройку по слову — например, «перевод» или «громкость». Быстро: Ctrl+K."},
+  {sel: "#tb-bell", title: "Уведомления", text: "Здесь сохраняются все всплывающие сообщения и ошибки — ничего не потеряется во время стрима."},
+  {sel: "#tb-health", title: "Состояние подключений", text: "Зелёное — всё работает. Если что-то отвалится, здесь станет жёлтым, а в «Эфире» появится кнопка «Исправить»."},
+];
+let TOUR_I = -1;
+function startTour(force) {
+  try { if (!force && localStorage.getItem("tour-done")) return; } catch (e) {}
+  go("live"); TOUR_I = 0;
+  let o = $("tour"); if (!o) { o = document.createElement("div"); o.id = "tour"; o.innerHTML = '<div class="tour-hole"></div><div class="tour-card" role="dialog" aria-live="polite"></div>'; document.body.appendChild(o); }
+  o.classList.remove("hidden"); tourShow();
+}
+function tourEnd() { const o = $("tour"); if (o) o.classList.add("hidden"); TOUR_I = -1; try { localStorage.setItem("tour-done", "1"); } catch (e) {} }
+function tourShow() {
+  const st = TOUR[TOUR_I]; if (!st) return tourEnd();
+  if (st.page) go(st.page);
+  const el = document.querySelector(st.sel); if (!el) { TOUR_I++; return tourShow(); }
+  const T = window.tr || (x => x);
+  el.scrollIntoView({block: "nearest"});
+  const r = el.getBoundingClientRect(), pad = 8, o = $("tour"), hole = o.querySelector(".tour-hole"), card = o.querySelector(".tour-card");
+  Object.assign(hole.style, {left: (r.left - pad) + "px", top: (r.top - pad) + "px", width: (r.width + pad * 2) + "px", height: Math.min(r.height + pad * 2, innerHeight - 20) + "px"});
+  card.innerHTML = `<div class="micro">${TOUR_I + 1} / ${TOUR.length}</div><b>${T(st.title)}</b><span>${T(st.text)}</span>
+    <div class="tour-a"><button class="sm" onclick="tourEnd()">${T("Пропустить")}</button><span class="grow"></span>
+    ${TOUR_I ? `<button class="sm" onclick="TOUR_I--;tourShow()">${T("Назад")}</button>` : ""}<button class="sm primary" onclick="TOUR_I++;tourShow()">${T(TOUR_I === TOUR.length - 1 ? "Готово" : "Далее")}</button></div>`;
+  const cw = 340, below = r.bottom + 16 + 190 < innerHeight;
+  let left = Math.min(innerWidth - cw - 16, Math.max(16, r.left + (r.width > cw ? 0 : r.width / 2 - cw / 2)));
+  if (r.width > innerWidth * .5 && r.height > innerHeight * .5) left = Math.max(16, r.right - cw - 24);
+  if (r.left < 300 && r.height > innerHeight * .6) { left = r.right + 18; }
+  card.style.left = left + "px";
+  card.style.top = (r.height > innerHeight * .6 ? Math.max(16, r.top + 40) : below ? r.bottom + 16 : Math.max(16, r.top - 16 - card.offsetHeight)) + "px";
+}
+window.addEventListener("resize", () => { if (TOUR_I >= 0) tourShow(); });
+document.addEventListener("keydown", e => { if (TOUR_I >= 0 && e.key === "Escape") tourEnd(); });
 // ---------- что нового ----------
 let CHL_DONE = false;
 async function loadChangelog() {
@@ -2609,6 +2680,7 @@ const UI_THEMES = {
   forest:   ["Лес", ["#0d1411", "#1a2720", "#22c55e", "#e4f1e8"]],
 };
 const OV_THEMES = {
+  studio:  ["Студия", "Как программа: тёмная карточка, обложка-пластинка"],
   classic: ["Классика", "Карточка с акцентной полосой"],
   minimal: ["Минимал", "Только текст с тенью, без фона"],
   neon:    ["Неон", "Светящаяся рамка и заголовок"],
@@ -2656,6 +2728,7 @@ $("ov-custom").addEventListener("change", () => renderOverlayThemes());
 
 // ---------- чат в OBS ----------
 const CHAT_THEMES = {
+  studio:  ["Студия", "Как программа: тёмные карточки"],
   classic: ["Классика", "Ник цветом, текст с тенью"],
   cards:   ["Карточки", "Каждое сообщение в карточке"],
   bubbles: ["Пузыри", "Облачка, ник над сообщением"],
@@ -2722,6 +2795,12 @@ async function layoutTest() {
 }
 
 // ---------- копии ----------
+async function importSettings(inp) {
+  const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return;
+  if (!confirm(`Перенести настройки из «${f.name}»? Текущие настройки сохранятся отдельной резервной копией, программа перезапустится.`)) return;
+  const fd = new FormData(); fd.append("file", f);
+  try { const r = await api("/settings/import", fd); toast(r.message || "Настройки перенесены"); setTimeout(() => location.reload(), 4000); } catch (e) {}
+}
 async function loadBackups() {
   const list = await api("/backups");
   $("backups").innerHTML = list.map(b => `<div class="list-item"><span class="grow mono">${esc(b.name)}</span><span class="small muted">${Math.round(b.size / 1024)} КБ</span>
@@ -2733,7 +2812,8 @@ async function loadBackups() {
 window.addEventListener("resize", () => { if (!$("p-music").classList.contains("hidden")) fitOverlay(); });
 (async () => {
   await loadSettings(); await poll(); loadLog();
-  setInterval(poll, 1500); setInterval(loadLog, 4000); loadLiveMetrics(); setInterval(loadLiveMetrics, 15000);
+  if (S && S.ui && S.ui.wizard_done && !WZ.open) setTimeout(() => startTour(), 1500);
+  wsState(); setInterval(() => { if (!WS_OK) poll(); }, 1500); setInterval(loadLog, 4000); loadLiveMetrics(); setInterval(loadLiveMetrics, 15000);
   setInterval(() => { if (!$("p-chat").classList.contains("hidden")) loadTimers(); }, 5000);
   const h = location.hash.slice(1); if (h && $("p-" + h)) go(h);
 })();

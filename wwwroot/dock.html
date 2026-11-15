@@ -154,9 +154,18 @@ $("add").onclick = async () => { const q = $("q").value.trim(); if (!q) return; 
   if (r.ok) $("q").value = ""; else alert(r.error); };
 $("q").onkeydown = e => { if (e.key === "Enter") $("add").click(); };
 $("stop").onclick = () => post("/api/alerts/stop");
-async function tick() {
+let WS_OK = false, WS_RETRY = 1000;
+function wsState() {
+  let ws;
+  try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/state"); } catch (e) { return; }
+  ws.onopen = () => { WS_OK = true; WS_RETRY = 1000; };
+  ws.onmessage = e => { try { const j = JSON.parse(e.data); if (j.ok) tick(j.data); } catch (x) {} };
+  ws.onclose = () => { WS_OK = false; setTimeout(wsState, WS_RETRY); WS_RETRY = Math.min(15000, WS_RETRY * 2); };
+  ws.onerror = () => { try { ws.close(); } catch (x) {} };
+}
+async function tick(pushed) {
   try {
-    const {data:s} = await (await fetch("/api/state", {cache:"no-store"})).json();
+    const s = pushed || (await (await fetch("/api/state", {cache:"no-store"})).json()).data;
     if (document.documentElement.dataset.theme !== s.ui_theme) document.documentElement.dataset.theme = s.ui_theme;
     const m = s.music, c = m.current;
     $("now").textContent = c ? c.title : "—";
@@ -265,7 +274,7 @@ $("vgo").onclick = () => {
   if ($("vkind").value === "poll") vdo("poll/start", {title, choices: opts, duration: d});
   else vdo("prediction/start", {title, outcomes: opts, window: d});
 };
-tick(); alerts(); setInterval(tick, 1500); setInterval(alerts, 30000); setInterval(hist, 10000); setInterval(votes, 2000);
+tick(); wsState(); alerts(); setInterval(() => { if (!WS_OK) tick(); }, 1500); setInterval(alerts, 30000); setInterval(hist, 10000); setInterval(votes, 2000);
 </script>
 </body>
 </html>

@@ -6,6 +6,8 @@
 <link rel="icon" href="/static/favicon.png">
 <title>Beg1nnnerOS — музыкальный оверлей</title>
 <style>
+  @font-face { font-family:"Geist"; src:url("/static/fonts/Geist.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Geist Mono"; src:url("/static/fonts/GeistMono.woff2") format("woff2"); font-weight:100 900; font-display:swap; }
   :root { --accent:#9146ff; --bg:rgba(16,16,22,.78); --fg:#fff; --fs:20px; }
   html,body { margin:0; background:transparent; overflow:hidden; }
   #wrap { width:700px; height:460px; position:relative; color:var(--fg); font-size:var(--fs);
@@ -101,6 +103,24 @@
   #wrap.t-retro { font-family:Consolas,"Cascadia Mono","Courier New",monospace; }
   .t-retro .box { background:var(--bg); border:1px solid var(--accent); padding:14px 16px; border-radius:2px;
                   text-shadow:0 0 6px var(--accent); }
+  /* 8. Студия — как сама программа */
+  .t-studio { font-family:"Geist","Segoe UI",system-ui,sans-serif; }
+  .t-studio .box { background:var(--bg); border-radius:22px; padding:18px 22px; border:1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 20px 50px -18px rgba(0,0,0,.75), 0 0 34px -12px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .t-studio .disc { display:block; width:3.6em; height:3.6em; border-radius:16px; position:relative;
+    background:radial-gradient(circle, var(--accent) 0 12%, transparent 13%), repeating-radial-gradient(circle, transparent 0 .32em, rgba(255,255,255,.08) .32em .36em),
+      color-mix(in srgb, var(--accent) 16%, #0c0c11);
+    border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); box-shadow:0 12px 30px -10px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .t-studio .label { font-family:"Geist Mono",monospace; font-weight:500; letter-spacing:.16em; font-size:.55em; color:color-mix(in srgb, var(--accent) 55%, #fff); }
+  .t-studio .title { font-weight:650; letter-spacing:-.02em; font-size:1.12em; }
+  .t-studio .who { opacity:.7; }
+  .t-studio .bar { height:4px; background:rgba(255,255,255,.1); overflow:visible; }
+  .t-studio .bar i { border-radius:2px; position:relative; }
+  .t-studio .bar i::after { content:""; position:absolute; right:-6px; top:-4px; width:12px; height:12px; border-radius:50%; background:#fff;
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .t-studio .time { font-family:"Geist Mono",monospace; opacity:.55; margin-top:8px; }
+  .t-studio #queue ol { list-style:none; padding-left:0; counter-reset:q; }
+  .t-studio #queue li { counter-increment:q; } .t-studio #queue li::before { content:counter(q, decimal-leading-zero) "  "; font-family:"Geist Mono",monospace; opacity:.45; }
   .t-retro .label::before { content:"> "; }
   .t-retro .label { letter-spacing:.05em; }
   .t-retro .title::after { content:"█"; animation:blink 1s steps(1) infinite; margin-left:4px; }
@@ -140,6 +160,7 @@ const THEMES = {
   bar:     {accent:"#9146ff", background:"rgba(10,10,14,0.86)", text_color:"#ffffff"},
   glass:   {accent:"#6c5ce7", background:"rgba(255,255,255,0.55)", text_color:"#14141c"},
   retro:   {accent:"#33ff66", background:"rgba(0,0,0,0.88)", text_color:"#33ff66"},
+  studio:  {accent:"#8b5cf6", background:"rgba(14,14,19,0.92)", text_color:"#f4f4f7"},
 };
 const P = new URLSearchParams(location.search);
 const DEMO = P.has("demo");

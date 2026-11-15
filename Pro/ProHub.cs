@@ -193,8 +193,8 @@ public sealed class ProHub
         var name = b.Str("name").Trim();
         if (name == "" || name.Length > 40) throw new UserError("Название темы: от 1 до 40 символов", "theme.name");
         var bases = kind == "player"
-            ? new[] { "classic", "minimal", "neon", "vinyl", "bar", "glass", "retro" }
-            : new[] { "classic", "cards", "bubbles", "neon", "retro", "compact", "light" };
+            ? new[] { "studio", "classic", "minimal", "neon", "vinyl", "bar", "glass", "retro" }
+            : new[] { "studio", "classic", "cards", "bubbles", "neon", "retro", "compact", "light" };
         var bs = b.Str("base", "classic");
         if (!bases.Contains(bs)) bs = "classic";
         var font = b.Str("font").Trim();

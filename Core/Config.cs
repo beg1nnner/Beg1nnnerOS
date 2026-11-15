@@ -109,7 +109,7 @@ public static class Config
               "symbols": {"enabled": true, "action": "delete", "timeout": 30, "run": 12, "emotes": 10},
               "length": {"enabled": false, "action": "delete", "timeout": 30, "max": 350}},
       "captions": {"enabled": false, "device": "", "engine": "whisper", "model": "base", "lang": "ru", "show": "both",
-                   "censor": true, "hide_sec": 5, "style": "classic", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true},
+                   "censor": true, "hide_sec": 5, "style": "studio", "font_size": 30, "position": "bottom", "max_lines": 2, "threads": 0, "gpu": true},
       "votes": {"chat_results": true, "chat_start": false, "chat_lock": true, "overlay_hide_sec": 20, "overlay_points": true,
                 "poll_templates": [
                   {"title": "Во что играем дальше?", "choices": ["Продолжаем", "Другая игра", "Общение"], "duration": 120},
@@ -139,14 +139,14 @@ public static class Config
         "restore_queue": true, "restore_hours": 12, "yandex_fallback": true, "crossfade": 4
       },
       "overlay": {
-        "theme": "classic", "custom_colors": false, "width": 700, "height": 460,
+        "theme": "studio", "custom_colors": false, "width": 700, "height": 460,
         "accent": "#9146ff", "background": "rgba(16,16,22,0.78)", "text_color": "#ffffff",
         "font_size": 20, "show_queue": true, "queue_size": 5, "queue_position": "below", "show_requester": true,
         "show_progress": true, "toasts": true
       },
       "alerts": {"enabled": true, "volume": 80},
       "chat_overlay": {
-        "theme": "classic", "font_size": 20, "max_messages": 20, "fade_sec": 0, "direction": "bottom",
+        "theme": "studio", "font_size": 20, "max_messages": 20, "fade_sec": 0, "direction": "bottom",
         "show_badges": true, "hide_commands": true, "hide_app": false,
         "hidden_users": ["nightbot", "streamelements", "moobot", "streamlabs", "wizebot"],
         "emotes": {"7tv": true, "bttv": false, "ffz": false}

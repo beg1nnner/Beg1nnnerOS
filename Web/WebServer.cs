@@ -187,14 +187,8 @@ public sealed partial class WebServer
         MapPro(app);
 
         // состояние и журнал
-        app.MapGet("/api/state", H((c, b) => Ok(new
-        {
-            version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
-            next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused,
-            alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
-            port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
-            update = _hub.Updater.State(),
-        })));
+        app.MapGet("/api/state", H((c, b) => Ok(StateObj())));
+        app.MapGet("/ws/state", (RequestDelegate)WsState);
 
         // обновления программы (GitHub Releases)
         app.MapPost("/api/update/check", H(async (c, b) =>
@@ -513,6 +507,14 @@ public sealed partial class WebServer
         // резервные копии
         app.MapGet("/api/backups", H((c, b) => Ok(Backup.List())));
         app.MapPost("/api/backups", H((c, b) => Ok(Backup.Create())));
+        // перенос настроек одним файлом (без ключей и входов — их на новом компьютере нужно ввести заново)
+        app.MapGet("/api/settings/export", H((c, b) =>
+        {
+            var name = Backup.Create("export");
+            var bytes = File.ReadAllBytes(Path.Combine(Config.BackupDir, name));
+            return Results.File(bytes, "application/zip", $"Beg1nnnerOS-settings-{DateTime.Now:yyyy-MM-dd}.zip");
+        }));
+        app.MapPost("/api/settings/import", D(ImportSettings));
         app.MapPost("/api/backups/restore", H((c, b) =>
         {
             if (_hub.Stream.Live) throw new UserError("Восстановление доступно вне активной трансляции");
@@ -810,6 +812,92 @@ public sealed partial class WebServer
         }
         catch (UserError e) { return Fail(e.Message); }
         catch (Exception e) { return Fail($"Не удалось загрузить файл: {e.Message}", 500); }
+    }
+
+    private object StateObj() => new
+    {
+        version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
+        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused,
+        alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
+        port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
+        update = _hub.Updater.State(),
+    };
+
+    /// <summary>
+    /// Мгновенные обновления панели и док-панели: состояние отправляется сразу, как только что-то изменилось
+    /// (проверка каждые 250 мс), вместо опроса /api/state раз в полторы секунды.
+    /// </summary>
+    private async Task WsState(HttpContext ctx)
+    {
+        if (!ctx.WebSockets.IsWebSocketRequest)
+        {
+            ctx.Response.StatusCode = 400;
+            return;
+        }
+        using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
+        var ct = ctx.RequestAborted;
+        var reader = Task.Run(async () =>
+        {
+            var buf = new byte[256];
+            try
+            {
+                while (ws.State == WebSocketState.Open)
+                {
+                    var r = await ws.ReceiveAsync(new ArraySegment<byte>(buf), ct);
+                    if (r.MessageType == WebSocketMessageType.Close) break;
+                }
+            }
+            catch { }
+        });
+        var last = "";
+        try
+        {
+            while (ws.State == WebSocketState.Open && !reader.IsCompleted && !ct.IsCancellationRequested)
+            {
+                var json = await _hub.Loop.CallSync(() => new JsonObject { ["ok"] = true, ["data"] = J.From(StateObj()) }.ToJsonString(J.Options));
+                if (json != last)
+                {
+                    last = json;
+                    await ws.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(json)), WebSocketMessageType.Text, true, ct);
+                }
+                await Task.Delay(250, ct);
+            }
+        }
+        catch { }
+    }
+
+    private async Task<IResult> ImportSettings(HttpContext ctx)
+    {
+        try
+        {
+            var form = await ctx.Request.ReadFormAsync();
+            var file = form.Files.GetFile("file");
+            if (file == null) return Fail("Файл не передан");
+            if (file.Length > 200L * 1024 * 1024) return Fail("Файл слишком большой");
+            var name = $"backup-{DateTime.Now:yyyyMMdd-HHmmss}-import.zip";
+            var path = Path.Combine(Config.BackupDir, name);
+            await using (var fs = File.Create(path)) await file.CopyToAsync(fs);
+            try
+            {
+                using var zip = System.IO.Compression.ZipFile.OpenRead(path);
+                if (zip.GetEntry("settings.json") == null) throw new InvalidDataException();
+            }
+            catch
+            {
+                File.Delete(path);
+                return Fail("Это не файл настроек Beg1nnnerOS — выберите файл, сохранённый кнопкой «Экспорт»");
+            }
+            await _hub.Loop.CallSync(() =>
+            {
+                if (_hub.Stream.Live) throw new UserError("Перенос настроек доступен вне активной трансляции");
+                Backup.Restore(name);
+                return true;
+            });
+            _ = Task.Delay(800).ContinueWith(_ => _hub.RestartApp());
+            return Ok(null, new() { ["message"] = "Настройки перенесены. Программа перезапускается…" });
+        }
+        catch (UserError e) { return Fail(e.Message); }
+        catch (Exception e) { return Fail($"Не удалось перенести настройки: {e.Message}", 500); }
     }
 
     // ---------- чат в OBS ----------
