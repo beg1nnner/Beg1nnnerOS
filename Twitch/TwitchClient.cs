@@ -499,10 +499,11 @@ public sealed class TwitchClient
     public async Task<bool> IsSubscriber(string userId) =>
         First(await Api(HttpMethod.Get, "/subscriptions", new() { ["broadcaster_id"] = BroadcasterId, ["user_id"] = userId })) != null;
 
-    public async Task<List<JsonNode>> ListRewards()
+    /// <summary>Награды канала. manageableOnly — только созданные этим же ключом приложения (только их можно менять).</summary>
+    public async Task<List<JsonNode>> ListRewards(bool manageableOnly = true)
     {
         var js = await Api(HttpMethod.Get, "/channel_points/custom_rewards",
-            new() { ["broadcaster_id"] = BroadcasterId, ["only_manageable_rewards"] = "true" });
+            new() { ["broadcaster_id"] = BroadcasterId, ["only_manageable_rewards"] = manageableOnly ? "true" : "false" });
         return (js["data"] as JsonArray)?.ToList() ?? new List<JsonNode>();
     }
 

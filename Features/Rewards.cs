@@ -31,6 +31,18 @@ public sealed class Rewards
         }
     }
 
+    /// <summary>
+    /// Награды, созданные другим ключом приложения Twitch (например, раньше вход был со своими ключами, а теперь — по коду,
+    /// или наоборот). Twitch не даёт их менять и возвращать за них баллы, но выкупы программа видит и выполняет.
+    /// </summary>
+    private HashSet<string> Foreign
+    {
+        get => new((_hub.State.Data["reward_foreign"] as JsonArray ?? new JsonArray()).Select(x => J.AsStr(x)));
+        set => _hub.State.Data["reward_foreign"] = new JsonArray(value.Select(x => (JsonNode)x).ToArray());
+    }
+    public bool IsForeign(string rewardId) => Foreign.Contains(rewardId);
+    public int ForeignCount => Foreign.Count;
+
     public string KeyFor(string rewardId) =>
         Ids.FirstOrDefault(p => J.AsStr(p.Value) == rewardId).Key;
 
@@ -92,6 +104,18 @@ public sealed class Rewards
         var desired = GetDesired();
         var newIds = new JsonObject();
         var errors = 0;
+        var foreign = new HashSet<string>();
+        List<JsonNode> all = null;   // все награды канала — загружаются, только если понадобятся
+        async Task<JsonNode> FindForeign(string title)
+        {
+            if (all == null)
+            {
+                try { all = await tw.ListRewards(false); }
+                catch (TwitchException) { all = new List<JsonNode>(); }
+            }
+            return all.FirstOrDefault(r => !existing.ContainsKey(r.Str("id")) &&
+                string.Equals(r.Str("title").Trim(), title.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
         foreach (var (key, d) in desired)
         {
             var title = d.Title.Length > 45 ? d.Title[..45] : d.Title;
@@ -109,6 +133,12 @@ public sealed class Rewards
                         r.Bool("is_user_input_required") != d.Input || r.Str("prompt") != d.Prompt)
                         await tw.UpdateReward(rid, body);
                     newIds[key] = rid;
+                }
+                else if (await FindForeign(title) is { } f)
+                {
+                    // награда с таким названием уже есть, но создана другим ключом приложения — используем её как есть
+                    newIds[key] = f.Str("id");
+                    foreign.Add(f.Str("id"));
                 }
                 else
                 {
@@ -140,13 +170,26 @@ public sealed class Rewards
             }
             catch (TwitchException e) { log.Error($"Награда «{r.Str("title")}»: {e.Reason}"); }
         }
+        var wasForeign = Foreign;
         _hub.State.Data["reward_ids"] = newIds;
+        Foreign = foreign;
         _hub.State.Save();
+        if (foreign.Count > 0 && !foreign.SetEquals(wasForeign))
+            log.Add("skip", $"Награды {string.Join(", ", foreign.Select(id => "«" + all.First(r => r.Str("id") == id).Str("title") + "»"))} созданы другим способом входа в Twitch " +
+                "(другим ключом приложения). Программа принимает их выкупы, но не может менять цену и возвращать баллы. " +
+                "Чтобы всё работало полностью, удалите эти награды в панели Twitch («Баллы канала» → «Управление наградами») — программа сама создаст их заново.");
         Status = errors == 0 ? "синхронизировано" : $"синхронизировано с ошибками ({errors})";
+        if (foreign.Count > 0) Status += $" · {foreign.Count} созданы другим входом — их баллы не возвращаются";
     }
 
     public async Task Complete(string rewardId, string redemptionId, bool ok)
     {
+        if (IsForeign(rewardId))
+        {
+            // Twitch не даёт отмечать выкупы чужих наград — запрос останется в «Очереди запросов» на Twitch
+            if (!ok) _hub.Log.Add("skip", "Баллы не возвращены автоматически: награда создана другим способом входа. Верните их вручную на Twitch («Очередь запросов наград») или пересоздайте награду.");
+            return;
+        }
         try { await _hub.Twitch.SetRedemption(rewardId, redemptionId, ok ? "FULFILLED" : "CANCELED"); }
         catch (Exception e) { _hub.Log.Error($"Не удалось {(ok ? "подтвердить" : "вернуть баллы за")} выкуп: {e.Message}"); }
     }
