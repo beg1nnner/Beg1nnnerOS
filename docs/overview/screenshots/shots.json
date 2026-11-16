@@ -1,0 +1,587 @@
+{
+ "s-live": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 21.82,
+    "y": 21.07,
+    "label": "Состояние подключений"
+   },
+   {
+    "n": 2,
+    "x": 21.82,
+    "y": 30.44,
+    "label": "Показатели стрима"
+   },
+   {
+    "n": 3,
+    "x": 21.79,
+    "y": 51.1,
+    "label": "«Сейчас играет» и очередь"
+   },
+   {
+    "n": 4,
+    "x": 73.74,
+    "y": 50.24,
+    "label": "Быстрые действия"
+   }
+  ]
+ },
+ "f-live-now": {
+  "kind": "frag",
+  "w": 760,
+  "h": 811,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 16.97,
+    "y": 16.61,
+    "label": "Обложка и цвет карточки"
+   },
+   {
+    "n": 2,
+    "x": 14.74,
+    "y": 36.3,
+    "label": "Пауза, пропуск, лайк и блокировка"
+   }
+  ]
+ },
+ "f-live-quick": {
+  "kind": "frag",
+  "w": 396,
+  "h": 502,
+  "callouts": []
+ },
+ "f-live-layout": {
+  "kind": "frag",
+  "w": 1136,
+  "h": 1507,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 70.51,
+    "y": 9.73,
+    "label": "Ручка: перетащить карточку"
+   },
+   {
+    "n": 2,
+    "x": 92.17,
+    "y": 9.73,
+    "label": "Закрепить вверху колонки"
+   },
+   {
+    "n": 3,
+    "x": 95.33,
+    "y": 9.73,
+    "label": "Скрыть карточку"
+   },
+   {
+    "n": 4,
+    "x": 82.11,
+    "y": 1.75,
+    "label": "Сбросить расположение"
+   }
+  ]
+ },
+ "f-precheck": {
+  "kind": "frag",
+  "w": 720,
+  "h": 906,
+  "callouts": []
+ },
+ "f-remote": {
+  "kind": "frag",
+  "w": 720,
+  "h": 581,
+  "callouts": []
+ },
+ "s-music": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 21.82,
+    "y": 27.95,
+    "label": "Ручной заказ без баллов"
+   },
+   {
+    "n": 2,
+    "x": 21.82,
+    "y": 49.83,
+    "label": "Очередь: порядок, приоритет, кто заказал"
+   }
+  ]
+ },
+ "f-music-rewards": {
+  "kind": "frag",
+  "w": 578,
+  "h": 472,
+  "callouts": []
+ },
+ "f-music-sources": {
+  "kind": "frag",
+  "w": 578,
+  "h": 1141,
+  "callouts": []
+ },
+ "f-music-volume": {
+  "kind": "frag",
+  "w": 578,
+  "h": 388,
+  "callouts": []
+ },
+ "f-music-xfade": {
+  "kind": "frag",
+  "w": 578,
+  "h": 171,
+  "callouts": []
+ },
+ "f-music-fallback": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 395,
+  "callouts": []
+ },
+ "f-music-blocks": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 661,
+  "callouts": []
+ },
+ "f-music-hist": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 719,
+  "callouts": []
+ },
+ "f-music-stats": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 802,
+  "callouts": []
+ },
+ "f-ov-player-themes": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 531,
+  "callouts": []
+ },
+ "s-chat": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 21.29,
+    "y": 29.79,
+    "label": "Свои команды"
+   },
+   {
+    "n": 2,
+    "x": 73.49,
+    "y": 28.27,
+    "label": "Таймеры по расписанию"
+   }
+  ]
+ },
+ "f-chat-cmds": {
+  "kind": "frag",
+  "w": 760,
+  "h": 522,
+  "callouts": []
+ },
+ "f-chat-std": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 496,
+  "callouts": []
+ },
+ "f-chat-autopost": {
+  "kind": "frag",
+  "w": 396,
+  "h": 261,
+  "callouts": []
+ },
+ "f-chat-import": {
+  "kind": "frag",
+  "w": 720,
+  "h": 349,
+  "callouts": []
+ },
+ "f-chat-tools": {
+  "kind": "frag",
+  "w": 578,
+  "h": 669,
+  "callouts": []
+ },
+ "f-ov-chat-themes": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 562,
+  "callouts": []
+ },
+ "f-chat-activity": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 934,
+  "callouts": []
+ },
+ "s-alerts": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 22.1,
+    "y": 40.42,
+    "label": "Алерт: медиа, цена, громкость"
+   },
+   {
+    "n": 2,
+    "x": 88.37,
+    "y": 48.39,
+    "label": "Новый МедиаАлерт"
+   }
+  ]
+ },
+ "f-alert-edit": {
+  "kind": "frag",
+  "w": 720,
+  "h": 1286,
+  "callouts": []
+ },
+ "s-events": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 22.81,
+    "y": 24.18,
+    "label": "Событие: текст в чат и показ на экране"
+   },
+   {
+    "n": 2,
+    "x": 73.49,
+    "y": 19.07,
+    "label": "Очередь и пауза уведомлений"
+   }
+  ]
+ },
+ "f-events-screen": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 654,
+  "callouts": []
+ },
+ "f-events-da": {
+  "kind": "frag",
+  "w": 396,
+  "h": 366,
+  "callouts": []
+ },
+ "f-announce": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 662,
+  "callouts": []
+ },
+ "s-votes": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "s-captions": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 22.59,
+    "y": 23.31,
+    "label": "Модель распознавания — скачивается по кнопке"
+   },
+   {
+    "n": 2,
+    "x": 22.59,
+    "y": 44.48,
+    "label": "Предпросмотр и микрофон"
+   }
+  ]
+ },
+ "f-speech": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 193,
+  "callouts": []
+ },
+ "f-speech-adv": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 688,
+  "callouts": []
+ },
+ "f-cap-show": {
+  "kind": "frag",
+  "w": 578,
+  "h": 358,
+  "callouts": []
+ },
+ "f-voice": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 854,
+  "callouts": []
+ },
+ "s-mod": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "f-mod-requests": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 289,
+  "callouts": []
+ },
+ "f-mod-log": {
+  "kind": "frag",
+  "w": 760,
+  "h": 262,
+  "callouts": []
+ },
+ "s-wheel": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": [
+   {
+    "n": 1,
+    "x": 22.85,
+    "y": 56.16,
+    "label": "Сектора: вес, цвет, действие"
+   },
+   {
+    "n": 2,
+    "x": 82.33,
+    "y": 33.22,
+    "label": "Предпросмотр"
+   }
+  ]
+ },
+ "f-wheel-launch": {
+  "kind": "frag",
+  "w": 578,
+  "h": 515,
+  "callouts": []
+ },
+ "f-give": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 462,
+  "callouts": []
+ },
+ "s-sstats": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "f-stream-detail": {
+  "kind": "frag",
+  "w": 1144,
+  "h": 609,
+  "callouts": []
+ },
+ "f-summary": {
+  "kind": "frag",
+  "w": 720,
+  "h": 532,
+  "callouts": []
+ },
+ "s-prof": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "f-thbuilder": {
+  "kind": "frag",
+  "w": 1112,
+  "h": 973,
+  "callouts": []
+ },
+ "f-set-theme": {
+  "kind": "frag",
+  "w": 890,
+  "h": 409,
+  "callouts": []
+ },
+ "f-hotkeys": {
+  "kind": "frag",
+  "w": 828,
+  "h": 589,
+  "callouts": []
+ },
+ "f-about": {
+  "kind": "frag",
+  "w": 451,
+  "h": 263,
+  "callouts": []
+ },
+ "f-backups": {
+  "kind": "frag",
+  "w": 451,
+  "h": 537,
+  "callouts": []
+ },
+ "f-safe-top": {
+  "kind": "frag",
+  "w": 1112,
+  "h": 101,
+  "callouts": []
+ },
+ "f-cmdk": {
+  "kind": "frag",
+  "w": 640,
+  "h": 429,
+  "callouts": []
+ },
+ "f-notifs": {
+  "kind": "frag",
+  "w": 380,
+  "h": 206,
+  "callouts": []
+ },
+ "f-safe-alerts": {
+  "kind": "frag",
+  "w": 1128,
+  "h": 175,
+  "callouts": []
+ },
+ "f-wizard-1": {
+  "kind": "frag",
+  "w": 760,
+  "h": 362,
+  "callouts": []
+ },
+ "f-wizard-speech": {
+  "kind": "frag",
+  "w": 760,
+  "h": 482,
+  "callouts": []
+ },
+ "f-wizard-obs": {
+  "kind": "frag",
+  "w": 760,
+  "h": 448,
+  "callouts": []
+ },
+ "t-studio": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-twitch": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-light": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-midnight": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-neon": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-graphite": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-sunset": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "t-forest": {
+  "kind": "screen",
+  "w": 1440,
+  "h": 900,
+  "callouts": []
+ },
+ "o-player": {
+  "kind": "overlay",
+  "w": 620,
+  "h": 420,
+  "callouts": []
+ },
+ "o-chat": {
+  "kind": "overlay",
+  "w": 460,
+  "h": 600,
+  "callouts": []
+ },
+ "o-events": {
+  "kind": "overlay",
+  "w": 760,
+  "h": 260,
+  "callouts": []
+ },
+ "o-votes": {
+  "kind": "overlay",
+  "w": 600,
+  "h": 420,
+  "callouts": []
+ },
+ "o-captions": {
+  "kind": "overlay",
+  "w": 1280,
+  "h": 300,
+  "callouts": []
+ },
+ "o-wheel": {
+  "kind": "overlay",
+  "w": 1000,
+  "h": 1000,
+  "callouts": []
+ },
+ "o-dock": {
+  "kind": "overlay",
+  "w": 360,
+  "h": 640,
+  "callouts": []
+ },
+ "f-mod-filters": {
+  "kind": "frag",
+  "w": 1128,
+  "h": 757,
+  "callouts": []
+ }
+}

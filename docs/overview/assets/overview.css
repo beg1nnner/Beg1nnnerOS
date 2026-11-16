@@ -1,0 +1,129 @@
+/* Вёрстка «Beg1nnnerOS — обзор возможностей». Палитра и размеры — из wwwroot/style.css (тема «Студия»). */
+@font-face { font-family:"Geist"; src:url("fonts/Geist.woff2") format("woff2"); font-weight:100 900; }
+@font-face { font-family:"Geist Mono"; src:url("fonts/GeistMono.woff2") format("woff2"); font-weight:100 900; }
+
+:root {
+  /* из :root в style.css */
+  --bg:#09090c; --panel:#111116; --panel2:#18181f; --fg:#f4f4f7; --muted:#b6b6c4; --dim:#9d9dae;
+  --accent:#8b5cf6; --accent2:#c4b5fd; --line:rgba(255,255,255,.075); --hair:rgba(255,255,255,.045);
+  --r:18px; --r-sm:8px; --r-md:12px;
+  --font:"Geist","Segoe UI",system-ui,sans-serif; --mono:"Geist Mono",ui-monospace,Consolas,monospace;
+  --page-w:174mm;
+}
+@page { size:A4; margin:16mm 18mm 18mm; }
+* { box-sizing:border-box; }
+html { background:var(--bg); -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body { margin:0; font-family:var(--font); color:var(--fg); font-size:10pt; line-height:1.55; font-weight:400;
+  font-feature-settings:"ss01"; -webkit-font-smoothing:antialiased; hyphens:manual; }
+a { color:var(--accent2); text-decoration:none; }
+p { margin:0 0 3mm; color:var(--muted); orphans:3; widows:3; }
+.ic { flex:none; }
+
+/* ---------- экран (для index.html в браузере) ---------- */
+@media screen {
+  body { max-width:calc(var(--page-w) + 40mm); margin:0 auto; padding:16mm 20mm; }
+  section { margin-bottom:24mm; }
+  .cover, .back { min-height:auto; }
+}
+
+/* ---------- главы ---------- */
+section.chapter { break-before:page; }
+.eyebrow { font:600 7.5pt var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--accent2); margin:0 0 3mm; }
+h1 { font-size:26pt; line-height:1.08; letter-spacing:-.03em; font-weight:700; margin:0 0 4mm; color:var(--fg); break-after:avoid; }
+h2 { font-size:12.5pt; line-height:1.25; letter-spacing:-.015em; font-weight:650; margin:0 0 2mm; color:var(--fg); break-after:avoid; }
+.lead { font-size:13pt; line-height:1.45; color:var(--fg); font-weight:450; margin:0 0 7mm; max-width:150mm; letter-spacing:-.01em; }
+
+.feat { margin:0 0 5mm; padding-top:4.5mm; border-top:1px solid var(--line); }
+.feat.text { margin-bottom:5mm; }
+.feat.keep { break-inside:avoid; }
+.feat .ft { max-width:150mm; break-inside:avoid; }
+.feat .ft p:last-child { margin-bottom:3.5mm; }
+.feat.side { display:grid; grid-template-columns:1fr 76mm; gap:7mm; align-items:start; break-inside:avoid; }
+.feat.side .ft { max-width:none; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:6mm; align-items:start; }
+.pair figure.frag { width:100%; }
+
+/* ---------- скриншоты ---------- */
+figure { margin:0 0 4mm; break-inside:avoid; }
+.shot { position:relative; border-radius:10px; overflow:hidden; background:var(--panel);
+  box-shadow:0 0 0 .6px rgba(255,255,255,.14), 0 18px 40px -16px rgba(0,0,0,.9); }
+.shot img { display:block; width:100%; height:auto; }
+figure.screen { width:var(--page-w); }
+figure.frag { width:min(130mm, calc(88mm * var(--r))); }
+.feat.side figure.frag { width:min(100%, calc(56mm * var(--r))); margin-left:auto; }
+figcaption { font-size:8pt; color:var(--dim); margin-top:2.2mm; display:flex; align-items:center; gap:1.6mm; }
+
+/* выноски: номер на картинке, пояснение — ниже */
+.co { position:absolute; width:5.2mm; height:5.2mm; margin:-2.6mm 0 0 -2.6mm; border-radius:50%; background:var(--accent); color:#fff;
+  font:700 7.5pt/5.2mm var(--mono); text-align:center; box-shadow:0 0 0 1.2px rgba(255,255,255,.9), 0 3px 8px rgba(0,0,0,.55); }
+.legend { list-style:none; margin:3mm 0 0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:1.6mm 6mm; }
+.feat.side .legend, figure.frag .legend { grid-template-columns:1fr; }
+.legend li { display:flex; gap:2.4mm; font-size:8.5pt; line-height:1.4; color:var(--muted); }
+.legend .n { flex:none; width:4.4mm; height:4.4mm; border-radius:50%; background:color-mix(in srgb, var(--accent) 22%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent) 55%, transparent); color:var(--accent2); font:700 6.5pt/4.1mm var(--mono); text-align:center; margin-top:.3mm; }
+
+/* оверлеи: на нейтральном тёмном фоне */
+figure.ov .stage { border-radius:10px; overflow:hidden; padding:6mm; display:flex; justify-content:center; align-items:center;
+  background:#141418; background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size:6mm 6mm; box-shadow:0 0 0 .6px rgba(255,255,255,.12); }
+figure.ov .stage img { display:block; max-width:100%; max-height:70mm; height:auto; }
+figure.ov figcaption { color:var(--muted); }
+figure.ov figcaption .ic { color:var(--accent2); }
+
+/* ---------- обложка ---------- */
+.cover { height:263mm; display:flex; flex-direction:column; position:relative; }
+.cv-top { display:flex; align-items:center; justify-content:space-between; }
+.mark { display:inline-grid; place-items:center; width:13mm; height:13mm; border-radius:3.6mm; font:700 13pt var(--mono); letter-spacing:-.04em; color:var(--fg);
+  background:linear-gradient(145deg, color-mix(in srgb, var(--accent) 55%, var(--panel2)), color-mix(in srgb, var(--accent) 18%, var(--panel)));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.mark.big { width:22mm; height:22mm; border-radius:6mm; font-size:22pt; }
+.cv-ver { font:500 8pt var(--mono); letter-spacing:.14em; color:var(--dim); text-transform:uppercase; }
+.cv-title { font-size:54pt; letter-spacing:-.045em; margin:30mm 0 4mm; }
+.cv-sub { font-size:16pt; color:var(--muted); line-height:1.35; margin:0 0 6mm; max-width:140mm; letter-spacing:-.01em; }
+.cv-kicker { font:600 8pt var(--mono); letter-spacing:.2em; color:var(--accent2); margin:0 0 12mm; }
+.cv-shot { margin-top:auto; }
+.cv-shot figure { width:var(--page-w); margin:0; }
+.cover::before { content:""; position:absolute; inset:0; z-index:-1;
+  background:radial-gradient(70mm 60mm at 30% 22%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 100%); }
+
+/* ---------- что это такое ---------- */
+.facts { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:8mm; }
+.fact { padding:5mm; border:1px solid var(--line); border-radius:var(--r-md); background:var(--panel); display:flex; flex-direction:column; gap:1.5mm; }
+.fact .ic { color:var(--accent2); margin-bottom:1.5mm; }
+.fact b { font-size:11pt; font-weight:650; letter-spacing:-.01em; }
+.fact span { font-size:9pt; color:var(--muted); line-height:1.45; }
+
+/* ---------- содержание ---------- */
+.toc-list { list-style:none; margin:8mm 0 0; padding:0; }
+.toc-list li { border-top:1px solid var(--line); }
+.toc-list a { display:flex; align-items:baseline; gap:4mm; padding:3.2mm 0; color:var(--fg); }
+.toc-list .te { width:9mm; font:600 8pt var(--mono); color:var(--accent2); letter-spacing:.08em; }
+.toc-list .tt { font-size:11.5pt; font-weight:550; letter-spacing:-.01em; }
+.toc-list .dots { flex:1; border-bottom:1px dotted rgba(255,255,255,.18); transform:translateY(-1mm); }
+.toc-list .tp { font:500 9pt var(--mono); color:var(--muted); min-width:7mm; text-align:right; }
+
+/* ---------- темы ---------- */
+.th-note { margin-bottom:5mm; }
+.themes { display:grid; grid-template-columns:1fr 1fr; gap:5mm 6mm; }
+.themes figure { margin:0; }
+.themes .shot { border-radius:6px; }
+.themes figcaption { font:600 7.5pt var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+
+/* ---------- как начать ---------- */
+.steps { list-style:none; margin:4mm 0 0; padding:0; counter-reset:s; }
+.steps > li { display:grid; grid-template-columns:10mm 1fr; gap:5mm; padding:4mm 0; border-top:1px solid var(--line); break-inside:avoid; }
+.steps .sn { width:9mm; height:9mm; border-radius:50%; display:grid; place-items:center; font:700 10pt var(--mono); color:var(--accent2);
+  background:color-mix(in srgb, var(--accent) 18%, transparent); border:1px solid color-mix(in srgb, var(--accent) 50%, transparent); }
+.steps figure.frag, .steps figure.screen { width:min(90mm, calc(50mm * var(--r))); margin-top:3mm; }
+
+/* ---------- последняя страница ---------- */
+.back { break-before:page; height:263mm; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; position:relative; }
+.back h1 { font-size:40pt; margin:8mm 0 3mm; }
+.back::before { content:""; position:absolute; inset:0; z-index:-1;
+  background:radial-gradient(70mm 60mm at 72% 30%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 100%); }
+.contacts { list-style:none; padding:0; margin:8mm 0 0; display:flex; flex-direction:column; gap:4mm; }
+.contacts li { display:flex; gap:4mm; align-items:flex-start; }
+.contacts .ic { color:var(--accent2); margin-top:.5mm; }
+.contacts .lb { display:block; font:600 7.5pt var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:.6mm; }
+.contacts a { font-size:12pt; color:var(--fg); }
+.fine { margin-top:auto; font-size:8pt; color:var(--dim); }

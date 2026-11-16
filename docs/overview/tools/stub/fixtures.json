@@ -1,0 +1,864 @@
+{
+ "/api/now": {
+  "ok": true,
+  "data": {
+   "current": {
+    "id": "cur",
+    "vid": "c",
+    "title": "Aurora Sounds — Stay Up Late",
+    "page_url": "",
+    "duration": 214,
+    "requester": "Night_Owl",
+    "login": "night_owl",
+    "priority": 0,
+    "source": "youtube",
+    "views": -1,
+    "paid": false,
+    "position": 104.7,
+    "paused": false
+   },
+   "queue": [
+    {
+     "id": "t0",
+     "vid": "v0",
+     "title": "Northern Lights — Midnight Drive",
+     "page_url": "",
+     "duration": 241,
+     "requester": "Nightowl",
+     "login": "nightowl",
+     "priority": 3,
+     "source": "youtube",
+     "views": -1,
+     "paid": false
+    },
+    {
+     "id": "t1",
+     "vid": "v1",
+     "title": "Lo-Fi Collective — Rainy Window",
+     "page_url": "",
+     "duration": 198,
+     "requester": "Kappa_fan",
+     "login": "kappa_fan",
+     "priority": 2,
+     "source": "youtube",
+     "views": -1,
+     "paid": false
+    },
+    {
+     "id": "t2",
+     "vid": "v2",
+     "title": "Synthwave Kid — Neon City",
+     "page_url": "",
+     "duration": 225,
+     "requester": "Viewer42",
+     "login": "viewer42",
+     "priority": 0,
+     "source": "youtube",
+     "views": -1,
+     "paid": false
+    },
+    {
+     "id": "t3",
+     "vid": "v3",
+     "title": "Echo Valley — Wildflowers",
+     "page_url": "",
+     "duration": 263,
+     "requester": "Moder",
+     "login": "moder",
+     "priority": 0,
+     "source": "youtube",
+     "views": -1,
+     "paid": false
+    },
+    {
+     "id": "t4",
+     "vid": "v4",
+     "title": "The Paper Planes — Summer Tape",
+     "page_url": "",
+     "duration": 207,
+     "requester": "Subscriber",
+     "login": "subscriber",
+     "priority": 0,
+     "source": "youtube",
+     "views": -1,
+     "paid": false
+    }
+   ],
+   "volume": 60,
+   "votes": 1,
+   "votes_needed": 3,
+   "toast": {
+    "id": 0,
+    "text": ""
+   },
+   "overlay": {
+    "theme": "vinyl",
+    "custom_colors": false,
+    "width": 700,
+    "height": 460,
+    "accent": "#9146ff",
+    "background": "rgba(16,16,22,0.78)",
+    "text_color": "#ffffff",
+    "font_size": 20,
+    "show_queue": true,
+    "queue_size": 5,
+    "queue_position": "above",
+    "show_requester": true,
+    "show_progress": true,
+    "toasts": true
+   },
+   "custom_themes": [
+    {
+     "id": "a1b2c3d4",
+     "kind": "player",
+     "name": "Розовый неон",
+     "base": "neon",
+     "accent": "#ff4fd8",
+     "background": "rgba(20,6,30,0.85)",
+     "text_color": "#ffe6fb",
+     "border_color": "#ff4fd8",
+     "border_width": 2,
+     "radius": 22,
+     "padding": 16,
+     "shadow": "glow",
+     "font": "Trebuchet MS",
+     "uppercase": false,
+     "css": ""
+    }
+   ]
+  }
+ },
+ "/api/state": {
+  "ok": true,
+  "data": {
+   "version": "2.0.0",
+   "ready": {
+    "keys": true,
+    "streamer": {
+     "ok": true,
+     "login": "demo_streamer",
+     "problem": "",
+     "missing_scopes": []
+    },
+    "bot": {
+     "ok": false,
+     "login": ""
+    },
+    "sender": {
+     "mode": "streamer",
+     "ok": true,
+     "login": "demo_streamer",
+     "error": "",
+     "allow": true
+    },
+    "eventsub": {
+     "ok": true,
+     "failed": {}
+    },
+    "alerts_source": 1,
+    "donationalerts": {
+     "ok": true,
+     "status": "подключено",
+     "configured": true
+    },
+    "rewards": "синхронизировано",
+    "stream": {
+     "live": true,
+     "title": "Вечерний стрим с музыкой от чата",
+     "category": "Just Chatting",
+     "uptime": "1 ч 42 мин"
+    }
+   },
+   "music": {
+    "current": {
+     "id": "cur",
+     "vid": "c",
+     "title": "Aurora Sounds — Stay Up Late",
+     "page_url": "",
+     "duration": 214,
+     "requester": "Night_Owl",
+     "login": "night_owl",
+     "priority": 0,
+     "source": "youtube",
+     "views": -1,
+     "paid": false,
+     "position": 104.7,
+     "paused": false
+    },
+    "queue": [
+     {
+      "id": "t0",
+      "vid": "v0",
+      "title": "Northern Lights — Midnight Drive",
+      "page_url": "",
+      "duration": 241,
+      "requester": "Nightowl",
+      "login": "nightowl",
+      "priority": 3,
+      "source": "youtube",
+      "views": -1,
+      "paid": false
+     },
+     {
+      "id": "t1",
+      "vid": "v1",
+      "title": "Lo-Fi Collective — Rainy Window",
+      "page_url": "",
+      "duration": 198,
+      "requester": "Kappa_fan",
+      "login": "kappa_fan",
+      "priority": 2,
+      "source": "youtube",
+      "views": -1,
+      "paid": false
+     },
+     {
+      "id": "t2",
+      "vid": "v2",
+      "title": "Synthwave Kid — Neon City",
+      "page_url": "",
+      "duration": 225,
+      "requester": "Viewer42",
+      "login": "viewer42",
+      "priority": 0,
+      "source": "youtube",
+      "views": -1,
+      "paid": false
+     },
+     {
+      "id": "t3",
+      "vid": "v3",
+      "title": "Echo Valley — Wildflowers",
+      "page_url": "",
+      "duration": 263,
+      "requester": "Moder",
+      "login": "moder",
+      "priority": 0,
+      "source": "youtube",
+      "views": -1,
+      "paid": false
+     },
+     {
+      "id": "t4",
+      "vid": "v4",
+      "title": "The Paper Planes — Summer Tape",
+      "page_url": "",
+      "duration": 207,
+      "requester": "Subscriber",
+      "login": "subscriber",
+      "priority": 0,
+      "source": "youtube",
+      "views": -1,
+      "paid": false
+     }
+    ],
+    "volume": 60,
+    "votes": 1,
+    "votes_needed": 3,
+    "toast": {
+     "id": 0,
+     "text": ""
+    }
+   },
+   "next_timer": {
+    "name": "Правила чата",
+    "seconds": 312,
+    "messages_left": 0
+   },
+   "paused_events": false,
+   "alerts": {
+    "pending": 0,
+    "current": null,
+    "volume": 80
+   },
+   "port": 8080,
+   "ui_theme": "twitch"
+  }
+ },
+ "/api/stats?period=stream": {
+  "ok": true,
+  "data": {
+   "chat": {
+    "messages": 0,
+    "users": 0,
+    "top": []
+   },
+   "music": {
+    "orders": 0,
+    "rejected": 0,
+    "skips": 0,
+    "points": 0,
+    "top_tracks": [],
+    "top_users": []
+   }
+  }
+ },
+ "/api/log": {
+  "ok": true,
+  "data": [
+   {
+    "id": 1,
+    "ts": 1794786119.774503,
+    "kind": "system",
+    "text": "Beg1nnnerOS запущен"
+   },
+   {
+    "id": 2,
+    "ts": 1794786119.774658,
+    "kind": "system",
+    "text": "EventSub подключён"
+   },
+   {
+    "id": 3,
+    "ts": 1794786119.7746992,
+    "kind": "command",
+    "text": "!uptime от viewer42"
+   },
+   {
+    "id": 4,
+    "ts": 1794786119.7747235,
+    "kind": "music",
+    "text": "Заказ от kappa_fan: «Lo-Fi Collective — Rainy Window» добавлен в очередь (позиция 2)"
+   },
+   {
+    "id": 5,
+    "ts": 1794786119.7747436,
+    "kind": "event",
+    "text": "Новый фолловер: user=Night_Owl"
+   },
+   {
+    "id": 6,
+    "ts": 1794786119.7747636,
+    "kind": "alert",
+    "text": "Показ «Звезда» для subscriber"
+   },
+   {
+    "id": 7,
+    "ts": 1794786119.7748241,
+    "kind": "command",
+    "text": "!followage от moder"
+   },
+   {
+    "id": 8,
+    "ts": 1794786119.7748487,
+    "kind": "music",
+    "text": "Играет: Aurora Sounds — Stay Up Late (заказ Night_Owl)"
+   },
+   {
+    "id": 9,
+    "ts": 1794786119.7748682,
+    "kind": "event",
+    "text": "Донат DonationAlerts: user=Щедрый, amount=300, currency=RUB"
+   }
+  ]
+ },
+ "/api/pro": {
+  "ok": true,
+  "data": {
+   "pro": {
+    "license": {
+     "active": true,
+     "expired": false,
+     "problem": "",
+     "owner": "demo_streamer",
+     "plan": "pro",
+     "expires": "04.12.2026",
+     "days_left": 30,
+     "key_hint": "…7f3a91c2",
+     "can_issue": true
+    },
+    "buy_url": "https://t.me/Beg1nnner",
+    "profile": "Основной"
+   },
+   "tts": {
+    "status": "ожидание",
+    "speaking": "",
+    "queue": 0,
+    "voices": [
+     {
+      "name": "Microsoft Irina Desktop",
+      "culture": "ru-RU",
+      "gender": "Female"
+     },
+     {
+      "name": "Microsoft Zira Desktop",
+      "culture": "en-US",
+      "gender": "Female"
+     }
+    ],
+    "yandex_voices": [
+     "alena",
+     "filipp"
+    ]
+   },
+   "giveaway": {
+    "status": "idle",
+    "prize": "Игра в Steam на выбор",
+    "keyword": "!участвую",
+    "reward_title": "",
+    "subs_only": false,
+    "followers_only": true,
+    "sub_luck": 2,
+    "winners_wanted": 1,
+    "ends_in": 312,
+    "count": 5,
+    "tickets": 7,
+    "entries": [
+     {
+      "login": "night_owl",
+      "name": "Night_Owl",
+      "sub": true,
+      "tickets": 2
+     },
+     {
+      "login": "viewer42",
+      "name": "viewer42",
+      "sub": false,
+      "tickets": 1
+     },
+     {
+      "login": "kappa_fan",
+      "name": "Kappa_Fan",
+      "sub": true,
+      "tickets": 2
+     },
+     {
+      "login": "moder",
+      "name": "Модер",
+      "sub": false,
+      "tickets": 1
+     },
+     {
+      "login": "lofi",
+      "name": "LoFi_Cat",
+      "sub": false,
+      "tickets": 1
+     }
+    ],
+    "winners": []
+   },
+   "games": {
+    "guess": {
+     "active": true,
+     "max": 100,
+     "tries": 14,
+     "last_winner": ""
+    },
+    "duels": 0
+   },
+   "cloud": {
+    "status": "",
+    "file": {
+     "exists": false,
+     "path": "",
+     "ts": 0,
+     "machine": "",
+     "secrets": false,
+     "version": "",
+     "offer": false
+    },
+    "folders": []
+   },
+   "profiles": [
+    {
+     "name": "Основной",
+     "id": "",
+     "active": true
+    },
+    {
+     "name": "Второй канал",
+     "id": "Второй канал",
+     "active": false
+    }
+   ]
+  }
+ },
+ "/api/commands": {
+  "ok": true,
+  "data": {
+   "custom": [
+    {
+     "name": "!привет",
+     "aliases": [],
+     "random_max": 100,
+     "cooldown": 5,
+     "access": "everyone",
+     "enabled": true,
+     "id": "40c0dafff4",
+     "response": "Привет, {user}! Добро пожаловать на канал 💜"
+    },
+    {
+     "name": "!правила",
+     "aliases": [],
+     "random_max": 100,
+     "cooldown": 5,
+     "access": "everyone",
+     "enabled": true,
+     "id": "1e202484ef",
+     "response": "Будьте вежливы, без спама и спойлеров"
+    },
+    {
+     "name": "!рандом",
+     "aliases": [],
+     "random_max": 100,
+     "cooldown": 5,
+     "access": "everyone",
+     "enabled": true,
+     "id": "3b3375e874",
+     "response": "{user}, твоё число: {random}"
+    },
+    {
+     "name": "!дискорд",
+     "aliases": [],
+     "random_max": 100,
+     "cooldown": 5,
+     "access": "everyone",
+     "enabled": true,
+     "id": "19f9c600de",
+     "response": "Наш Discord: ссылка в описании канала"
+    }
+   ],
+   "standard": {
+    "commands": {
+     "name": "!commands",
+     "aliases": [
+      "!команды"
+     ],
+     "desc": "Список доступных команд",
+     "cooldown": 10,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "skip": {
+     "name": "!skip",
+     "aliases": [],
+     "desc": "Голосование за пропуск текущего трека",
+     "cooldown": 0,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "followage": {
+     "name": "!followage",
+     "aliases": [
+      "!followdate"
+     ],
+     "desc": "Дата начала отслеживания канала",
+     "cooldown": 15,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "uptime": {
+     "name": "!uptime",
+     "aliases": [],
+     "desc": "Продолжительность эфира",
+     "cooldown": 10,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "top": {
+     "name": "!top",
+     "aliases": [],
+     "desc": "Топ активности чата за стрим",
+     "cooldown": 30,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "topweek": {
+     "name": "!topweek",
+     "aliases": [],
+     "desc": "Топ активности чата за неделю",
+     "cooldown": 30,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "topall": {
+     "name": "!topall",
+     "aliases": [],
+     "desc": "Топ активности чата за всё время",
+     "cooldown": 30,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "track": {
+     "name": "!track",
+     "aliases": [
+      "!трек"
+     ],
+     "desc": "Текущая композиция плеера",
+     "cooldown": 5,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "shazam": {
+     "name": "!shazam",
+     "aliases": [],
+     "desc": "Распознавание звука выбранного устройства",
+     "cooldown": 15,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "translate": {
+     "name": "!translate",
+     "aliases": [
+      "!перевод"
+     ],
+     "desc": "Перевод текста",
+     "cooldown": 5,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "timer": {
+     "name": "!timer",
+     "aliases": [
+      "!таймер"
+     ],
+     "desc": "Разовый таймер-напоминание",
+     "cooldown": 3,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "timers": {
+     "name": "!timers",
+     "aliases": [],
+     "desc": "Ваши разовые таймеры",
+     "cooldown": 5,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    },
+    "canceltimer": {
+     "name": "!canceltimer",
+     "aliases": [],
+     "desc": "Отмена таймера по ID",
+     "cooldown": 2,
+     "access": "everyone",
+     "template": "{result}",
+     "random_max": 100,
+     "enabled": true,
+     "deleted": false
+    }
+   }
+  }
+ },
+ "/api/timers": {
+  "ok": true,
+  "data": {
+   "repeating": [],
+   "viewer": [],
+   "next": {
+    "name": "Правила чата",
+    "seconds": 312,
+    "messages_left": 0
+   }
+  }
+ },
+ "/api/alerts": {
+  "ok": true,
+  "data": {
+   "items": [],
+   "pending": [],
+   "clients": 0
+  }
+ },
+ "/api/tools": {
+  "ok": true,
+  "data": {
+   "shazam": {
+    "available": false,
+    "why": "не установлено: shazamio, soundcard",
+    "state": "ожидание",
+    "last": null,
+    "devices": []
+   },
+   "translate": {
+    "available": false,
+    "why": "модуль argostranslate не установлен (ModuleNotFoundError)",
+    "busy": "",
+    "installed": [],
+    "catalog": []
+   },
+   "yandex": {
+    "available": true,
+    "has_token": false,
+    "status": ""
+   },
+   "donationalerts": {
+    "status": "не подключено",
+    "connected": false
+   },
+   "hotkeys": {},
+   "tray": "выключен"
+  }
+ },
+ "/api/backups": {
+  "ok": true,
+  "data": []
+ },
+ "/api/chat/overlay": {
+  "ok": true,
+  "data": {
+   "settings": {
+    "theme": "cards",
+    "font_size": 20,
+    "max_messages": 20,
+    "fade_sec": 0,
+    "direction": "bottom",
+    "show_badges": true,
+    "hide_commands": true,
+    "hide_app": false,
+    "hidden_users": [
+     "nightbot",
+     "streamelements",
+     "moobot",
+     "streamlabs",
+     "wizebot"
+    ],
+    "emotes": {
+     "7tv": true,
+     "bttv": false,
+     "ffz": false
+    }
+   },
+   "broadcaster_id": "",
+   "channel": "",
+   "custom_themes": []
+  }
+ },
+ "/api/settings#extras": {
+  "devices": [],
+  "access": {
+   "everyone": "Все",
+   "vip": "VIP и модераторы",
+   "sub": "Подписчики и модераторы",
+   "mod": "Модераторы",
+   "broadcaster": "Стример"
+  },
+  "hotkey_actions": {
+   "pause_music": "Пауза или продолжение музыки",
+   "skip": "Пропуск текущей композиции",
+   "stop_alerts": "Остановка МедиаАлертов",
+   "pause_events": "Пауза или возобновление уведомлений о событиях"
+  },
+  "event_types": {
+   "donation": {
+    "title": "Донат DonationAlerts",
+    "vars": [
+     "user",
+     "amount",
+     "currency",
+     "message"
+    ]
+   },
+   "follow": {
+    "title": "Новый фолловер",
+    "vars": [
+     "user"
+    ]
+   },
+   "sub": {
+    "title": "Подписка или подарки",
+    "vars": [
+     "user",
+     "details",
+     "months",
+     "count",
+     "tier"
+    ]
+   },
+   "cheer": {
+    "title": "Cheer / Bits",
+    "vars": [
+     "user",
+     "bits",
+     "message"
+    ]
+   },
+   "reward": {
+    "title": "Награда за баллы Twitch",
+    "vars": [
+     "user",
+     "reward",
+     "cost"
+    ]
+   },
+   "raid": {
+    "title": "Входящий рейд",
+    "vars": [
+     "user",
+     "viewers"
+    ]
+   },
+   "hype": {
+    "title": "Hype Train",
+    "vars": [
+     "event",
+     "level",
+     "details"
+    ]
+   },
+   "poll": {
+    "title": "Голосование",
+    "vars": [
+     "event",
+     "title",
+     "details"
+    ]
+   },
+   "ad": {
+    "title": "Рекламная вставка",
+    "vars": [
+     "duration"
+    ]
+   },
+   "online": {
+    "title": "Начало трансляции",
+    "vars": [
+     "title",
+     "category"
+    ]
+   },
+   "update": {
+    "title": "Смена названия или категории",
+    "vars": [
+     "title",
+     "category"
+    ]
+   }
+  }
+ }
+}

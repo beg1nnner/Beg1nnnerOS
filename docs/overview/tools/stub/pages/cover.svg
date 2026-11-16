@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- Сгенерированная обложка для ролика: градиент и «звёзды», без чужих изображений -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/><stop offset=".55" stop-color="#2563eb"/><stop offset="1" stop-color="#1e1b6b"/>
+    </linearGradient>
+    <radialGradient id="r" cx=".68" cy=".32" r=".5"><stop offset="0" stop-color="#e0f2fe" stop-opacity=".9"/><stop offset="1" stop-color="#e0f2fe" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#g)"/>
+  <circle cx="272" cy="128" r="160" fill="url(#r)"/>
+  <g fill="#fff">
+    <circle cx="60" cy="70" r="3"/><circle cx="120" cy="40" r="2"/><circle cx="330" cy="300" r="2.5"/><circle cx="90" cy="250" r="2"/>
+    <circle cx="200" cy="330" r="3"/><circle cx="350" cy="60" r="2"/><circle cx="40" cy="350" r="2.5"/><circle cx="170" cy="150" r="1.8"/>
+    <path d="M272 98l6 24 24 6-24 6-6 24-6-24-24-6 24-6z" opacity=".95"/>
+  </g>
+  <path d="M0 330 Q100 280 200 320 T400 300 V400 H0Z" fill="#fff" fill-opacity=".18"/>
+</svg>

@@ -226,7 +226,12 @@
     "/mod": () => mod(),
     "/mod/suspicious": () => ({scope: true, items: [{user_id: "d9", login: "fresh_acc_0001", name: "fresh_acc_0001", source: "age", reason: L("аккаунт создан сегодня", "account created today"),
       text: L("всем привет, загляните ко мне", "hi all, come check my channel"), ts: ago(240), count: 2}]}),
-    "/mod/unban-requests": () => ({ready: true, scope: true, error: "", items: []}),
+    "/backups": () => [0, 1, 3].map((d, i) => ({name: `backup-${new Date((D.t0 - d * 86400) * 1000).toISOString().slice(0, 10)}-2130.zip`, size: 412000 + i * 5300})),
+    "/mod/unban-requests": () => ({ready: true, scope: true, error: "", items: [
+      {id: "ur1", name: "Quiet_Lantern", created_at: new Date((D.t0 - 3 * 3600) * 1000).toISOString(),
+        text: L("Простите за капс вчера, больше не повторится", "Sorry for the caps yesterday, won't happen again")},
+      {id: "ur2", name: "MossyPebble", created_at: new Date((D.t0 - 26 * 3600) * 1000).toISOString(),
+        text: L("Это был мой младший брат, можно вернуть доступ?", "That was my little brother, can I get access back?")}]}),
     "/music/history": () => history(),
     "/music/liked": () => ({items: [], total: 0}),
     "/music/fallback/next": () => ({status: L("резервный плейлист: 48 треков", "fallback playlist: 48 tracks"), items: TRACKS.slice(3, 6).map(t => ({title: t.title, duration: t.dur, liked: false}))}),
@@ -240,7 +245,23 @@
     "/captions/devices": () => ({items: [{id: L("Микрофон (USB Audio)", "Microphone (USB Audio)")}]}),
     "/wheel": () => wheelState(),
   };
-  const PREFIX = [["/pro/streams/", p => streamDetail(decodeURIComponent(p.slice("/pro/streams/".length)))]];
+  // итоги стрима — в том же виде, что собирает программа (Announce.Summary), из вымышленных цифр примера
+  function streamSummaryText(id) {
+    const d = streamDetail(id), s = d.summary, h = Math.floor(s.duration / 3600), m = Math.round(s.duration % 3600 / 60);
+    const n = v => v.toLocaleString(EN() ? "en-US" : "ru-RU");
+    const text = EN()
+      ? [`📊 Stream summary «${s.title}»`, "", `⏱ ${h} h ${m} min · 🎮 ${s.category}`, `👀 Peak viewers: ${n(s.peak)} · average ${n(s.avg)}`,
+         `💬 Messages: ${n(s.messages)} from ${n(s.chatters)} viewers`, `💜 New followers: ${s.follows} · subs: ${s.subs} · bits: ${n(s.bits)} · raids: ${s.raids}`,
+         `💸 Donations: ${n(s.donations.RUB)} ₽`, `🎵 Tracks requested: ${s.orders}`, `🏆 Most active: ${d.top_chat.map(x => `${x[0]} (${x[1]})`).join(", ")}`,
+         "🎶 Stream tracks:", ...TRACKS.slice(0, 3).map((t, i) => `  ${i + 1}. ${t.title}`), "", "Thanks to everyone who was on the stream! ❤️"]
+      : [`📊 Итоги стрима «${s.title}»`, "", `⏱ ${h} ч ${m} мин · 🎮 ${s.category}`, `👀 Пик зрителей: ${n(s.peak)} · в среднем ${n(s.avg)}`,
+         `💬 Сообщений: ${n(s.messages)} от ${n(s.chatters)} зрителей`, `💜 Новых фолловеров: ${s.follows} · сабов: ${s.subs} · битсов: ${n(s.bits)} · рейдов: ${s.raids}`,
+         `💸 Донаты: ${n(s.donations.RUB)} ₽`, `🎵 Заказано треков: ${s.orders}`, `🏆 Самые активные: ${d.top_chat.map(x => `${x[0]} (${x[1]})`).join(", ")}`,
+         "🎶 Треки стрима:", ...TRACKS.slice(0, 3).map((t, i) => `  ${i + 1}. ${t.title}`), "", "Спасибо всем, кто был на стриме! ❤️"];
+    return {text: text.join("\n"), thanks: null};
+  }
+  const PREFIX = [["/pro/streams/", p => streamDetail(decodeURIComponent(p.slice("/pro/streams/".length)))],
+    ["/stream-summary/", p => streamSummaryText(decodeURIComponent(p.slice("/stream-summary/".length)))]];
   // «чтение» через POST: ответить можно, ничего не меняя
   const READ_POST = {
     "/votes/refresh": () => votes(),
