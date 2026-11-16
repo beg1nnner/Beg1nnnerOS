@@ -236,6 +236,15 @@ async def run(browser, pg):
     await go(pg, "pro", "wheel", wait=2200)
     await screen(pg, "s-wheel", [("css:#wl-sectors", "Сектора: вес, цвет, действие", .02, .05), ("css:.wl-prev", "Предпросмотр", .5, .08)])
     await frag(pg, "f-wheel-launch", ["Кто и как запускает"])
+    if want("f-vwheel"):
+        # колесо зрителей из демо-режима: вымышленные варианты, покупки «приходят» сами
+        await pg.evaluate("wlPick('demo-vw')"); await pg.wait_for_timeout(3200)
+        await pg.evaluate(CLEAN)
+        await frag(pg, "f-vwheel-sectors", ["css:#vw-live"], items=[
+            ("css:#vw-pending .vw-pend", "Вариант на проверке", .02, .5), ("css:.vw-sim", "Похоже на вариант с опечаткой", .5, .5),
+            ("css:#vw-sectors tr.vw-row .vw-acts", "Переименовать, сумма, объединить, удалить", .5, .5)])
+        await frag(pg, "f-vwheel-rewards", ["css:#vw-rewards"], pad=12)
+        await pg.evaluate("wlPick('main')"); await pg.wait_for_timeout(800)
     await go(pg, "pro", "give")
     await frag(pg, "f-give", ["Розыгрыш"])
     await go(pg, "pro", "sstats", wait=1800)
@@ -309,6 +318,16 @@ async def run(browser, pg):
                         "sectors": sectors, "result": 5, "duration_ms": 5000, "delay": 0}})
     await overlay(browser, "/wheel", "o-wheel", 1000, 1000, prep=sp, wait=7200)
     scene({"spin": None})
+    opts = [("Hollow Knight", 13500), ("Stardew Valley", 12500), ("Outer Wilds", 10500), ("Celeste", 4000), ("Hades", 3500),
+            ("Portal 2", 2500), ("Terraria", 2000), ("Disco Elysium", 1500), ("Subnautica", 1000), ("Inside", 500), ("Dead Cells", 500)]
+    tot = sum(w for _, w in opts)
+    vsec = [{"id": f"v{i}", "name": n, "weight": w} for i, (n, w) in enumerate(opts)]
+    vw = {"ok": True, "data": {"spin": None, "sound": False, "volume": 0, "theme": "studio", "title": True, "custom_themes": [],
+          "viewer": {"id": "vw", "name": "Во что играем дальше", "status": "open", "label": "Предложить игру — 500 / 2 000 / 10 000 баллов", "show": True,
+                     "ends_in": 154, "elimination": False, "left": len(vsec), "sectors": vsec, "winner": "",
+                     "top": [{"name": n, "pct": str(round(w * 100 / tot)) if w * 100 / tot >= 10 else str(round(w * 100 / tot, 1))} for n, w in opts[:8]],
+                     "last": {"user": "PixelMoth", "points": 2000}}}}
+    await overlay(browser, "/wheel", "o-vwheel", 1600, 760, routes={"**/api/wheel/overlay*": vw}, wait=2600)
     await overlay(browser, "/dock", "o-dock", 360, 640, wait=2500, transparent=False)
 
 
