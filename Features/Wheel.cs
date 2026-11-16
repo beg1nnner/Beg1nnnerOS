@@ -240,7 +240,7 @@ public sealed class Wheel
         var c = Cfg;
         var line = s.Giveaway ? $"🏆 Победитель розыгрыша «{s.Prize}»: @{sec.Name}! Поздравляем!"
             : Commands.Render(c.Str("chat_template", "🎡 {user} крутит колесо «{wheel}»: выпало «{result}»!"),
-                new() { ["user"] = who, ["wheel"] = s.WheelName, ["result"] = sec.Name });
+                new Dictionary<string, string> { ["user"] = who, ["wheel"] = s.WheelName, ["result"] = sec.Name });
         if (!s.Test && (s.Giveaway || c.Bool("chat_result", true)) && line.Trim() != "")
             try { await _hub.Twitch.SendChat(line); } catch (Exception e) { _hub.Log.Add("skip", "Колесо: не удалось написать в чат — " + e.Message); }
         if (!s.Test) _hub.Events.ShowCustom("wheel", s.Giveaway ? "Розыгрыш" : "Колесо фортуны", who, s.Giveaway ? $"Победитель: {sec.Name}" : $"Выпало: {sec.Name}");
@@ -255,7 +255,7 @@ public sealed class Wheel
         {
             case "chat":
                 if (sec.Text == "") return "";
-                await _hub.Twitch.SendChat(Commands.Render(sec.Text, new() { ["user"] = who, ["result"] = sec.Name }));
+                await _hub.Twitch.SendChat(Commands.Render(sec.Text, new Dictionary<string, string> { ["user"] = who, ["result"] = sec.Name }));
                 return "сообщение в чат";
             case "alert":
                 if (sec.AlertId == "") return "";
