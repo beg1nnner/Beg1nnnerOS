@@ -225,6 +225,37 @@ public sealed class Rewards
         catch (Exception e) { _hub.Log.Error($"Не удалось {(ok ? "подтвердить" : "вернуть баллы за")} выкуп: {e.Message}"); }
     }
 
+    /// <summary>
+    /// Подтвердить (ok) или вернуть баллы за покупку заказа музыки — с повторами: если Twitch недоступен или токен
+    /// обновляется, ещё две попытки с паузой. Не вышло — запись в журнал, чтобы стример вернул баллы вручную.
+    /// </summary>
+    public async Task Settle(string rewardId, string redemptionId, bool ok, string who, string title, int cost)
+    {
+        if (string.IsNullOrEmpty(rewardId) || string.IsNullOrEmpty(redemptionId)) return;
+        if (IsForeign(rewardId))
+        {
+            if (!ok) _hub.Log.Add("skip", $"Баллы не возвращены автоматически ({who}, «{title}», {cost}): награда создана другим способом входа. " +
+                                          "Верните их вручную на Twitch («Очередь запросов наград») или пересоздайте награду.");
+            return;
+        }
+        // при запуске программы Twitch может быть ещё не подключён — ждём до минуты
+        for (var i = 0; i < 60 && !_hub.Twitch.Streamer.Ready; i++) await Task.Delay(1000);
+        string last = "";
+        foreach (var pause in new[] { 0, 3, 8 })
+        {
+            if (pause > 0) await Task.Delay(pause * 1000);
+            try
+            {
+                await _hub.Twitch.SetRedemption(rewardId, redemptionId, ok ? "FULFILLED" : "CANCELED");
+                return;
+            }
+            catch (Exception e) { last = e is TwitchException te ? te.Reason : e.Message; }
+        }
+        _hub.Log.Error(ok
+            ? $"Не удалось подтвердить на Twitch заказ {who} «{title}» ({cost} баллов): {last}. Покупка осталась в «Очереди запросов наград» — отметьте её там"
+            : $"Не удалось вернуть баллы {who} за «{title}» ({cost} баллов): {last}. Верните их вручную в «Очереди запросов наград» на Twitch");
+    }
+
     // ---------- выкупы ----------
     public async Task OnRedemption(JsonNode ev)
     {
@@ -264,17 +295,35 @@ public sealed class Rewards
             await Complete(rid, redId, false);
     }
 
-    private async Task<int> PriorityFor(JsonNode ev)
+    // приоритет зрителя (VIP, подписка) — на 10 минут, чтобы не спрашивать Twitch при каждом заказе
+    private readonly Dictionary<string, (int P, double Ts)> _prioCache = new();
+
+    /// <summary>VIP и подписка проверяются одновременно и параллельно с поиском трека. Ошибка — приоритет 0.</summary>
+    private async Task<int> PriorityFor(JsonNode ev, OrderTiming tm)
     {
         var m = _hub.S.Obj("music");
         var uid = ev.Str("user_id");
+        bool vipOn = m.Bool("vip_priority"), subOn = m.Bool("sub_priority");
+        if (!vipOn && !subOn || uid == "") return 0;
+        var key = uid + (vipOn ? "v" : "") + (subOn ? "s" : "");
+        if (_prioCache.TryGetValue(key, out var c) && ActionLog.Now - c.Ts < 600) { tm.Priority = 0; return c.P; }
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            if (m.Bool("vip_priority") && await _hub.Twitch.IsVip(uid)) return 2;
-            if (m.Bool("sub_priority") && await _hub.Twitch.IsSubscriber(uid)) return 1;
+            var vip = vipOn ? _hub.Twitch.IsVip(uid) : Task.FromResult(false);
+            var sub = subOn ? _hub.Twitch.IsSubscriber(uid) : Task.FromResult(false);
+            await Task.WhenAll(vip, sub);
+            var p = vip.Result ? 2 : sub.Result ? 1 : 0;
+            _prioCache[key] = (p, ActionLog.Now);
+            if (_prioCache.Count > 2000) _prioCache.Clear();
+            return p;
         }
-        catch (TwitchException e) { _hub.Log.Add("skip", $"Не удалось проверить VIP/подписку: {e.Reason}"); }
-        return 0;
+        catch (Exception e)
+        {
+            _hub.Log.Add("skip", $"Не удалось проверить VIP/подписку: {(e is TwitchException te ? te.Reason : e.Message)}");
+            return 0;
+        }
+        finally { tm.Priority = sw.Elapsed.TotalSeconds; }
     }
 
     private async Task MusicRedemption(string kind, JsonNode ev, string rid, string redId, int cost, string name, string login)
@@ -285,7 +334,7 @@ public sealed class Rewards
         if (kind == "skip")
         {
             var cur = music.Current;
-            if (cur != null && music.Skip($"награда от {login}"))
+            if (cur != null && music.Skip($"награда от {login}", login == cur.Login ? SkipBy.Requester : SkipBy.Reward))
             {
                 await Complete(rid, redId, true);
                 stats.Music(sk, "skip", "ok", login, name, cur.Title, cost);
@@ -298,12 +347,17 @@ public sealed class Rewards
             }
             return;
         }
-        var priority = kind == "priority" ? 3 : await PriorityFor(ev);
+        var tm = new OrderTiming();
+        // приоритет проверяется одновременно с поиском трека, а не перед ним
+        var priority = kind == "priority" ? Task.FromResult(3) : PriorityFor(ev, tm);
         if (!_hub.YtDlp.Ready || _hub.YtDlp.Installing)
             await _hub.Twitch.SendChat($"@{name}, готовлю плеер к первому запуску — заказ будет обработан примерно через минуту");
-        var (ok, text, track) = await music.Request(ev.Str("user_input"), name, login, priority, false, (rid, redId, cost));
-        await Complete(rid, redId, ok);
-        stats.Music(sk, kind, ok ? "ok" : "rejected", login, name, track?.Title ?? ev.Str("user_input"), ok ? cost : 0);
+        var (ok, text, track) = await music.Request(ev.Str("user_input"), name, login, 0, false, (rid, redId, cost), priority, tm);
+        // Принятый заказ НЕ подтверждается сразу: покупка остаётся «ожидающей» и подтверждается, когда трек
+        // отыграет 30 секунд (Music.ConfirmPay). Отклонённый — возвращается сразу, как раньше.
+        if (!ok) await Complete(rid, redId, false);
+        // потраченные баллы учитываются в статистике при подтверждении (тип paid), а не при заказе
+        stats.Music(sk, ok ? kind : Music.IsRepeatText(text) ? "repeat" : kind, ok ? "ok" : "rejected", login, name, track?.Title ?? ev.Str("user_input"), 0);
         _hub.Log.Add("music", $"Заказ от {login}: {text}");
         if (!ok) await _hub.Twitch.SendChat($"@{name}, заказ отклонён: {text}. Баллы возвращены");
         else if (_hub.S.Bool("music.announce")) await _hub.Twitch.SendChat($"@{name}, {text}");

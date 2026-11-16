@@ -10,8 +10,11 @@ namespace Beg1nnnerOS.Features;
 /// </summary>
 public static class Loudness
 {
-    /// <summary>Возвращает (громкость в LUFS, пиковое значение 0…1) или null, если в файле тишина.</summary>
-    public static (double Lufs, double Peak)? Measure(string path, int maxMinutes = 12)
+    /// <summary>
+    /// Возвращает (громкость в LUFS, пиковое значение 0…1) или null, если в файле тишина.
+    /// maxSeconds &gt; 0 — только начало файла (быстрая предварительная оценка, пока трек уже играет).
+    /// </summary>
+    public static (double Lufs, double Peak)? Measure(string path, int maxMinutes = 12, double maxSeconds = 0)
     {
         using var reader = new MediaFoundationReader(path);
         var sp = reader.ToSampleProvider();
@@ -27,7 +30,7 @@ public static class Loudness
         var hops = new List<double>();     // энергия каждого шага (сумма по каналам)
         double acc = 0, peak = 0;
         var inHop = 0;
-        long frames = 0, maxFrames = (long)fs * 60 * maxMinutes;
+        long frames = 0, maxFrames = maxSeconds > 0 ? (long)(fs * maxSeconds) : (long)fs * 60 * maxMinutes;
         var buf = new float[fs * ch];      // ~1 с за чтение
         int n;
         while ((n = sp.Read(buf, 0, buf.Length)) > 0 && frames < maxFrames)

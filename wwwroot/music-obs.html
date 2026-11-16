@@ -87,7 +87,7 @@ async function tick() {
         if (fade > 0.05) setGain(deck, s.gain, fade); else setGain(deck, s.gain, 0);
       } else deck = null;
       retire(old, old && old.a && !old.a.paused ? (fade > 0.05 ? fade : 0.15) : 0);
-    } else if (deck) setGain(deck, s.gain, 0);
+    } else if (deck && Math.abs(s.gain - wantGain) > 0.0005) setGain(deck, s.gain, s.ramp || 0);   // громкость измерена после старта — плавно
     wantGain = s.gain;
     const d = deck;
     if (d && s.src) {

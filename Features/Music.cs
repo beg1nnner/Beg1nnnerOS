@@ -7,7 +7,9 @@ using System.Net.Http;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Beg1nnnerOS.Core;
 using Beg1nnnerOS.Twitch;
@@ -31,16 +33,39 @@ public sealed class Track
     public string Cover = "";         // обложка (Яндекс); у YouTube берётся превью видео по ID
     public long Views = -1;   // просмотры на YouTube (-1 — неизвестно)
     public (string RewardId, string RedemptionId, int Cost)? Redemption;
+    /// <summary>Покупка за баллы: "" — не оплачен баллами, pending — ждёт (баллы ещё можно вернуть), done — подтверждена, refunded — возвращена.</summary>
+    public string Pay = "";
     public bool Fallback;   // трек из резервного плейлиста (играет, когда заказов нет)
     public double ResumeAt;   // с какой секунды начать (восстановление после вылета)
+    public OrderTiming Timing;   // замер шагов заказа (не сохраняется)
+    public YtJob Job;            // идущая загрузка yt-dlp (не сохраняется)
 
     public object Public() => new
     {
         id = Id, vid = Vid, title = Title, page_url = PageUrl, duration = Duration, requester = Requester,
-        login = Login, priority = Priority, source = Source, paid = Redemption != null, views = Views, fallback = Fallback,
+        login = Login, priority = Priority, source = Source, paid = Redemption != null, pay = Pay, views = Views, fallback = Fallback,
         artist = string.Join(", ", Music.ArtistsOf(this)), channel = Channel, cover = Music.CoverOf(this),
     };
+
+    public Track Clone() => new()
+    {
+        Vid = Vid, Title = Title, PageUrl = PageUrl, Duration = Duration, Source = Source, Artist = Artist, Channel = Channel,
+        ChannelId = ChannelId, Cover = Cover, Views = Views,
+    };
 }
+
+/// <summary>Время шагов одного заказа (с.): от выкупа награды до звука. -1 — шага не было.</summary>
+public sealed class OrderTiming
+{
+    public readonly Stopwatch Sw = Stopwatch.StartNew();
+    public double Priority = -1, Search = -1, Info = -1, Launch = -1, Download = -1, Loudness = -1, Player = -1, Total = -1;
+    public string Cache = "";        // что взято из кэша: запрос, сведения, файл
+    public bool Immediate;           // очередь заказов была пуста — время «заказ → звук» без ожидания других треков
+    public bool Logged;
+}
+
+/// <summary>Кто пропустил трек — от этого зависит, вернутся ли баллы.</summary>
+public enum SkipBy { Staff, Vote, Requester, Reward, Block, System }
 
 public sealed class ResolveException : Exception
 {
@@ -70,9 +95,18 @@ public sealed class Music
     /// <summary>Замена поиска в тестах.</summary>
     public Func<string, Task<Track>> ResolveOverride;
 
+    // ---------- кэш поиска и сведений ----------
+    private readonly Dictionary<string, string> _qCache = new();            // нормализованный запрос → ID ролика
+    private readonly LinkedList<string> _qOrder = new();
+    private readonly Dictionary<string, (Track T, double Ts)> _infoCache = new();   // ID ролика → сведения (6 ч)
+    private readonly SemaphoreSlim _speculative = new(2, 2);   // не больше двух опережающих загрузок на всю программу
+
     // ---------- выравнивание громкости ----------
     // Измерения по ID трека: громкость (LUFS) и пик. Хранятся в кэше, чтобы не мерить трек дважды.
     private readonly ConcurrentDictionary<string, double[]> _loud = new();
+    private readonly ConcurrentDictionary<string, double[]> _loudPartial = new();   // по первым 25 секундам — пока нет полного
+    private readonly Dictionary<string, Task> _measuring = new();
+    private double _obsRampUntil;
     private static string LoudFile => Path.Combine(Config.CacheDir, "loudness.json");
     private bool _loudDirty;
 
@@ -163,12 +197,25 @@ public sealed class Music
         // режим переключили на «программа», а трек играет в OBS — продолжаем в программе с того же места
         if (_obsActive && !ObsMode) MoveToApp("режим «музыка в программе»");
         FallbackChanged();
+        DropBlocked();
+    }
+
+    /// <summary>В панели заблокировали трек, исполнителя или канал — такие заказы уходят из очереди, баллы возвращаются.</summary>
+    private void DropBlocked()
+    {
+        var drop = Queue.Where(q => !q.Fallback && q.Login != "" && (TrackBlocked(q) || BlockedBy(q) != null)).ToList();
+        if (drop.Count == 0) return;
+        foreach (var q in drop) { Queue.Remove(q); ForgetDownload(q); }
+        _hub.Log.Add("music", $"Из очереди убрано заблокированных заказов: {drop.Count}");
+        RefundMany(drop, "трек заблокирован стримером");
     }
 
     /// <summary>Поправка громкости трека в дБ: до целевого уровня, не больше +12 / −12 дБ.</summary>
     public double GainDb(string vid)
     {
-        if (!Cfg.Bool("normalize", true) || !_loud.TryGetValue(vid, out var m)) return 0;
+        if (!Cfg.Bool("normalize", true)) return 0;
+        // полное измерение; пока его нет — предварительное по началу трека
+        if (!_loud.TryGetValue(vid, out var m) && !_loudPartial.TryGetValue(vid, out m)) return 0;
         var target = Cfg.Num("normalize_target", -14);
         var g = Math.Clamp(target - m[0], -12, 12);
         // не задираем трек так, что больше 6 дБ уйдёт в лимитер
@@ -200,19 +247,45 @@ public sealed class Music
         catch { }
     }
 
-    /// <summary>Измеряет громкость скачанного файла (в фоне, ~1 с на трек).</summary>
-    private async Task Measure(string vid, string path)
+    /// <summary>
+    /// Измеряет громкость скачанного файла в фоне: сначала первые 25 секунд (предварительная поправка, доли секунды),
+    /// затем весь файл (~1 с; это значение и попадает в кэш). Воспроизведение этого не ждёт:
+    /// если трек уже играет, поправка подтягивается плавно за 1,5 секунды.
+    /// </summary>
+    private Task StartMeasure(string vid, string path)
     {
-        if (!Cfg.Bool("normalize", true) || _loud.ContainsKey(vid)) return;
+        if (!Cfg.Bool("normalize", true) || _loud.ContainsKey(vid)) return Task.CompletedTask;
+        if (_measuring.TryGetValue(vid, out var running)) return running;
+        var task = MeasureBg(vid, path);
+        _measuring[vid] = task;
+        return task;
+    }
+
+    private async Task MeasureBg(string vid, string path)
+    {
         try
         {
+            var part = await Task.Run(() => Loudness.Measure(path, maxSeconds: 25));
+            if (part != null && !_loud.ContainsKey(vid)) { _loudPartial[vid] = new[] { part.Value.Lufs, part.Value.Peak }; GainChanged(vid); }
             var m = await Task.Run(() => Loudness.Measure(path));
             if (m == null) return;
             _loud[vid] = new[] { m.Value.Lufs, m.Value.Peak };
+            _loudPartial.TryRemove(vid, out _);
             _loudDirty = true;
             SaveLoudness();
+            GainChanged(vid);
         }
         catch (Exception e) { _hub.Log.Add("skip", $"Не удалось измерить громкость: {e.Message}"); }
+        finally { _measuring.Remove(vid); }
+    }
+
+    /// <summary>Громкость трека измерена, пока он уже играет: плавно подводим поправку (без щелчка).</summary>
+    private void GainChanged(string vid)
+    {
+        if (Current == null || Current.Vid != vid || Loading) return;
+        var g = GainDb(vid);
+        if (_obsActive) _obsRampUntil = ActionLog.Now + 2;   // OBS-страница сама плавно меняет громкость
+        else if (Math.Abs(Player.GainDb - g) >= 0.1) Player.RampGain(g, 1.5);
     }
 
     public void Wake() => _wake.TrySetResult(true);
@@ -227,7 +300,8 @@ public sealed class Music
     {
         ApplySettings();
         Directory.CreateDirectory(Config.CacheDir);
-        CleanupCache();
+        YtDlp.CleanPartial(Config.CacheDir);   // недокачанное при прошлом запуске
+        TrimCache();
         LoadLoudness();
         RestoreQueue();
         _ = ObsWatch();
@@ -252,7 +326,8 @@ public sealed class Music
         ["vid"] = t.Vid, ["title"] = t.Title, ["url"] = t.PageUrl, ["duration"] = t.Duration, ["requester"] = t.Requester,
         ["login"] = t.Login, ["priority"] = t.Priority, ["source"] = t.Source, ["views"] = t.Views,
         ["reward_id"] = t.Redemption?.RewardId ?? "", ["redemption_id"] = t.Redemption?.RedemptionId ?? "",
-        ["cost"] = t.Redemption?.Cost ?? 0, ["position"] = Math.Round(pos, 1), ["cover"] = t.Cover,
+        ["cost"] = t.Redemption?.Cost ?? 0, ["pay"] = t.Pay, ["position"] = Math.Round(pos, 1), ["cover"] = t.Cover,
+        ["artist"] = t.Artist, ["channel"] = t.Channel,
     };
 
     private static Track TrackFrom(JsonNode n) => new()
@@ -261,6 +336,9 @@ public sealed class Music
         Requester = n.Str("requester"), Login = n.Str("login"), Priority = n.Int("priority"), Source = n.Str("source", "youtube"),
         Views = (long)n.Num("views", -1), ResumeAt = n.Num("position"), Cover = n.Str("cover"),
         Redemption = n.Str("redemption_id") != "" ? (n.Str("reward_id"), n.Str("redemption_id"), n.Int("cost")) : null,
+        // до 2.7.1 покупка подтверждалась сразу при заказе — сохранённые без состояния считаем подтверждёнными
+        Pay = n.Str("redemption_id") == "" ? "" : n.Str("pay", "done"),
+        Artist = n.Str("artist"), Channel = n.Str("channel"),
     };
 
     /// <summary>Записывает очередь и текущий трек. Заказы резервного плейлиста не сохраняются — они и так вернутся.</summary>
@@ -270,7 +348,7 @@ public sealed class Music
         {
             var cur = Current != null && !Current.Fallback ? Current : null;
             var queue = Queue.Where(t => !t.Fallback).ToList();
-            var sig = (cur?.Id ?? "") + "|" + string.Join(",", queue.Select(t => t.Id + ":" + t.Priority));
+            var sig = (cur?.Id ?? "") + ":" + cur?.Pay + "|" + string.Join(",", queue.Select(t => t.Id + ":" + t.Priority + ":" + t.Pay)) + "|" + _recent.Count;
             var pos = cur == null ? 0 : Loading ? cur.ResumeAt : Position;   // пока трек грузится, плеер ещё не на нём
             // очередь не менялась — позицию текущего трека обновляем раз в 10 секунд
             if (!force && sig == _savedSig && (cur == null || Math.Abs(pos - _savedPos) < 10)) return;
@@ -279,6 +357,10 @@ public sealed class Music
                 ["saved"] = ActionLog.Now,
                 ["current"] = cur != null ? TrackJson(cur, pos) : null,
                 ["queue"] = new JsonArray(queue.Select(t => (JsonNode)TrackJson(t)).ToArray()),
+                ["recent"] = new JsonArray(_recent.Select(r => (JsonNode)new JsonObject
+                {
+                    ["vid"] = r.Vid, ["keys"] = string.Join("\n", r.Keys), ["ts"] = r.Ts, ["order"] = r.Order,
+                }).ToArray()),
             };
             var tmp = QueueFile + ".tmp";
             File.WriteAllText(tmp, js.ToJsonString());
@@ -304,13 +386,27 @@ public sealed class Music
         {
             if (!File.Exists(QueueFile)) return;
             var js = JsonNode.Parse(File.ReadAllText(QueueFile));
-            if (!Cfg.Bool("restore_queue", true)) return;
+            // недавно сыгранные заказы — для защиты от повторов (переживают перезапуск независимо от восстановления очереди)
+            foreach (var r in js["recent"] as JsonArray ?? new JsonArray())
+                if (ActionLog.Now - r.Num("ts") < 24 * 3600)
+                    _recent.Add(new RecentPlay(r.Str("vid"), r.Str("keys").Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet(), r.Num("ts"), r.Bool("order")));
             var age = ActionLog.Now - js.Num("saved");
             var maxH = Math.Clamp(Cfg.Int("restore_hours", 12), 1, 168);
-            if (age > maxH * 3600)
+            var skipRestore = !Cfg.Bool("restore_queue", true) || age > maxH * 3600;
+            if (skipRestore)
             {
-                if ((js["queue"] as JsonArray)?.Count > 0 || js["current"] != null)
+                // очередь не возвращаем — баллы за неподтверждённые заказы возвращаем зрителям
+                var saved = new List<Track>();
+                if (js["current"] is JsonObject c0 && c0.Str("vid") != "") saved.Add(TrackFrom(c0));
+                foreach (var n in js["queue"] as JsonArray ?? new JsonArray()) if (n.Str("vid") != "") saved.Add(TrackFrom(n));
+                var pending = saved.Where(t => t.Pay == "pending").ToList();
+                if (saved.Count > 0 && Cfg.Bool("restore_queue", true))
                     _hub.Log.Add("music", $"Старая очередь (сохранена {(int)(age / 3600)} ч назад) не восстановлена — больше {maxH} ч");
+                if (pending.Count > 0)
+                {
+                    RefundMany(pending, "очередь не восстановлена после перезапуска программы");
+                    SaveQueue(true);
+                }
                 return;
             }
             var restored = new List<Track>();
@@ -331,6 +427,217 @@ public sealed class Music
 
     public string RestoredInfo = "";
     public double RestoredAt;
+
+    // ---------- баллы: списываются только за сыгранный трек ----------
+    // Покупка остаётся на Twitch «ожидающей», пока трек не отыграл 30 секунд (или не закончился раньше).
+    // Пока она не подтверждена, баллы можно вернуть: трек не загрузился, его убрали, отменили или заблокировали.
+    public const double PaySeconds = 30;
+
+    /// <summary>Подтверждает покупку (баллы списаны окончательно). Повторный вызов ничего не делает.</summary>
+    public void ConfirmPay(Track t)
+    {
+        if (t?.Redemption == null || t.Pay != "pending") return;
+        t.Pay = "done";
+        SaveQueue(true);
+        var (rid, redId, cost) = t.Redemption.Value;
+        try { _hub.Stats.Music(_hub.Stream.Key, "paid", "ok", t.Login, t.Requester, t.Title, cost); } catch { }
+        _ = _hub.Rewards.Settle(rid, redId, true, t.Requester, t.Title, cost);
+    }
+
+    /// <summary>Возвращает баллы за заказ, если покупка ещё не подтверждена. tell — написать зрителю в чат.</summary>
+    public bool RefundPay(Track t, string reason, bool tell = true)
+    {
+        if (t?.Redemption == null || t.Pay != "pending") return false;
+        t.Pay = "refunded";
+        SaveQueue(true);
+        var (rid, redId, cost) = t.Redemption.Value;
+        try { _hub.Stats.Music(_hub.Stream.Key, "refund", "refunded", t.Login, t.Requester, t.Title, cost); } catch { }
+        _hub.Log.Add("music", $"Баллы возвращены {t.Requester} за «{t.Title}» ({cost}): {reason}");
+        _ = _hub.Rewards.Settle(rid, redId, false, t.Requester, t.Title, cost);
+        if (tell && t.Requester != "" && Cfg.Bool("chat_errors", true))
+            _ = SayChat($"@{t.Requester}, {reason}: «{Short(t.Title, 60)}». Баллы возвращены");
+        return true;
+    }
+
+    /// <summary>Несколько возвратов сразу (очистка очереди) — одно общее сообщение в чат.</summary>
+    public int RefundMany(IEnumerable<Track> tracks, string reason)
+    {
+        var done = tracks.Where(t => RefundPay(t, reason, false)).ToList();
+        if (done.Count > 0 && Cfg.Bool("chat_errors", true))
+        {
+            var who = string.Join(", ", done.Select(t => "@" + t.Requester).Distinct().Take(15));
+            _ = SayChat($"{char.ToUpper(reason[0])}{reason[1..]} — баллы возвращены: {who}");
+        }
+        return done.Count;
+    }
+
+    private async Task SayChat(string text)
+    {
+        try { await _hub.Twitch.SendChat(text); }
+        catch (Exception e) { _hub.Log.Add("skip", $"Не удалось написать в чат: {e.Message}"); }
+    }
+
+    /// <summary>Трек перестал играть: что делать с покупкой зависит от того, кто и когда его остановил.</summary>
+    private void SettleOnStop(Track t, SkipBy by)
+    {
+        if (t?.Pay != "pending") return;
+        var pos = Loading && Current == t ? 0 : Position;
+        if (by == SkipBy.Block) RefundPay(t, "трек заблокирован");
+        else if (by == SkipBy.Staff && pos < PaySeconds && Cfg.Bool("refund_early_skip", true)) RefundPay(t, "стример пропустил трек");
+        else ConfirmPay(t);   // голосование, «Пропуск» другого зрителя, сам заказчик, больше 30 секунд
+    }
+
+    // ---------- защита от повторов ----------
+    public sealed record RecentPlay(string Vid, HashSet<string> Keys, double Ts, bool Order);
+    private readonly List<RecentPlay> _recent = new();
+
+    private static readonly Regex Variant = new(
+        @"\b(live|концерт\w*|лайв|remix|rmx|ремикс|cover|кавер|acoustic|акусти\w*|slowed|замедл\w*|sped\s+up|speed\s+up|ускор\w*|nightcore|найткор|reverb|instrumental|минус|karaoke|караоке)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static string NormText(string s) =>
+        Regex.Replace((s ?? "").ToLowerInvariant().Replace('ё', 'е'), @"[^\p{L}\p{N}]+", " ").Trim();
+
+    /// <summary>
+    /// Ключи «исполнитель — название» для сравнения: без «(Official Video)» и знаков, «ё» → «е».
+    /// Концертная версия, ремикс, кавер и т. п. дают другой ключ — это не повтор оригинала.
+    /// </summary>
+    public static HashSet<string> RepeatKeys(Track t)
+    {
+        var keys = new HashSet<string>();
+        var clean = CleanTitle(t.Title);
+        var title = NormText(clean);
+        var variants = string.Join(",", Variant.Matches(title).Select(m => m.Value.Length > 4 ? m.Value[..4] : m.Value).Distinct().OrderBy(x => x));
+        void Add(string k) { if (k.Length >= 4) keys.Add(k + "|" + variants); }
+        if (TitleArtist.IsMatch(clean)) Add(title);   // в названии уже есть исполнитель
+        var artist = t.Artist != "" ? t.Artist : Regex.Replace(t.Channel ?? "", @"\s*-\s*Topic$", "", RegexOptions.IgnoreCase);
+        if (artist != "" && !title.StartsWith(NormText(artist))) Add(NormText(artist) + " " + title);
+        if (keys.Count == 0) Add(title);
+        return keys;
+    }
+
+    private bool SameTrack(Track a, string vid, HashSet<string> keys) => vid != "" && a.Vid == vid || keys.Overlaps(RepeatKeys(a));
+
+    /// <summary>Причина отказа, если этот трек играет, уже стоит в очереди или играл недавно; иначе null.</summary>
+    public string RepeatReason(Track t) => RepeatReason(t.Vid, RepeatKeys(t));
+
+    public string RepeatReason(string vid, HashSet<string> keys)
+    {
+        if (Current != null && SameTrack(Current, vid, keys)) return "этот трек уже играет";
+        var i = Queue.FindIndex(x => !x.Fallback && SameTrack(x, vid, keys));
+        if (i >= 0) return $"этот трек уже в очереди (№{i + 1})";
+        var mins = Math.Clamp(Cfg.Int("repeat_minutes", 30), 0, 1440);
+        if (mins > 0)
+        {
+            var r = _recent.LastOrDefault(x => x.Order && ActionLog.Now - x.Ts < mins * 60 && (vid != "" && x.Vid == vid || x.Keys.Overlaps(keys)));
+            if (r != null)
+            {
+                var ago = Math.Max(1, (int)Math.Round((ActionLog.Now - r.Ts) / 60));
+                return $"этот трек играл {ago} {L.Pl(ago, "минуту", "минуты", "минут")} назад, закажите его позже";
+            }
+        }
+        return null;
+    }
+
+    public static bool IsRepeatText(string text) => text.StartsWith("этот трек уже") || text.StartsWith("этот трек играл");
+
+    private void RememberPlayed(Track t)
+    {
+        _recent.Add(new RecentPlay(t.Vid, RepeatKeys(t), ActionLog.Now, !t.Fallback && t.Login != ""));
+        _recent.RemoveAll(x => ActionLog.Now - x.Ts > 24 * 3600);
+        if (_recent.Count > 500) _recent.RemoveRange(0, _recent.Count - 500);
+    }
+
+    // ---------- кэш звуковых файлов ----------
+    /// <summary>Готовый файл трека в кэше (не пустой) или null.</summary>
+    private static string CachedFile(string vid)
+    {
+        if (string.IsNullOrEmpty(vid)) return null;
+        try
+        {
+            var name = vid.StartsWith("ym:") ? "ym_" + vid[3..] + ".mp3" : null;
+            if (name != null) { var p = Path.Combine(Config.CacheDir, name); return File.Exists(p) && new FileInfo(p).Length > 0 ? p : null; }
+            return Directory.GetFiles(Config.CacheDir, $"yt_{vid}.*").FirstOrDefault(f => !f.EndsWith(".part") && !f.EndsWith(".ytdl") && new FileInfo(f).Length > 0);
+        }
+        catch { return null; }
+    }
+
+    private static void Touch(string path)
+    {
+        try { File.SetLastWriteTimeUtc(path, DateTime.UtcNow); } catch { }
+    }
+
+    private static string VidOfFile(string name)
+    {
+        var n = Path.GetFileNameWithoutExtension(name);
+        return n.StartsWith("yt_") ? n[3..] : n.StartsWith("ym_") ? "ym:" + n[3..] : "";
+    }
+
+    private static IEnumerable<FileInfo> AudioFiles()
+    {
+        try { return new DirectoryInfo(Config.CacheDir).GetFiles().Where(f => f.Name.StartsWith("yt_") || f.Name.StartsWith("ym_")).ToList(); }
+        catch { return Array.Empty<FileInfo>(); }
+    }
+
+    /// <summary>
+    /// Кэш музыки не больше заданного объёма: сначала уходят давно не игравшие файлы, последними — треки из
+    /// понравившихся и резервного плейлиста. Лимит 0 — как раньше: удаляются файлы старше суток.
+    /// </summary>
+    private void TrimCache()
+    {
+        try
+        {
+            var inUse = new HashSet<string>(Queue.Select(q => q.Vid));
+            if (Current != null) inUse.Add(Current.Vid);
+            foreach (var k in _downloads.Where(p => !p.Value.IsCompleted).Select(p => p.Key)) inUse.Add(k);
+            var files = AudioFiles().Where(f => !inUse.Contains(VidOfFile(f.Name))).ToList();
+            var limitMb = Math.Max(0, Cfg.Int("cache_mb", 2048));
+            if (limitMb == 0)
+            {
+                foreach (var f in files) if (f.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-1)) { try { f.Delete(); } catch { } }
+                return;
+            }
+            var total = AudioFiles().Sum(f => f.Length);
+            var limit = limitMb * 1024L * 1024;
+            if (total <= limit) return;
+            var keep = new HashSet<string>(LikedItems.Select(x => x.Str("vid")).Concat(_fbList.Select(t => t.Vid)));
+            foreach (var f in files.OrderBy(f => keep.Contains(VidOfFile(f.Name)) ? 1 : 0).ThenBy(f => f.LastWriteTimeUtc))
+            {
+                if (total <= limit) break;
+                try { var len = f.Length; f.Delete(); total -= len; _downloads.Remove(VidOfFile(f.Name)); } catch { }
+            }
+        }
+        catch (Exception e) { _hub.Log.Add("skip", "Кэш музыки: " + e.Message); }
+    }
+
+    public (long Used, long Limit) CacheInfo() => (AudioFiles().Sum(f => f.Length), Math.Max(0, Cfg.Int("cache_mb", 2048)) * 1024L * 1024);
+
+    /// <summary>«Очистить»: удаляет все файлы кэша, кроме играющего, стоящих в очереди и скачиваемых.</summary>
+    public long ClearCache()
+    {
+        var inUse = new HashSet<string>(Queue.Select(q => q.Vid));
+        if (Current != null) inUse.Add(Current.Vid);
+        foreach (var k in _downloads.Where(p => !p.Value.IsCompleted).Select(p => p.Key)) inUse.Add(k);
+        long freed = 0;
+        foreach (var f in AudioFiles().Where(f => !inUse.Contains(VidOfFile(f.Name))))
+        {
+            try { var len = f.Length; f.Delete(); freed += len; _downloads.Remove(VidOfFile(f.Name)); } catch { }
+        }
+        _hub.Log.Add("music", $"Кэш музыки очищен: освобождено {freed / 1048576.0:0.#} МБ");
+        return freed;
+    }
+
+    /// <summary>Убирает отменённую загрузку: процесс yt-dlp завершается, недокачанный файл удаляется.</summary>
+    private void ForgetDownload(Track t)
+    {
+        if (t == null || t.Vid == "") return;
+        if (Current?.Vid == t.Vid || Queue.Any(q => q.Vid == t.Vid)) return;   // этот же трек ещё нужен
+        if (_downloads.TryGetValue(t.Vid, out var task) && !task.IsCompleted)
+        {
+            t.Job?.Cancel();
+            _downloads.Remove(t.Vid);
+        }
+    }
 
     // ---------- резервный плейлист ----------
     private List<Track> _fbList = new();
@@ -413,8 +720,17 @@ public sealed class Music
             _fbOrder.AddRange(ids);
         }
         if (_fbOrder.Count == 0) return null;
-        var vid = _fbOrder[0];
-        _fbOrder.RemoveAt(0);
+        // не ставим трек, который играл или был заказан за последние N минут, если в плейлисте есть другие
+        var mins = Math.Clamp(Cfg.Int("repeat_minutes", 30), 0, 1440);
+        var idx = 0;
+        if (mins > 0)
+        {
+            var recent = _recent.Where(x => ActionLog.Now - x.Ts < mins * 60).ToList();
+            var cands = recent.Count == 0 ? -1 : _fbOrder.FindIndex(v => !recent.Any(r => r.Vid == v || r.Keys.Overlaps(RepeatKeys(pool[v]))));
+            if (cands > 0) idx = cands;
+        }
+        var vid = _fbOrder[idx];
+        _fbOrder.RemoveAt(idx);
         var src = pool[vid];
         return new Track
         {
@@ -458,7 +774,7 @@ public sealed class Music
         if (!FallbackOn)
         {
             FallbackStatus = Cfg.Bool("fallback_enabled") ? "нет ссылки и понравившихся треков" : "выключен";
-            if (Current?.Fallback == true) Skip("резервный плейлист выключен");
+            if (Current?.Fallback == true) Skip("резервный плейлист выключен", SkipBy.System);
             return;
         }
         if (Cfg.Str("fallback_url").Trim() != _fbUrl) { _fbList = new(); _fbOrder.Clear(); _fbBad.Clear(); }
@@ -508,45 +824,67 @@ public sealed class Music
 
     public string CancelOwn(string login, string name)
     {
-        var idx = Queue.FindLastIndex(t => t.Login == login);
-        if (idx < 0) return $"{name}, в очереди нет ваших треков (играющий трек отменить нельзя)";
+        var idx = Queue.FindLastIndex(t => t.Login == login && !t.Fallback);
+        if (idx < 0)
+            return Current != null && Current.Login == login && Current.Pay != ""
+                ? $"{name}, играющий трек отменить нельзя. Баллы за заказ не возвращаются"
+                : $"{name}, в очереди нет ваших треков (играющий трек отменить нельзя)";
         var t = Queue[idx];
         Queue.RemoveAt(idx);
+        ForgetDownload(t);
         _hub.Log.Add("music", $"{login} отменил свой заказ «{t.Title}»");
-        var paid = t.Redemption != null ? " Баллы за заказ не возвращаются." : "";
+        var paid = RefundPay(t, "заказ отменён", false) ? " Баллы возвращены." : "";
         return $"{name}, «{Short(t.Title, 50)}» убран из очереди.{paid}";
     }
 
-    private static void CleanupCache()
-    {
-        try
-        {
-            foreach (var f in new DirectoryInfo(Config.CacheDir).GetFiles())
-                if (f.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-1)) f.Delete();
-        }
-        catch { }
-    }
-
+    /// <summary>Скачивает трек (если его ещё нет в кэше) и запускает измерение громкости в фоне.</summary>
     private async Task<string> DownloadAudio(Track t)
     {
+        var sw = Stopwatch.StartNew();
         var p = await DownloadRaw(t);
-        await Measure(t.Vid, p);
+        AfterDownload(t, p, t.Job != null && t.Job.DownloadSec > 0 ? t.Job.DownloadSec : sw.Elapsed.TotalSeconds);
         return p;
+    }
+
+    /// <summary>Загрузка, начатая ещё при заказе (сведения и звук одним запуском yt-dlp).</summary>
+    private async Task<string> FromJob(Track t, YtJob job)
+    {
+        var sw = Stopwatch.StartNew();
+        var p = await job.File;
+        AfterDownload(t, p, job.DownloadSec > 0 ? job.DownloadSec : sw.Elapsed.TotalSeconds);
+        return p;
+    }
+
+    private void AfterDownload(Track t, string path, double sec)
+    {
+        Touch(path);
+        if (t.Timing != null && t.Timing.Download < 0) t.Timing.Download = sec;
+        _ = StartMeasure(t.Vid, path);
+        TrimCache();
     }
 
     private async Task<string> DownloadRaw(Track t)
     {
         Directory.CreateDirectory(Config.CacheDir);
+        var cached = CachedFile(t.Vid);
+        if (cached != null)
+        {
+            if (t.Timing != null) { t.Timing.Download = 0; t.Timing.Cache += (t.Timing.Cache == "" ? "" : ", ") + "файл"; }
+            return cached;
+        }
         if (t.Vid.StartsWith("ym:"))
         {
             var path = Path.Combine(Config.CacheDir, "ym_" + t.Vid[3..] + ".mp3");
-            if (File.Exists(path) && new FileInfo(path).Length > 0) return path;
             var url = await _hub.Yandex.DirectLink(t.Vid[3..]);
             var bytes = await _hub.Http.GetByteArrayAsync(url);
-            await File.WriteAllBytesAsync(path, bytes);
+            await File.WriteAllBytesAsync(path + ".tmp", bytes);
+            File.Move(path + ".tmp", path, true);
             return path;
         }
-        return await _hub.YtDlp.DownloadAudio(t.Vid, Config.CacheDir);
+        // сведения и звук — одним запуском yt-dlp (раньше сведения запрашивались ещё раз перед скачиванием)
+        var job = _hub.YtDlp.Fetch(t.PageUrl != "" ? t.PageUrl : "https://www.youtube.com/watch?v=" + t.Vid, t.Source, Config.CacheDir);
+        t.Job = job;
+        return await job.File;
     }
 
     private async Task PlayNext()
@@ -555,55 +893,123 @@ public sealed class Music
         Queue.RemoveAt(0);
         Current = t;
         Votes.Clear();
-        string path;
+        var path = await LoadForPlay(t);
+        if (path == null || Current != t) return;
+        var ok = TryStart(t, path, out var err);
+        if (!ok)
+        {
+            // повреждённый файл в кэше не должен ломать заказ: удаляем и скачиваем заново (один раз)
+            _hub.Log.Add("skip", $"Файл «{t.Title}» не открылся ({err}) — скачиваю заново");
+            try { File.Delete(path); } catch { }
+            _downloads.Remove(t.Vid);
+            t.Job = null;
+            path = await LoadForPlay(t);
+            if (path == null || Current != t) return;
+            ok = TryStart(t, path, out err);
+        }
+        if (!ok)
+        {
+            _hub.Log.Error($"Плеер не смог открыть «{t.Title}»: файл повреждён или формат не поддерживается ({err})");
+            Current = null;
+            Wake();
+            RefundPay(t, "не удалось открыть звук этого трека", false);
+            await TellViewer(t, "не удалось открыть звук этого трека");
+            return;
+        }
+        try
+        {
+            var url = t.PageUrl != "" ? t.PageUrl : t.Vid.StartsWith("ym:") ? "" : $"https://www.youtube.com/watch?v={t.Vid}";
+            _hub.Stats.Played(_hub.Stream.Key, t.Vid, t.Title, url, t.Source, t.Requester, t.Login, t.Duration, t.Fallback);
+        }
+        catch (Exception e) { _hub.Log.Add("skip", "История треков: " + e.Message); }
+        RememberPlayed(t);
+        _hub.Log.Add("music", $"Играет: {t.Title}" + (t.Requester != "" ? $" (заказ {t.Requester})" : ""));
+        ShowToast($"♪ {t.Title}");
+        LogTiming(t);
+        Prefetch();
+    }
+
+    /// <summary>Загрузка трека перед стартом. null — не получилось (с баллами и сообщением зрителю уже разобрались) или трек пропущен.</summary>
+    private async Task<string> LoadForPlay(Track t)
+    {
         Loading = true;
         try
         {
             if (!t.Vid.StartsWith("ym:") && _hub.YtDlp.Installing)
                 _hub.Log.Add("music", "Готовлю плеер к первому запуску (загрузка yt-dlp)…");
-            path = await GetAudio(t);
+            return await GetAudio(t);
         }
         catch (Exception e)
         {
             _downloads.Remove(t.Vid);
+            if (Current != t) return null;   // пропущен во время загрузки — загрузка отменена, баллы уже обработаны
             var reason = Reason(e);
             // YouTube не отдал трек — пробуем найти этот же трек в Яндекс Музыке
-            path = Current == t ? await YandexInstead(t, reason) : null;
-            if (path == null)
-            {
-                Loading = false;
-                _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {reason}");
-                if (Current == t) Current = null;
-                Wake();
-                await TellViewer(t, reason);
-                return;
-            }
+            var path = await YandexInstead(t, reason);
+            if (path != null) return path;
+            Loading = false;
+            _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {reason}");
+            if (Current == t) Current = null;
+            Wake();
+            RefundPay(t, reason, false);
+            await TellViewer(t, reason);
+            return null;
         }
         finally { Loading = false; }
-        if (Current != t) return;   // пропущен во время загрузки
+    }
+
+    private bool TryStart(Track t, string path, out string error)
+    {
+        error = "";
         try
         {
             var startAt = t.ResumeAt > 3 && (t.Duration <= 0 || t.ResumeAt < t.Duration - 5) ? t.ResumeAt - 2 : 0;
-            t.ResumeAt = 0;
+            var sw = Stopwatch.StartNew();
             StartPlayback(t, path, startAt);
-            try
-            {
-                var url = t.PageUrl != "" ? t.PageUrl : t.Vid.StartsWith("ym:") ? "" : $"https://www.youtube.com/watch?v={t.Vid}";
-                _hub.Stats.Played(_hub.Stream.Key, t.Vid, t.Title, url, t.Source, t.Requester, t.Login, t.Duration, t.Fallback);
-            }
-            catch (Exception e) { _hub.Log.Add("skip", "История треков: " + e.Message); }
+            t.ResumeAt = 0;
+            if (t.Timing != null && t.Timing.Player < 0) t.Timing.Player = sw.Elapsed.TotalSeconds;
+            return true;
         }
-        catch (Exception e)
+        catch (Exception e) { error = e.Message; return false; }
+    }
+
+    // ---------- замеры времени заказа ----------
+    private readonly List<(string Stream, double Sec)> _startTimes = new();
+    private static readonly System.Globalization.CultureInfo Ru = System.Globalization.CultureInfo.GetCultureInfo("ru-RU");
+    private static string Sec(double x) => x.ToString("0.0", Ru) + " с";
+
+    /// <summary>Строка в журнал (тип «Диагностика»): сколько занял каждый шаг заказа до звука.</summary>
+    private void LogTiming(Track t)
+    {
+        var tm = t.Timing;
+        if (tm == null || tm.Logged) return;
+        tm.Logged = true;
+        tm.Total = tm.Sw.Elapsed.TotalSeconds;
+        tm.Loudness = 0;   // старт не ждёт измерения громкости
+        var parts = new List<string>();
+        if (tm.Priority >= 0) parts.Add("приоритет " + Sec(tm.Priority));
+        if (tm.Search >= 0) parts.Add("поиск " + Sec(tm.Search));
+        if (tm.Info >= 0) parts.Add("сведения " + Sec(tm.Info));
+        if (tm.Download >= 0) parts.Add("загрузка " + Sec(tm.Download));
+        parts.Add("громкость " + Sec(tm.Loudness) + (_loud.ContainsKey(t.Vid) ? "" : " (в фоне)"));
+        if (tm.Player >= 0) parts.Add("плеер " + Sec(tm.Player));
+        parts.Add("всего " + Sec(tm.Total));
+        var cache = tm.Cache != "" ? $" (из кэша: {tm.Cache})" : "";
+        var wait = tm.Immediate ? "" : " (ждал своей очереди)";
+        _hub.Log.Add("debug", $"Заказ «{Short(t.Title, 60)}»: {string.Join(" · ", parts)}{cache}{wait}");
+        if (tm.Immediate)
         {
-            _hub.Log.Error($"Плеер не смог открыть «{t.Title}»: файл повреждён или формат не поддерживается ({e.Message})");
-            Current = null;
-            Wake();
-            await TellViewer(t, "не удалось открыть звук этого трека");
-            return;
+            _startTimes.Add((_hub.Stream.Key, tm.Total));
+            if (_startTimes.Count > 500) _startTimes.RemoveAt(0);
         }
-        _hub.Log.Add("music", $"Играет: {t.Title}" + (t.Requester != "" ? $" (заказ {t.Requester})" : ""));
-        ShowToast($"♪ {t.Title}");
-        Prefetch();
+    }
+
+    /// <summary>Среднее время «заказ → звук» за текущий стрим (только заказы в пустую очередь).</summary>
+    public (double Avg, int Count) AvgStart()
+    {
+        var key = _hub.Stream.Key;
+        var list = _startTimes.Where(x => x.Stream == key).Select(x => x.Sec).ToList();
+        return list.Count == 0 ? (0, 0) : (Math.Round(list.Average(), 1), list.Count);
     }
 
     // ---------- запасной источник: Яндекс Музыка ----------
@@ -658,7 +1064,8 @@ public sealed class Music
     {
         if (t.Login == "" || !Cfg.Bool("chat_errors", true)) return;
         var title = t.Title.Length > 80 ? t.Title[..80] + "…" : t.Title;
-        try { await _hub.Twitch.SendChat($"@{t.Requester}, не удалось включить «{title}»: {reason}. Трек пропущен"); }
+        var refund = t.Pay == "refunded" ? ". Баллы возвращены" : "";
+        try { await _hub.Twitch.SendChat($"@{t.Requester}, не удалось включить «{title}»: {reason}. Трек пропущен{refund}"); }
         catch (Exception e) { _hub.Log.Add("skip", $"Не удалось написать в чат: {e.Message}"); }
     }
 
@@ -744,6 +1151,7 @@ public sealed class Music
         catch (Exception e)
         {
             _hub.Log.Error($"Плеер не смог открыть «{t.Title}»: {e.Message}");
+            if (_obsPos < PaySeconds) RefundPay(t, "не удалось продолжить трек"); else ConfirmPay(t);
             Current = null;
             Wake();
         }
@@ -779,6 +1187,8 @@ public sealed class Music
             {
                 var cf = CrossfadeSec;
                 var cur = Current;
+                // баллы за заказ списываются, когда трек отыграл первые 30 секунд
+                if (cur is { Pay: "pending" } && !Loading && Position >= PaySeconds) ConfirmPay(cur);
                 if (cf <= 0 || cur == null || Loading || IsPaused) continue;
                 var gen = _obsActive ? _obsGen : Player.Gen;
                 if (gen == _xfadeGen) continue;
@@ -797,17 +1207,40 @@ public sealed class Music
                 var next = Queue[0];
                 if (!_downloads.TryGetValue(next.Vid, out var task) || !task.IsCompletedSuccessfully) continue;
                 _xfadeGen = gen;
-                _nextFade = cf;
-                if (_obsActive) { _obsActive = false; OnEnd(_obsGen, ""); }
-                else
-                {
-                    Player.FadeOut(cf);
-                    Current = null;
-                    Wake();
-                }
+                ConfirmPay(cur);   // трек доигран (короткий трек — до 30 секунд)
+                HandOff(cf);
             }
             catch (Exception e) { _hub.Log.Add("skip", "Плавный переход: " + e.Message); }
         }
+    }
+
+    /// <summary>Текущий трек плавно уступает место следующему (он уже скачан): кроссфейд за fade секунд.</summary>
+    private void HandOff(double fade)
+    {
+        _nextFade = fade;
+        if (_obsActive) { _obsActive = false; OnEnd(_obsGen, ""); }
+        else
+        {
+            Player.FadeOut(fade);
+            Current = null;
+            Wake();
+        }
+    }
+
+    /// <summary>
+    /// Пришёл заказ, а играет резервный трек: фон продолжает звучать, пока заказ не скачан, затем плавный переход.
+    /// Не готов за 20 секунд — фон останавливается, как раньше. Загрузка не удалась — фон просто играет дальше.
+    /// </summary>
+    private async Task InterruptFallbackWhenReady(Track order, Track fb)
+    {
+        var dl = GetAudio(order);
+        var ready = await Task.WhenAny(dl, Task.Delay(TimeSpan.FromSeconds(20))) == dl;
+        if (Current != fb || Queue.Count == 0 || Queue[0].Fallback) return;   // фон уже закончился или заказ убрали
+        if (ready && !dl.IsCompletedSuccessfully) return;
+        if (!ready) { Skip("заказ не скачался за 20 секунд", SkipBy.System); return; }
+        _xfadeGen = _obsActive ? _obsGen : Player.Gen;
+        _hub.Log.Add("music", $"Резервный трек уступает заказу: {Queue[0].Title}");
+        HandOff(CrossfadeSec > 0 ? CrossfadeSec : 0.6);
     }
 
     /// <summary>Опрос от OBS-страницы: она сообщает позицию/окончание/ошибку и получает, что играть.</summary>
@@ -841,6 +1274,7 @@ public sealed class Music
             paused = active && _obsPaused,
             gain = Math.Round(gainLin, 4),
             fade = Math.Round(_obsFade, 2),
+            ramp = ActionLog.Now < _obsRampUntil ? 1.5 : 0,   // громкость трека измерена после старта — менять плавно
         };
     }
 
@@ -848,19 +1282,25 @@ public sealed class Music
     {
         if (gen != Player.Gen) return;
         if (error != "") _hub.Log.Error($"Плеер: воспроизведение прервалось ({error})");
+        if (error == "") ConfirmPay(Current);   // доиграл до конца (короткий трек — раньше 30 секунд)
+        else if (Current?.Pay == "pending" && Position < PaySeconds) RefundPay(Current, "воспроизведение прервалось");
         Current = null;
         Wake();
     }
 
     // ---------- управление ----------
-    public bool Skip(string reason = "")
+    /// <summary>Пропуск текущего трека. by — кто пропустил: от этого зависит, вернутся ли баллы за заказ.</summary>
+    public bool Skip(string reason = "", SkipBy by = SkipBy.Staff)
     {
         if (Current == null) return false;
         var title = Current.Title;
+        var t = Current;
+        SettleOnStop(t, by);
         if (CrossfadeSec > 0 && !_obsActive) Player.FadeOut(0.6); else Player.Stop();   // пропуск — короткое затухание без щелчка
         _nextFade = CrossfadeSec > 0 ? 0.6 : 0;
         _obsActive = false;
         Current = null;
+        if (Loading) ForgetDownload(t);   // пропущен, пока скачивался — останавливаем загрузку
         _hub.Log.Add("music", $"Пропущен: {title}" + (reason != "" ? $" ({reason})" : ""));
         Wake();
         return true;
@@ -887,11 +1327,24 @@ public sealed class Music
         ApplySettings();
     }
 
+    /// <summary>Стример или модератор убрал трек из очереди: загрузка останавливается, баллы возвращаются.</summary>
     public Track Remove(string id)
     {
         var t = Queue.FirstOrDefault(x => x.Id == id);
-        if (t != null) Queue.Remove(t);
+        if (t == null) return null;
+        Queue.Remove(t);
+        ForgetDownload(t);
+        RefundPay(t, "трек убран из очереди");
         return t;
+    }
+
+    /// <summary>Очистить очередь заказов: баллы за все неподтверждённые заказы возвращаются одним сообщением.</summary>
+    public int ClearQueue()
+    {
+        var removed = Queue.ToList();
+        Queue.Clear();
+        foreach (var t in removed) ForgetDownload(t);
+        return RefundMany(removed, "очередь очищена");
     }
 
     public void Move(string id, int delta)
@@ -910,7 +1363,8 @@ public sealed class Music
         if (!Cfg.Bool("skip_vote_enabled", true) && !msg.IsMod) return "Голосование за пропуск выключено";
         if (msg.IsMod || (cur.Login != "" && msg.Login == cur.Login))
         {
-            Skip($"!skip от {msg.Login}");
+            // модератор — как стример (ранний пропуск возвращает баллы); заказчик пропускает свой трек — баллы списываются
+            Skip($"!skip от {msg.Login}", cur.Login != "" && msg.Login == cur.Login ? SkipBy.Requester : SkipBy.Staff);
             _hub.Stats.Music(_hub.Stream.Key, "vote_skip", "ok", msg.Login, msg.Name, cur.Title);
             return $"Трек «{cur.Title}» пропущен";
         }
@@ -919,7 +1373,7 @@ public sealed class Music
         Votes.Add(msg.Login);
         if (Votes.Count >= need)
         {
-            Skip("голосование");
+            Skip("голосование", SkipBy.Vote);
             _hub.Stats.Music(_hub.Stream.Key, "vote_skip", "ok", msg.Login, msg.Name, cur.Title);
             return $"Голосование: трек «{cur.Title}» пропущен";
         }
@@ -955,14 +1409,150 @@ public sealed class Music
         return new Track { Vid = "ym:" + y.Id, Title = y.Title, PageUrl = y.Url, Duration = y.Duration, Source = source, Artist = y.Artists, Cover = y.Cover };
     }
 
-    private Task<Track> YtByUrl(string url, string source) => _hub.YtDlp.ByUrl(url, source);
-
-    private Task<Track> YtSearch(string q, string source, long minViews) => _hub.YtDlp.Search(q, source, minViews);
-
     private static string Short(string s) => s.Length > 120 ? s[..120] : s;
     private static string Short(string s, int n) => s.Length > n ? s[..(n - 1)] + "…" : s;
 
-    private async Task<Track> SearchAny(string q, string source, long minViews)
+    /// <summary>Найденный трек и, если она уже идёт, загрузка его звука (сведения и звук одним запуском yt-dlp).</summary>
+    private sealed class Resolved
+    {
+        public Track Track;
+        public YtJob Job;                 // загрузка, начатая сразу после поиска (может быть null)
+        public bool Speculative;          // занят один из двух слотов опережающей загрузки
+        public string QueryKey = "";      // запрос → ролик: запомнить, если заказ принят
+        public SemaphoreSlim Slots;
+        public void Release()
+        {
+            if (!Speculative) return;
+            Speculative = false;
+            Slots.Release();
+        }
+        /// <summary>Заказ отклонён: загрузка прерывается, недокачанный файл удаляется.</summary>
+        public void Drop() { Job?.Cancel(); Release(); }
+    }
+
+    private static readonly Regex YtIdInUrl = new(@"(?:[?&]v=|youtu\.be/|/shorts/|/live/|/embed/)([A-Za-z0-9_-]{11})", RegexOptions.Compiled);
+
+    private static string NormQuery(string q) => Regex.Replace((q ?? "").Trim().ToLowerInvariant(), @"\s+", " ");
+
+    private void RememberQuery(string key, string vid)
+    {
+        if (key == "" || vid == "") return;
+        if (!_qCache.ContainsKey(key)) _qOrder.AddLast(key);
+        _qCache[key] = vid;
+        while (_qOrder.Count > 500) { _qCache.Remove(_qOrder.First.Value); _qOrder.RemoveFirst(); }
+    }
+
+    private void RememberInfo(Track t)
+    {
+        if (t.Vid == "" || t.Vid.StartsWith("ym:")) return;
+        _infoCache[t.Vid] = (t.Clone(), ActionLog.Now);
+        if (_infoCache.Count > 500)
+            foreach (var k in _infoCache.OrderBy(p => p.Value.Ts).Take(_infoCache.Count - 500).Select(p => p.Key).ToList()) _infoCache.Remove(k);
+    }
+
+    private Track CachedInfo(string vid) =>
+        vid != "" && _infoCache.TryGetValue(vid, out var c) && ActionLog.Now - c.Ts < 6 * 3600 ? c.T.Clone() : null;
+
+    /// <summary>
+    /// Сведения о ролике YouTube и сразу его загрузка. Сведения из кэша (6 ч) — без обращения к YouTube;
+    /// файл в кэше — без загрузки. Загрузка начинается до проверок; если заказ отклонят, её прервут.
+    /// </summary>
+    private async Task<Resolved> YtById(string vid, string url, string source, OrderTiming tm, Track flat = null)
+    {
+        var info = CachedInfo(vid);
+        var hasFile = CachedFile(vid) != null;
+        if (info != null)
+        {
+            info.Source = source;
+            tm.Info = 0; tm.Cache += (tm.Cache == "" ? "" : ", ") + "сведения";
+            if (hasFile) return new Resolved { Track = info };
+        }
+        // свободен слот опережающей загрузки — качаем звук тем же запуском, что и сведения
+        var spec = !hasFile && _speculative.Wait(0);
+        if (info != null && !spec) return new Resolved { Track = info };   // скачается обычным порядком, когда подойдёт очередь
+        var job = _hub.YtDlp.Fetch(url, source, Config.CacheDir, download: spec);
+        // сведения уже есть — ждать их от yt-dlp не нужно, нужен только звук
+        if (info != null) return new Resolved { Track = info, Job = job, Speculative = true, Slots = _speculative };
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var got = await job.Info;
+            if (info == null)
+            {
+                info = got;
+                tm.Info = sw.Elapsed.TotalSeconds;
+                tm.Launch = job.LaunchSec;
+                if (flat != null && info.Views < 0) info.Views = flat.Views;
+                RememberInfo(info);
+            }
+        }
+        catch
+        {
+            job.Cancel();
+            if (spec) _speculative.Release();
+            throw;
+        }
+        return new Resolved { Track = info, Job = spec ? job : null, Speculative = spec, Slots = _speculative };
+    }
+
+    /// <summary>Проверки по данным быстрого поиска — до загрузки, чтобы не качать заведомо неподходящее. Тексты — как у полной проверки.</summary>
+    private string PreCheck(Track c, long minViews)
+    {
+        var maxSec = Cfg.Int("max_duration_min", 8) * 60;
+        if (c.Duration > maxSec) return $"трек длиннее {Cfg.Int("max_duration_min")} мин";
+        if (Banned(c.Title) != null) return "запрещённое слово в названии трека";
+        if (minViews > 0 && c.Views >= 0 && c.Views < minViews) return $"у видео меньше {YtDlp.FormatViews(minViews)} просмотров";
+        if (TrackBlocked(c)) return "этот трек заблокирован";
+        return BlockedBy(c);
+    }
+
+    private async Task<Resolved> YtSearchOrder(string q, string source, long minViews, OrderTiming tm, bool manual)
+    {
+        var key = NormQuery(q);
+        // этот запрос уже заказывали — сразу к ролику, без поиска
+        if (_qCache.TryGetValue(key, out var known))
+        {
+            var url = "https://www.youtube.com/watch?v=" + known;
+            if (!manual)
+            {
+                var rep = RepeatReason(known, CachedInfo(known) is { } ci ? RepeatKeys(ci) : new HashSet<string>());
+                if (rep != null) throw new ResolveException(rep);
+            }
+            try
+            {
+                tm.Search = 0; tm.Cache += (tm.Cache == "" ? "" : ", ") + "запрос";
+                var r = await YtById(known, url, source, tm);
+                r.QueryKey = key;
+                return r;
+            }
+            catch (ResolveException) { _qCache.Remove(key); _qOrder.Remove(key); tm.Search = -1; }
+        }
+        var sw = Stopwatch.StartNew();
+        var cands = await _hub.YtDlp.SearchFlat(q, source, minViews);
+        tm.Search = sw.Elapsed.TotalSeconds;
+        ResolveException last = null;
+        foreach (var c in cands.Take(3))
+        {
+            if (!manual)
+            {
+                var pre = PreCheck(c, minViews) ?? RepeatReason(c);
+                if (pre != null) throw new ResolveException(pre);
+            }
+            try
+            {
+                var r = await YtById(c.Vid, c.PageUrl, source, tm, c);
+                r.QueryKey = key;
+                return r;
+            }
+            catch (ResolveException e) when (YtDlp.CandidateError(e))
+            {
+                last = e;   // это видео недоступно (18+, удалено…) — загрузка прервана, берём следующее
+            }
+        }
+        throw new ResolveException("подходящие видео недоступны: " + last?.Message);
+    }
+
+    private async Task<Resolved> SearchAny(string q, string source, long minViews, OrderTiming tm, bool manual)
     {
         var order = SearchOrder();
         if (order.Count == 0) throw new ResolveException("поиск по названию отключён, пришлите ссылку");
@@ -971,10 +1561,19 @@ public sealed class Music
         {
             try
             {
-                return s == "yandex" ? FromYandex(await _hub.Yandex.Search(q), source) : await YtSearch(q, source, minViews);
+                if (s == "yandex")
+                {
+                    var sw = Stopwatch.StartNew();
+                    var y = FromYandex(await _hub.Yandex.Search(q), source);
+                    tm.Search = sw.Elapsed.TotalSeconds;
+                    return new Resolved { Track = y };
+                }
+                return await YtSearchOrder(q, source, minViews, tm, manual);
             }
             catch (Exception e)   // пробуем следующий источник
             {
+                // отказ по правилам (длительность, повтор…) — не ошибка источника, другой источник не нужен
+                if (e is ResolveException re && s == "youtube" && IsRuleReject(re.Message)) throw;
                 var why = e switch
                 {
                     YandexException or ResolveException => e.Message,
@@ -989,31 +1588,52 @@ public sealed class Music
         throw new ResolveException(string.Join("; ", errors));
     }
 
+    /// <summary>Отказ по правилам заказа (а не ошибка поиска): его возвращаем зрителю как есть.</summary>
+    private static bool IsRuleReject(string m) =>
+        IsRepeatText(m) || m.StartsWith("трек длиннее") || m.StartsWith("запрещённое слово") || m.StartsWith("у видео меньше")
+        || m == "этот трек заблокирован" || m.EndsWith("в чёрном списке");
+
+    /// <summary>Находит трек по ссылке или названию (для панели и проверок, без заказа).</summary>
     public async Task<Track> Resolve(string query, long minViews = 0)
     {
-        if (ResolveOverride != null) return await ResolveOverride(query);
+        var r = await ResolveOrder(query, minViews, new OrderTiming(), true);
+        r.Drop();
+        return r.Track;
+    }
+
+    private async Task<Resolved> ResolveOrder(string query, long minViews, OrderTiming tm, bool manual)
+    {
+        if (ResolveOverride != null) return new Resolved { Track = await ResolveOverride(query) };
         var q = query.Trim();
         var src = Cfg.Obj("sources");
         if (SpotifyRe.IsMatch(q))
         {
             if (!src.Bool("spotify")) throw new ResolveException("ссылки Spotify отключены");
-            return await SearchAny(await SpotifyQuery(q), "spotify", minViews);
+            return await SearchAny(await SpotifyQuery(q), "spotify", minViews, tm, manual);
         }
         var ym = YandexMusic.TrackRe.Match(q);
         if (ym.Success)
         {
             if (!src.Bool("yandex")) throw new ResolveException("ссылки Яндекс Музыки отключены");
-            try { return FromYandex(await _hub.Yandex.Track(ym.Groups[1].Value), "yandex"); }
+            try { return new Resolved { Track = FromYandex(await _hub.Yandex.Track(ym.Groups[1].Value), "yandex") }; }
             catch (ResolveException) { throw; }
             catch (Exception e) { throw new ResolveException($"Яндекс Музыка: {e.Message}"); }
         }
         if (YtRe.IsMatch(q))
         {
             if (!src.Bool("youtube")) throw new ResolveException("ссылки YouTube отключены");
-            return await YtByUrl(q, "youtube");
+            var m = YtIdInUrl.Match(q);
+            var vid = m.Success ? m.Groups[1].Value : "";
+            // повтор проверяем сразу по ID из ссылки — до обращения к YouTube
+            if (!manual && vid != "")
+            {
+                var rep = RepeatReason(vid, CachedInfo(vid) is { } ci ? RepeatKeys(ci) : new HashSet<string>());
+                if (rep != null) throw new ResolveException(rep);
+            }
+            return await YtById(vid, q, "youtube", tm);
         }
         if (UrlRe.IsMatch(q)) throw new ResolveException("поддерживаются ссылки YouTube, Яндекс Музыки, Spotify или название трека");
-        return await SearchAny(q, "search", minViews);
+        return await SearchAny(q, "search", minViews, tm, manual);
     }
 
     private string Banned(string text)
@@ -1022,8 +1642,29 @@ public sealed class Music
         return Cfg.StrList("banned_words").FirstOrDefault(w => w != "" && low.Contains(w.ToLowerInvariant()));
     }
 
+    private bool TrackBlocked(Track t)
+    {
+        var bt = Cfg.StrList("blocked_tracks").Select(b => b.ToLowerInvariant()).ToList();
+        return bt.Contains(t.Vid.ToLowerInvariant()) || bt.Contains(t.Title.ToLowerInvariant()) || bt.Contains(t.PageUrl.ToLowerInvariant());
+    }
+
+    /// <summary>Проверки найденного трека — те же, что и раньше, плюс защита от повторов (последней).</summary>
+    private string CheckTrack(Track track, long minViews)
+    {
+        var maxSec = Cfg.Int("max_duration_min", 8) * 60;
+        if (track.Duration <= 0) return "не удалось определить длительность";
+        if (track.Duration > maxSec) return $"трек длиннее {Cfg.Int("max_duration_min")} мин";
+        if (Banned(track.Title) != null) return "запрещённое слово в названии трека";
+        // Фильтр просмотров — только для YouTube (у Яндекс Музыки просмотров нет)
+        if (minViews > 0 && !track.Vid.StartsWith("ym:") && track.Views >= 0 && track.Views < minViews)
+            return $"у видео меньше {YtDlp.FormatViews(minViews)} просмотров";
+        if (TrackBlocked(track)) return "этот трек заблокирован";
+        return BlockedBy(track) ?? RepeatReason(track);
+    }
+
     public async Task<(bool Ok, string Text, Track Track)> Request(string query, string name, string login,
-        int priority = 0, bool manual = false, (string, string, int)? redemption = null)
+        int priority = 0, bool manual = false, (string, string, int)? redemption = null,
+        Task<int> priorityTask = null, OrderTiming timing = null)
     {
         if (string.IsNullOrWhiteSpace(query)) return (false, "пустой заказ: укажите ссылку или название", null);
         if (!manual)
@@ -1036,40 +1677,171 @@ public sealed class Music
                 return (false, $"лимит заказов от зрителя: {Cfg.Int("per_user_limit")}", null);
         }
         var minViews = manual ? 0L : (long)Cfg.Num("min_views", 0);
-        Track track;
-        try { track = await Resolve(query, minViews); }
+        var tm = timing ?? new OrderTiming();
+        Resolved r;
+        try { r = await ResolveOrder(query, minViews, tm, manual); }
         catch (ResolveException e) { return (false, e.Message, null); }
         catch (Exception e) { return (false, $"не удалось найти трек: {YtDlp.Explain(e.Message)}", null); }
+        var track = r.Track;
         if (!manual)
         {
-            var maxSec = Cfg.Int("max_duration_min", 8) * 60;
-            if (track.Duration <= 0) return (false, "не удалось определить длительность", null);
-            if (track.Duration > maxSec) return (false, $"трек длиннее {Cfg.Int("max_duration_min")} мин", null);
-            if (Banned(track.Title) != null) return (false, "запрещённое слово в названии трека", null);
-            // Фильтр просмотров — только для YouTube (у Яндекс Музыки просмотров нет)
-            if (minViews > 0 && !track.Vid.StartsWith("ym:") && track.Views >= 0 && track.Views < minViews)
-                return (false, $"у видео меньше {YtDlp.FormatViews(minViews)} просмотров", null);
-            var bt = Cfg.StrList("blocked_tracks").Select(b => b.ToLowerInvariant()).ToList();
-            if (bt.Contains(track.Vid.ToLowerInvariant()) || bt.Contains(track.Title.ToLowerInvariant()) ||
-                bt.Contains(track.PageUrl.ToLowerInvariant()))
-                return (false, "этот трек заблокирован", null);
-            var why = BlockedBy(track);
-            if (why != null) return (false, why, null);
+            var why = CheckTrack(track, minViews);
+            if (why != null) { r.Drop(); return (false, why, null); }
         }
+        // приоритет (VIP, подписка) проверялся параллельно с поиском
+        if (priorityTask != null)
+        {
+            try { priority = await priorityTask; } catch { priority = 0; }
+        }
+        // пока искали — этот же трек мог успеть заказать другой зритель
+        if (!manual && RepeatReason(track) is { } rep2) { r.Drop(); return (false, rep2, null); }
         track.Requester = name;
         track.Login = login;
         track.Priority = priority;
         track.Redemption = redemption;
+        track.Pay = redemption != null ? "pending" : "";   // баллы спишутся, когда трек заиграет
+        track.Timing = tm;
+        track.Job = r.Job;
+        tm.Immediate = (Current == null || Current.Fallback) && !Queue.Any(q => !q.Fallback);
         Queue.RemoveAll(q => q.Fallback);   // заранее выбранный резервный трек уступает заказу
         var idx = Queue.FindIndex(x => x.Priority < priority);
         if (idx < 0) idx = Queue.Count;
         Queue.Insert(idx, track);
-        // заказ важнее резервного плейлиста: прерываем фоновый трек
-        if (Current?.Fallback == true && Cfg.Bool("fallback_interrupt", true)) Skip("пришёл заказ");
+        if (r.Job != null) _downloads[track.Vid] = FromJob(track, r.Job);
+        r.Release();
+        RememberQuery(r.QueryKey, track.Vid.StartsWith("ym:") ? "" : track.Vid);
+        // заказ важнее резервного плейлиста: фон доигрывает, пока заказ не скачан, затем плавный переход
+        if (Current?.Fallback == true && Cfg.Bool("fallback_interrupt", true) && idx == 0)
+            _ = InterruptFallbackWhenReady(track, Current);
         Wake();
         Prefetch();
         if (!manual) PlayChime();
         return (true, $"«{track.Title}» добавлен в очередь (позиция {idx + 1})", track);
+    }
+
+    // ---------- проверка скорости заказа ----------
+    // Прогоняет набор заказов двумя способами — прежним (до 2.7.1) и новым — и печатает время каждого шага.
+    // Файлы скачиваются во временную папку и удаляются; очередь, кэш и баллы не затрагиваются.
+    private sealed class BenchPass { public double Search = -1, Info = -1, Download = -1, Loudness = -1, Total = -1; public string Error = ""; }
+    private sealed class BenchRow { public string Query = ""; public BenchPass Old = new(), New = new(); }
+    private sealed class BenchRun { public bool Running; public int Done, Total; public double Launch = -1; public string Text = "", Error = ""; public List<BenchRow> Rows = new(); }
+    private BenchRun _bench;
+
+    public object BenchState()
+    {
+        var b = _bench;
+        if (b == null) return null;
+        object P(BenchPass p) => new { search = R(p.Search), info = R(p.Info), download = R(p.Download), loudness = R(p.Loudness), total = R(p.Total), error = p.Error };
+        return new
+        {
+            running = b.Running, done = b.Done, total = b.Total, launch = R(b.Launch), text = b.Text, error = b.Error,
+            rows = b.Rows.Select(r => new { query = r.Query, old = P(r.Old), @new = P(r.New) }).ToList(),
+        };
+    }
+
+    private static double R(double x) => x < 0 ? -1 : Math.Round(x, 2);
+
+    public void StartBench(List<string> items)
+    {
+        if (_bench?.Running == true) throw new UserError("Проверка уже идёт");
+        items = items.Select(x => x.Trim()).Where(x => x != "").Take(20).ToList();
+        if (items.Count == 0) throw new UserError("Добавьте хотя бы один заказ: название или ссылку YouTube");
+        _bench = new BenchRun { Running = true, Total = items.Count };
+        _ = RunBench(items, _bench);
+    }
+
+    private async Task RunBench(List<string> items, BenchRun b)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "Beg1nnnerOS-bench");
+        try
+        {
+            try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { }
+            b.Launch = await _hub.YtDlp.LaunchTime();
+            for (var i = 0; i < items.Count; i++)
+            {
+                var row = new BenchRow { Query = items[i] };
+                b.Rows.Add(row);
+                // порядок способов чередуется, чтобы ни один не выигрывал за счёт «прогретого» YouTube
+                foreach (var pass in i % 2 == 0 ? new[] { "new", "old" } : new[] { "old", "new" })
+                {
+                    var dir = Path.Combine(root, pass + i);
+                    Directory.CreateDirectory(dir);
+                    var p = pass == "old" ? row.Old : row.New;
+                    try { await (pass == "old" ? BenchOld(items[i], dir, p) : BenchNew(items[i], dir, p)); }
+                    catch (Exception e) { p.Error = Reason(e); }
+                }
+                b.Done++;
+            }
+            b.Text = BenchTable(b);
+            foreach (var line in b.Text.Split('\n')) _hub.Log.Add("debug", line);
+        }
+        catch (Exception e) { b.Error = Reason(e); }
+        finally
+        {
+            b.Running = false;
+            try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { }
+        }
+    }
+
+    /// <summary>Прежний способ: поиск → отдельный запуск за сведениями → отдельный запуск для скачивания → измерение громкости до старта.</summary>
+    private async Task BenchOld(string q, string dir, BenchPass p)
+    {
+        var all = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
+        string url = q;
+        if (!YtRe.IsMatch(q)) { var c = await _hub.YtDlp.SearchFlat(q, "search"); p.Search = sw.Elapsed.TotalSeconds; url = c[0].PageUrl; }
+        else p.Search = 0;
+        sw.Restart();
+        var info = await _hub.YtDlp.ByUrl(url, "youtube");
+        p.Info = sw.Elapsed.TotalSeconds;
+        sw.Restart();
+        var path = await _hub.YtDlp.DownloadAudio(info.Vid, dir);
+        p.Download = sw.Elapsed.TotalSeconds;
+        sw.Restart();
+        await Task.Run(() => Loudness.Measure(path));
+        p.Loudness = sw.Elapsed.TotalSeconds;
+        p.Total = all.Elapsed.TotalSeconds;
+    }
+
+    /// <summary>Новый способ: поиск → сведения и звук одним запуском → старт без ожидания громкости (её время — для справки).</summary>
+    private async Task BenchNew(string q, string dir, BenchPass p)
+    {
+        var all = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
+        string url = q;
+        if (!YtRe.IsMatch(q)) { var c = await _hub.YtDlp.SearchFlat(q, "search"); p.Search = sw.Elapsed.TotalSeconds; url = c[0].PageUrl; }
+        else p.Search = 0;
+        sw.Restart();
+        var job = _hub.YtDlp.Fetch(url, "youtube", dir);
+        await job.Info;
+        p.Info = sw.Elapsed.TotalSeconds;
+        sw.Restart();
+        var path = await job.File;
+        p.Download = sw.Elapsed.TotalSeconds;
+        p.Total = all.Elapsed.TotalSeconds;   // плеер стартует здесь — громкость меряется уже во время воспроизведения
+        sw.Restart();
+        await Task.Run(() => Loudness.Measure(path, maxSeconds: 25));
+        p.Loudness = sw.Elapsed.TotalSeconds;
+    }
+
+    private static string BenchTable(BenchRun b)
+    {
+        string F(double x) => x < 0 ? "—" : x.ToString("0.0", Ru);
+        var lines = new List<string>
+        {
+            $"Проверка скорости заказа: {b.Rows.Count} заказов · запуск yt-dlp (--version) {F(b.Launch)} с",
+            "Заказ | было: поиск / сведения / загрузка / громкость = всего | стало: поиск / сведения+загрузка… / громкость (в фоне) = всего",
+        };
+        foreach (var r in b.Rows)
+        {
+            var o = r.Old.Error != "" ? "ошибка: " + r.Old.Error : $"{F(r.Old.Search)} / {F(r.Old.Info)} / {F(r.Old.Download)} / {F(r.Old.Loudness)} = {F(r.Old.Total)}";
+            var n = r.New.Error != "" ? "ошибка: " + r.New.Error : $"{F(r.New.Search)} / {F(r.New.Info)} / {F(r.New.Download)} / ({F(r.New.Loudness)}) = {F(r.New.Total)}";
+            lines.Add($"{Short(r.Query, 50)} | {o} | {n}");
+        }
+        var ok = b.Rows.Where(r => r.Old.Error == "" && r.New.Error == "").ToList();
+        if (ok.Count > 0)
+            lines.Add($"В среднем: было {F(ok.Average(r => r.Old.Total))} с, стало {F(ok.Average(r => r.New.Total))} с");
+        return string.Join("\n", lines);
     }
 
     // ---------- чёрный список исполнителей и каналов ----------
@@ -1155,10 +1927,12 @@ public sealed class Music
             CfgList("blocked_tracks").Add(cur.Vid != "" ? cur.Vid : cur.Title);
         }
         _hub.Settings.Save();
-        // заказы того же исполнителя или канала, уже стоящие в очереди, тоже убираем
-        var removed = what == "track" ? 0 : Queue.RemoveAll(q => !q.Fallback && BlockedBy(q) != null);
-        Skip("заблокирован");
-        return $"«{item}» в чёрном списке" + (removed > 0 ? $", из очереди убрано: {removed}" : "");
+        // заказы того же исполнителя или канала, уже стоящие в очереди, тоже убираем (баллы за них возвращаются)
+        var removed = what == "track" ? new List<Track>() : Queue.Where(q => !q.Fallback && BlockedBy(q) != null).ToList();
+        foreach (var q in removed) { Queue.Remove(q); ForgetDownload(q); }
+        RefundMany(removed, "трек заблокирован стримером");
+        Skip("заблокирован", SkipBy.Block);
+        return $"«{item}» в чёрном списке" + (removed.Count > 0 ? $", из очереди убрано: {removed.Count}" : "");
     }
 
     public object State()
@@ -1188,6 +1962,9 @@ public sealed class Music
             liked_count = LikedItems.Count,
             restored = ActionLog.Now - RestoredAt < 60 ? RestoredInfo : "",
             obs_connected = ObsConnected,
+            pay = cur?.Pay ?? "",
+            avg_start = AvgStart() is var a && a.Count > 0 ? new { sec = a.Avg, count = a.Count } : null,
+            bench = BenchState(),
         };
     }
 }

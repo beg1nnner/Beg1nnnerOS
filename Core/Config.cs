@@ -153,7 +153,8 @@ public static class Config
         "order_sound": true, "order_sound_style": "bell", "order_sound_volume": 50, "chat_errors": true,
         "normalize": true, "normalize_target": -14, "output": "app",
         "fallback_enabled": false, "fallback_url": "", "fallback_shuffle": true, "fallback_interrupt": true, "fallback_liked": true,
-        "restore_queue": true, "restore_hours": 12, "yandex_fallback": true, "crossfade": 4
+        "restore_queue": true, "restore_hours": 12, "yandex_fallback": true, "crossfade": 4,
+        "repeat_minutes": 30, "refund_early_skip": true, "cache_mb": 2048
       },
       "overlay": {
         "theme": "studio", "custom_colors": false, "width": 700, "height": 460,

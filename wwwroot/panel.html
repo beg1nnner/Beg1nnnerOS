@@ -343,6 +343,9 @@
   /* колесо зрителей */
   [data-tab="wheel"].is-v .wl-n, [data-tab="wheel"]:not(.is-v) .wl-v { display:none !important; }
   [data-tab="wheel"].is-v:not(.is-elim) .wl-elim, [data-tab="wheel"].is-elim .wl-norm, [data-tab="wheel"]:not(.is-part) .wl-part { display:none !important; }
+  .bench-row { padding:var(--sp-2) 0; border-bottom:1px solid var(--hair); }
+  .bench-row:last-child { border-bottom:0; }
+  .bench-n { font-family:var(--mono); font-size:var(--fs-sm); font-variant-numeric:tabular-nums; margin-top:2px; }
   .vw-rewards { display:flex; flex-direction:column; gap:var(--sp-3); }
   .vw-rw { padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md); border:1px solid var(--hair); background:color-mix(in srgb, var(--fg) 3%, transparent); }
   .vw-rw-top { display:grid; grid-template-columns:auto minmax(0, 1fr) 140px auto; gap:var(--sp-3); align-items:end; }
@@ -830,6 +833,7 @@
   .u-w-90px:not(#_#_) { width:90px; }
   .u-w-auto:not(#_#_) { width:auto; }
   .u-ws-nowrap:not(#_#_) { white-space:nowrap; }
+  .u-wb-all:not(#_#_) { word-break:break-all; }
   .u-ws-pre-wrap:not(#_#_) { white-space:pre-wrap; }
 </style>
 </head>
@@ -926,7 +930,7 @@
       <div class="card" data-card="log">
         <div class="row log-h"><h3 class="card-t grow">Журнал действий и ошибок</h3>
           <select id="log-kind" class="u-w-auto" onchange="loadLog()">
-            <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option>
+            <option value="">Все</option><option value="error">Ошибки</option><option value="skip">Пропуски</option><option value="debug">Диагностика</option>
             <option value="command">Команды</option><option value="mod">Модерация</option><option value="event">События</option><option value="timer">Таймеры</option>
             <option value="music">Музыка</option><option value="alert">Алерты</option><option value="system">Система</option>
           </select>
@@ -971,7 +975,7 @@
       <div class="muted small u-mt-2">Ручное добавление не списывает баллы и не применяет лимиты заказов.</div>
     </div>
     <div class="card"><div class="row"><h3 class="grow u-m-0">Очередь</h3>
-      <button class="sm danger" onclick="confirmDlg({title:'Очистить очередь?',text:'Все треки из очереди будут удалены.',okLabel:'Очистить очередь',danger:1}).then(ok=>ok&&api('/music/clear',{}))">Очистить</button></div>
+      <button class="sm danger" onclick="qClear()">Очистить</button></div>
       <table class="u-mt-2"><thead><tr><th>#</th><th>Трек</th><th>Длит.</th><th>Заказ</th><th></th></tr></thead><tbody id="m-queue" data-skel></tbody></table>
     </div>
   </div>
@@ -986,6 +990,8 @@
         <tr><td>Пропустить трек</td><td><input data-s="music.rewards.skip.title" maxlength="45"></td><td><input type="number" min="1" data-s="music.rewards.skip.cost"></td><td><input type="checkbox" data-s="music.rewards.skip.enabled"></td></tr>
       </tbody></table>
       <div class="muted small u-mt-2">Приоритетный заказ не обрывает текущий трек. Неподходящий заказ отклоняется, баллы возвращаются через Twitch.</div>
+      <div class="muted small u-mt-2">Баллы списываются, когда трек отыграл 30 секунд. До этого принятые заказы видны на Twitch в «Очереди запросов наград» как ожидающие — это нормально, программа закрывает их сама: подтверждает сыгранные и возвращает баллы, если трек не загрузился, его убрали из очереди, зритель отменил заказ или трек заблокировали.</div>
+      <label class="switch u-mt-3"><input type="checkbox" data-s="music.refund_early_skip"> Возвращать баллы, если стример или модератор пропустил трек в первые 30 секунд</label>
     </div>
     <div class="card">
       <h3>Источники и ограничения</h3>
@@ -1002,13 +1008,21 @@
         <button class="sm u-mt-4" onclick="ytCheck('yt-check')">Проверить связь с YouTube</button>
       </div>
       <div id="yt-check" class="hidden u-m-n1-0-4"></div>
+      <div class="row u-mb-3 u-ai-fend">
+        <label class="f u-w-170px"><span>Кэш музыки, МБ (0 — хранить сутки)</span><input type="number" min="0" max="100000" step="256" data-s="music.cache_mb"></label>
+        <span class="small muted u-mb-2" id="m-cache">Кэш музыки: …</span>
+        <button class="sm u-mb-2" onclick="cacheClear()">Очистить</button>
+        <button class="sm u-mb-2" onclick="benchOpen()">Проверка скорости заказа</button>
+      </div>
       <div class="row">
         <label class="f"><span>Лимит заказов от зрителя</span><input type="number" min="1" data-s="music.per_user_limit"></label>
         <label class="f"><span>Длина очереди</span><input type="number" min="1" data-s="music.queue_limit"></label>
         <label class="f"><span>Макс. длительность трека, мин</span><input type="number" min="1" data-s="music.max_duration_min"></label>
         <label class="f"><span>Голосов для !skip</span><input type="number" min="1" data-s="music.skip_votes"></label>
         <label class="f"><span>Мин. просмотров на YouTube (0 — без фильтра)</span><input type="number" min="0" step="1000" data-s="music.min_views"></label>
+        <label class="f"><span>Не повторять трек чаще чем раз в, мин (0 — можно сразу)</span><input type="number" min="0" max="1440" data-s="music.repeat_minutes"></label>
       </div>
+      <div class="muted small u-mt-2">Трек, который играет сейчас или уже стоит в очереди, заказать нельзя всегда. Тот же трек с другого канала тоже считается повтором, концертная версия, ремикс или кавер — нет. Ручное добавление не проверяется.</div>
       <div class="row u-mt-3">
         <label class="switch"><input type="checkbox" data-s="music.skip_vote_enabled"> Голосование !skip</label>
         <label class="switch"><input type="checkbox" data-s="music.vip_priority"> Приоритет VIP</label>
@@ -2468,6 +2482,7 @@ document.querySelectorAll(".tabs[data-group]").forEach(tabs => tabs.querySelecto
   tabs.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   tabs.parentElement.querySelectorAll(":scope > [data-tab]").forEach(d => d.classList.toggle("hidden", d.dataset.tab !== b.dataset.t));
   if (["mstats", "cstats"].includes(b.dataset.t)) loadStats();
+  if (b.dataset.t === "orders") cacheLoad();
   if (b.dataset.t === "overlay") fitOverlay();
   if (b.dataset.t === "vtimers") loadTimers();
   if (b.dataset.t === "tools") loadTools();
@@ -3028,6 +3043,9 @@ async function poll(pushed) {
   npTint(art);
   $("np-like").querySelector("span").textContent = c && c.liked ? "В избранном" : "В избранное";
   $("np-paid").classList.toggle("hidden", !(c && c.paid));
+  $("np-paid").title = tr(m.pay === "pending" ? "Баллы спишутся после 30 секунд воспроизведения" : m.pay === "refunded" ? "Баллы возвращены" : "Баллы списаны");
+  window.MUS_Q = m.queue; window.MUS_BENCH = m.bench; window.MUS_AVG = m.avg_start;
+  if (m.bench) benchRender(m.bench);
   $("np-like").classList.toggle("liked", !!(c && c.liked)); $("np-like").disabled = !c;
   // ничего не играет: вместо прочерка — пустое состояние, полоса прогресса скрыта, кнопки управления треком неактивны
   document.querySelector("#p-live .np").classList.toggle("idle", !c);
@@ -3054,10 +3072,10 @@ async function poll(pushed) {
   $("live-qn").textContent = m.queue.length ? `${m.queue.length} · ${fmt(qsec)}` : "";
   $("nb-music").textContent = m.queue.length || "";
   setHTML("m-queue", m.queue.map((t, i) => `<tr><td class="num muted u-w-56px u-ws-nowrap">${String(i + 1).padStart(2, "0")}${t.priority === 3 ? `<span class="prio-ic" title="${tr("Вне очереди")}">${ICON.zap}</span>` : t.priority ? `<span class="prio-ic" title="${tr("Приоритет")}">${ICON.star}</span>` : ""}</td>
-    <td><span class="u-d-flex u-ai-center u-gap-3"><span class="cv-sm" style="color:${avColor(t.requester)}">${artImg(t) || ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a></span></td><td class="num muted">${fmt(t.duration)}</td>
+    <td><span class="u-d-flex u-ai-center u-gap-3"><span class="cv-sm" style="color:${avColor(t.requester)}">${artImg(t) || ICO_MUSIC}</span><a href="${esc(t.page_url)}" target="_blank" data-noi18n>${esc(t.title)}</a>${t.pay === "pending" ? `<span class="pill l" title="${esc(tr("Баллы спишутся, когда трек заиграет"))}">${tr("баллы")}</span>` : ""}</span></td><td class="num muted">${fmt(t.duration)}</td>
     <td>${t.requester ? `<span class="u-d-inline-flex u-ai-center u-gap-2"><span class="av" style="background:${avColor(t.requester)}">${esc(t.requester[0])}</span><span data-noi18n>${esc(t.requester)}</span></span>` : '<span class="muted">вручную</span>'}</td>
     <td class="row u-fw-nowrap"><button class="ib" title="Выше" aria-label="Переместить выше" onclick="api('/music/move',{id:'${t.id}',delta:-1})">${ICON.up}</button><button class="ib" title="Ниже" aria-label="Переместить ниже" onclick="api('/music/move',{id:'${t.id}',delta:1})">${ICON.down}</button>
-    <button class="ib danger" onclick="api('/music/remove',{id:'${t.id}',refund:${t.paid}})" title="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}" aria-label="${t.paid ? "Удалить и вернуть баллы" : "Удалить"}">${t.paid ? ICON.undo : ICON.trash}</button></td></tr>`).join("")
+    <button class="ib danger" onclick="qRemove('${t.id}')" title="${t.pay === "pending" ? "Удалить и вернуть баллы" : "Удалить"}" aria-label="${t.pay === "pending" ? "Удалить и вернуть баллы" : "Удалить"}">${t.pay === "pending" ? ICON.undo : ICON.trash}</button></td></tr>`).join("")
     || `<tr><td colspan="5">${emptyBox("Очередь пуста", "Зрители заказывают треки за баллы канала, или добавьте трек вручную выше.")}</td></tr>`);
   const nt = ST.next_timer;
   $("next-timer").innerHTML = nt ? `<span data-noi18n>${esc(nt.name)}</span> · <b class="mono u-bg-none u-p-0 u-c-fg">${fmt(nt.seconds)}</b>${nt.messages_left ? ` · ждёт ${nt.messages_left} сообщ.` : ""}` : 'таймеры — во время эфира';
@@ -3078,7 +3096,7 @@ async function poll(pushed) {
   $("al-url").textContent = base() + "/alerts"; $("dock-url").textContent = base() + "/dock";
 }
 const LOG_KINDS = {error:["Ошибка", "#fb7185"], skip:["Пропуск", "#fbbf24"], command:["Команда", "#60a5fa"], mod:["Модерация", "#f472b6"], event:["Событие", "#fbbf24"],
-  timer:["Таймер", "#2dd4bf"], music:["Музыка", "#c4b5fd"], alert:["Алерт", "#fb923c"], system:["Система", "#8a8a99"], youtube:["YouTube", "#f87171"], yandex:["Яндекс", "#facc15"]};
+  timer:["Таймер", "#2dd4bf"], music:["Музыка", "#c4b5fd"], debug:["Диагностика", "#94a3b8"], alert:["Алерт", "#fb923c"], system:["Система", "#8a8a99"], youtube:["YouTube", "#f87171"], yandex:["Яндекс", "#facc15"]};
 async function loadLog() {
   const items = await api("/log" + ($("log-kind").value ? "?kind=" + $("log-kind").value : ""));
   setHTML("log", items.slice().reverse().map(i => `<div class="kind-${i.kind} lg"><span class="k">${new Date(i.ts * 1000).toLocaleTimeString()}</span>
@@ -3374,7 +3392,8 @@ async function loadStats() {
   $("ms-body").innerHTML = `<div class="metrics u-sh-none u-bg-field">${[["Заказов", m.orders], ["Отказов", m.rejected], ["Пропусков", m.skips], ["Потрачено баллов", m.points]]
     .map(([t, v]) => `<div><span class="micro">${t}</span><b>${v}</b></div>`).join("")}</div>
     <div class="st-cols"><div><h3>Топ композиций</h3>${hbars(m.top_tracks, "")}</div><div><h3>Топ зрителей</h3>${hbars(m.top_users, "")}</div></div>
-    ${m.by_day ? `<h3 class="u-mt-6">Заказы по дням</h3>${vbars(m.by_day, lastDays())}` : ""}`;
+    ${m.by_day ? `<h3 class="u-mt-6">Заказы по дням</h3>${vbars(m.by_day, lastDays())}` : ""}
+    <div class="small muted u-mt-4">${tr("Среднее время до начала трека за стрим")}: ${window.MUS_AVG ? `<b>${String(window.MUS_AVG.sec).replace(".", ",")} ${tr("с")}</b> (${tr("заказов в пустую очередь")}: ${window.MUS_AVG.count})` : tr("пока нет заказов в пустую очередь")}</div>`;
   const cs = (await api("/stats?period=" + $("cs-period").value)).chat;
   $("cs-body").innerHTML = `<div class="metrics u-sh-none u-bg-field"><div><span class="micro">Сообщений</span><b>${cs.messages}</b></div><div><span class="micro">Зрителей</span><b>${cs.users}</b></div></div>
     <div class="st-cols"><div><h3>Самые активные</h3>${hbars(cs.top, "сообщ.")}</div>
@@ -4942,6 +4961,55 @@ async function wlSpin(test) {
   await flushSave();
   try { await api("/wheel/spin", {wheel: WL_ID, test}); toast(test ? "Проверка: колесо крутится в OBS" : "Колесо запущено"); } catch (e) {}
   wlLoad();
+}
+
+// ---------- очередь: удаление с возвратом баллов, кэш, проверка скорости ----------
+async function qRemove(id) {
+  const t = (window.MUS_Q || []).find(x => x.id === id);
+  if (t && t.pay === "pending" && !await confirmDlg({title: `Удалить «${t.title}» из очереди?`, text: "Баллы вернутся зрителю.", okLabel: "Удалить и вернуть баллы", danger: 1})) return;
+  await api("/music/remove", {id});
+}
+async function qClear() {
+  const n = (window.MUS_Q || []).filter(x => x.pay === "pending").length;
+  if (!await confirmDlg({title: "Очистить очередь?", text: tr("Все треки из очереди будут удалены.") + (n ? " " + tr("Баллы за неподтверждённые заказы вернутся зрителям") + `: ${n}.` : ""), okLabel: "Очистить очередь", danger: 1})) return;
+  const r = await api("/music/clear", {});
+  if (r && r.refunded) toast(tr("Очередь очищена, баллы возвращены") + ": " + r.refunded);
+}
+const mb = b => (b / 1048576 >= 1024 ? (b / 1073741824).toFixed(1).replace(".", ",") + " " + tr("ГБ") : Math.round(b / 1048576) + " " + tr("МБ"));
+async function cacheLoad() {
+  try { const r = await api("/music/cache", {}, undefined, {quiet: true}); $("m-cache").textContent = `${tr("Кэш музыки")}: ${tr("занято")} ${mb(r.used)}` + (r.limit ? ` ${tr("из")} ${mb(r.limit)}` : ` · ${tr("файлы старше суток удаляются")}`); } catch (e) {}
+}
+async function cacheClear() {
+  if (!await confirmDlg({title: "Очистить кэш музыки?", text: "Скачанные треки удалятся с диска. Играющий трек и очередь не затронуты; при следующем заказе трек скачается заново.", okLabel: "Очистить", danger: 1})) return;
+  const r = await api("/music/cache_clear", {});
+  toast(tr("Освобождено") + " " + mb(r.freed)); cacheLoad();
+}
+const BENCH_DEFAULT = ["Imagine Dragons — Believer", "Кино — Группа крови", "Daft Punk — Get Lucky", "Ария — Беспечный ангел", "The Weeknd — Blinding Lights",
+  "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "https://www.youtube.com/watch?v=JGwWNGJdvx8",
+  "https://www.youtube.com/watch?v=fJ9rUzIMcZQ", "https://www.youtube.com/watch?v=hTWKbfoikeg"];
+function benchOpen() {
+  dlgOpen((box) => {
+    const ok = dlgHead(box, {title: "Проверка скорости заказа", text: "Каждый заказ проходит двумя способами — прежним и новым — и замеряется по шагам. Очередь, кэш и баллы не затрагиваются; займёт несколько минут.", okLabel: "Запустить"});
+    const body = box.querySelector(".dlg-body");
+    body.innerHTML = `<label class="f"><span>${esc(tr("Заказы: по одному в строке (названия и ссылки YouTube)"))}</span><textarea id="bench-items" class="u-minh-160px">${esc(BENCH_DEFAULT.join("\n"))}</textarea></label>`;
+    return {ok, accept: () => body.querySelector("#bench-items").value.split("\n").map(x => x.trim()).filter(Boolean), cancel: () => null, focus: body.querySelector("textarea")};
+  }).then(async items => {
+    if (!items) return;
+    await api("/music/bench", {items}); toast("Проверка запущена — результат появится в «Музыка → Заказы»");
+  });
+}
+function benchRender(b) {
+  let box = $("bench-box");
+  if (!box) { box = document.createElement("div"); box.id = "bench-box"; box.className = "card"; document.querySelector('#p-music [data-tab="orders"]').prepend(box); }
+  const f = x => x < 0 ? "—" : x.toFixed(1).replace(".", ",");
+  const rows = (b.rows || []).map(r => `<div class="bench-row"><div class="small u-wb-all" data-noi18n>${esc(r.query.replace(/^https?:\/\/(www\.)?/, ""))}</div>
+    <div class="bench-n"><span class="muted">${tr("было")}</span> ${r.old.error ? `<span class="u-c-warn">${esc(r.old.error)}</span>` : `${f(r.old.search)} · ${f(r.old.info)} · ${f(r.old.download)} · ${f(r.old.loudness)} = <b>${f(r.old.total)}</b>`}</div>
+    <div class="bench-n"><span class="muted">${tr("стало")}</span> ${r.new.error ? `<span class="u-c-warn">${esc(r.new.error)}</span>` : `${f(r.new.search)} · ${f(r.new.info)} · ${f(r.new.download)} · (${f(r.new.loudness)}) = <b>${f(r.new.total)}</b>`}</div></div>`).join("");
+  const html = `<div class="row"><h3 class="grow u-m-0">${tr("Проверка скорости заказа")}</h3><span class="small muted">${b.running ? `${tr("идёт")}: ${b.done} ${tr("из")} ${b.total}` : b.error ? esc(b.error) : `${tr("запуск yt-dlp")}: ${f(b.launch)} ${tr("с")}`}</span>
+    ${b.text ? `<button class="sm" onclick="navigator.clipboard.writeText(window.MUS_BENCH.text).then(()=>toast('Таблица скопирована'))">${tr("Копировать таблицу")}</button>` : ""}</div>
+    <div class="small muted u-mt-1">${tr("Секунды: поиск · сведения · загрузка · громкость = всего. В новом способе громкость меряется во время воспроизведения и в «всего» не входит.")}</div>
+    <div class="u-mt-2">${rows}</div>`;
+  setHTML(box, html);
 }
 
 // ---------- колесо зрителей ----------

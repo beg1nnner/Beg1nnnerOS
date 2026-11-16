@@ -146,10 +146,19 @@ public sealed class YtDlp
         }
     }
 
-    /// <summary>Один запуск yt-dlp; возвращает stdout. Ошибка — ResolveException с текстом из stderr.</summary>
-    private async Task<string> RunOnce(IEnumerable<string> args, TimeSpan timeout)
+    /// <summary>Сколько секунд занял последний запуск от старта процесса до первой строки вывода (для замеров).</summary>
+    public double LastLaunchSec;
+
+    /// <summary>Время запуска yt-dlp без работы с сетью (yt-dlp --version) — для проверки скорости заказа.</summary>
+    public async Task<double> LaunchTime()
     {
-        var exe = await EnsureExe();
+        var sw = Stopwatch.StartNew();
+        await RunOnce(new[] { "--version" }, TimeSpan.FromSeconds(30), plain: true);
+        return sw.Elapsed.TotalSeconds;
+    }
+
+    private ProcessStartInfo Psi(string exe, IEnumerable<string> args, bool plain = false)
+    {
         var psi = new ProcessStartInfo(exe)
         {
             UseShellExecute = false, CreateNoWindow = true,
@@ -158,7 +167,16 @@ public sealed class YtDlp
             WorkingDirectory = Path.GetDirectoryName(exe),
         };
         // повторы спасают от разовых обрывов соединения (SSL, таймауты) по пути до YouTube
-        foreach (var a in new[] { "--encoding", "utf-8", "--no-warnings", "--extractor-retries", "3", "--retries", "5", "--socket-timeout", "20" }.Concat(args)) psi.ArgumentList.Add(a);
+        var common = plain ? Array.Empty<string>() : new[] { "--encoding", "utf-8", "--no-warnings", "--extractor-retries", "3", "--retries", "5", "--socket-timeout", "20" };
+        foreach (var a in common.Concat(args)) psi.ArgumentList.Add(a);
+        return psi;
+    }
+
+    /// <summary>Один запуск yt-dlp; возвращает stdout. Ошибка — ResolveException с текстом из stderr.</summary>
+    private async Task<string> RunOnce(IEnumerable<string> args, TimeSpan timeout, bool plain = false)
+    {
+        var exe = await EnsureExe();
+        var psi = Psi(exe, args, plain);
         _running++;
         try
         {
@@ -289,6 +307,35 @@ public sealed class YtDlp
     /// </summary>
     public async Task<Track> Search(string query, string source, long minViews = 0)
     {
+        var candidates = await SearchFlat(query, source, minViews);
+        // Быстрый поиск не видит ограничений (18+, блокировка, только для спонсоров) — проверяем
+        // найденное полной загрузкой сведений и при ошибке берём следующий результат.
+        ResolveException last = null;
+        foreach (var c in candidates.Take(3))
+        {
+            try
+            {
+                var full = await ByUrl(c.PageUrl, source);
+                if (full.Views < 0) full.Views = c.Views;
+                return full;
+            }
+            catch (ResolveException e) when (CandidateError(e))
+            {
+                last = e;   // это видео недоступно — пробуем следующее
+            }
+        }
+        throw new ResolveException("подходящие видео недоступны: " + last?.Message);
+    }
+
+    /// <summary>Ошибка касается только этого видео (недоступно, 18+…) — можно взять следующий результат поиска.</summary>
+    public static bool CandidateError(ResolveException e) => e.Message != "нет связи с YouTube" && !e.Message.StartsWith("YouTube");
+
+    /// <summary>
+    /// Быстрый поиск (один запуск, без страниц видео): результаты, которые не эфиры и набрали не меньше minViews просмотров.
+    /// У результатов есть название, длительность, просмотры и канал — этого хватает для предварительных проверок.
+    /// </summary>
+    public async Task<List<Track>> SearchFlat(string query, string source, long minViews = 0)
+    {
         var count = minViews > 0 ? 10 : 5;
         var json = await Run(new[] { "-j", "--flat-playlist", $"ytsearch{count}:" + query }, TimeSpan.FromSeconds(60));
         var skippedLow = false;
@@ -306,26 +353,15 @@ public sealed class YtDlp
             throw new ResolveException(skippedLow
                 ? $"не найдено видео с {FormatViews(minViews)}+ просмотрами"
                 : "ничего не найдено");
-        // Быстрый поиск не видит ограничений (18+, блокировка, только для спонсоров) — проверяем
-        // найденное полной загрузкой сведений и при ошибке берём следующий результат.
-        ResolveException last = null;
-        foreach (var c in candidates.Take(3))
-        {
-            try
-            {
-                var full = await ByUrl(c.PageUrl, source);
-                if (full.Views < 0) full.Views = c.Views;
-                return full;
-            }
-            catch (ResolveException e) when (e.Message != "нет связи с YouTube" && !e.Message.StartsWith("YouTube"))
-            {
-                last = e;   // это видео недоступно — пробуем следующее
-            }
-        }
-        throw new ResolveException("подходящие видео недоступны: " + last?.Message);
+        return candidates;
     }
 
-    /// <summary>Скачивает звук (предпочтительно M4A/AAC — его надёжно читает Windows) и возвращает путь к файлу.</summary>
+    public const string AudioFormat = "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio";
+
+    /// <summary>
+    /// Прежний способ (до 2.7.1): сведения уже получены отдельным запуском, здесь — второй запуск только для скачивания.
+    /// Оставлен для «Проверки скорости заказа», чтобы сравнить старый и новый способ на одном наборе.
+    /// </summary>
     public async Task<string> DownloadAudio(string videoId, string dir)
     {
         Directory.CreateDirectory(dir);
@@ -335,11 +371,188 @@ public sealed class YtDlp
         if (ready != null) return ready;
         await Run(new[]
         {
-            "-f", "bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]/bestaudio",
+            "-f", AudioFormat,
             "--no-playlist", "--no-part", "--no-mtime",
             "-o", Path.Combine(dir, $"yt_{videoId}.%(ext)s"),
             "https://www.youtube.com/watch?v=" + videoId,
         }, TimeSpan.FromMinutes(4));
         return Existing() ?? throw new ResolveException("yt-dlp не сохранил аудио");
+    }
+
+    // ---------- сведения и загрузка за один запуск ----------
+    private static int _jobSeq;
+
+    /// <summary>Папка незавершённых загрузок: в общий кэш попадает только полностью скачанный файл.</summary>
+    public static string PartialDir(string cacheDir) => Path.Combine(cacheDir, ".dl");
+
+    /// <summary>Удаляет остатки прерванных загрузок (после вылета программы).</summary>
+    public static void CleanPartial(string cacheDir)
+    {
+        try { if (Directory.Exists(PartialDir(cacheDir))) Directory.Delete(PartialDir(cacheDir), true); } catch { }
+    }
+
+    /// <summary>
+    /// Один запуск yt-dlp: сведения о видео в JSON (печатаются до начала загрузки) и сразу скачивание звука.
+    /// Info завершается, как только пришли сведения, File — когда файл скачан и перенесён в кэш.
+    /// Cancel() завершает процесс и удаляет недокачанный файл.
+    /// </summary>
+    public YtJob Fetch(string url, string source, string cacheDir, bool download = true)
+    {
+        var job = new YtJob(url);
+        job.Run = RunJob(job, url, source, cacheDir, download);
+        return job;
+    }
+
+    private async Task RunJob(YtJob job, string url, string source, string cacheDir, bool download)
+    {
+        var dir = Path.Combine(PartialDir(cacheDir), "j" + Interlocked.Increment(ref _jobSeq) + "_" + Environment.ProcessId);
+        job.Dir = dir;
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            for (var attempt = 0; ; attempt++)
+            {
+                try { await RunJobOnce(job, url, source, cacheDir, download, dir, sw); return; }
+                catch (ResolveException e) when (attempt == 0 && !job.Cancelled && !job.Info.IsCompleted &&
+                                                 e.Message.StartsWith("соединение с YouTube обрывается"))
+                {
+                    await Task.Delay(2000);   // разовый обрыв защищённого соединения — ещё одна попытка
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            var err = job.Cancelled ? new ResolveException("загрузка отменена") : e as ResolveException ?? new ResolveException(Explain(e.Message));
+            job.InfoTcs.TrySetException(err);
+            job.FileTcs.TrySetException(err);
+        }
+        finally
+        {
+            try { if (Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+        }
+    }
+
+    private async Task RunJobOnce(YtJob job, string url, string source, string cacheDir, bool download, string dir, Stopwatch sw)
+    {
+        var exe = await EnsureExe();
+        if (job.Cancelled) throw new ResolveException("загрузка отменена");
+        var args = new List<string> { "-j", "--no-playlist" };
+        if (download)
+        {
+            Directory.CreateDirectory(dir);
+            args.AddRange(new[] { "--no-simulate", "-f", AudioFormat, "--no-part", "--no-mtime", "-o", Path.Combine(dir, "yt_%(id)s.%(ext)s") });
+        }
+        args.Add(url);
+        var psi = Psi(exe, args);
+        _running++;
+        using var p = new Process { StartInfo = psi };
+        try
+        {
+            var started = sw.Elapsed.TotalSeconds;
+            p.Start();
+            job.Process = p;
+            if (job.Cancelled) { try { p.Kill(true); } catch { } throw new ResolveException("загрузка отменена"); }
+            var stderr = new StringBuilder();
+            var errTask = Task.Run(async () =>
+            {
+                string l;
+                while ((l = await p.StandardError.ReadLineAsync()) != null)
+                {
+                    if (job.LaunchSec < 0) job.LaunchSec = sw.Elapsed.TotalSeconds - started;
+                    lock (stderr) stderr.AppendLine(l);
+                }
+            });
+            var outTask = Task.Run(async () =>
+            {
+                string l;
+                while ((l = await p.StandardOutput.ReadLineAsync()) != null)
+                {
+                    if (job.LaunchSec < 0) job.LaunchSec = sw.Elapsed.TotalSeconds - started;
+                    if (job.Info.IsCompleted || !l.TrimStart().StartsWith("{")) continue;
+                    try
+                    {
+                        var info = J.ParseLoose(l);
+                        if (IsLive(info)) throw new ResolveException("прямые трансляции не поддерживаются");
+                        var t = ToTrack(info, source, url);
+                        job.Id = t.Vid;
+                        job.InfoSec = sw.Elapsed.TotalSeconds;
+                        job.InfoTcs.TrySetResult(t);
+                        if (!download) return;
+                    }
+                    catch (ResolveException e)
+                    {
+                        job.InfoTcs.TrySetException(e);
+                        try { p.Kill(true); } catch { }
+                    }
+                    catch (Exception e)
+                    {
+                        job.InfoTcs.TrySetException(new ResolveException("не удалось прочитать сведения о видео: " + e.Message));
+                        try { p.Kill(true); } catch { }
+                    }
+                }
+            });
+            // сведения должны прийти за минуту, загрузка — уложиться в 4 минуты
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+            var infoTimeout = Task.Delay(TimeSpan.FromSeconds(60), cts.Token);
+            var exited = p.WaitForExitAsync(cts.Token);
+            if (await Task.WhenAny(exited, job.Info, infoTimeout) == infoTimeout && !job.Info.IsCompleted)
+            {
+                try { p.Kill(true); } catch { }
+                throw new ResolveException("YouTube не ответил вовремя");
+            }
+            try { await exited; }
+            catch (OperationCanceledException)
+            {
+                try { p.Kill(true); } catch { }
+                throw new ResolveException("YouTube не ответил вовремя");
+            }
+            await Task.WhenAll(outTask, errTask);
+            if (job.Cancelled) throw new ResolveException("загрузка отменена");
+            if (p.ExitCode != 0)
+            {
+                string text; lock (stderr) text = stderr.ToString();
+                var lines = text.Split('\n').Select(l => l.Trim()).Where(l => l != "").ToList();
+                var line = lines.LastOrDefault(l => l.StartsWith("ERROR")) ?? lines.LastOrDefault() ?? "ошибка yt-dlp";
+                line = line.Replace("ERROR: ", "");
+                _hub.Log.Add("skip", "yt-dlp: " + (line.Length > 300 ? line[..300] : line));
+                if (job.Info.IsFaulted) await job.Info;   // своя причина (эфир) — её и показываем
+                throw new ResolveException(Explain(line));
+            }
+            if (!job.Info.IsCompleted) throw new ResolveException("ничего не найдено");
+            var info0 = await job.Info;
+            if (!download) { job.FileTcs.TrySetResult(""); return; }
+            var file = Directory.Exists(dir) ? Directory.GetFiles(dir, "yt_*").FirstOrDefault(f => new FileInfo(f).Length > 0) : null;
+            if (file == null) throw new ResolveException("yt-dlp не сохранил аудио");
+            var dest = Path.Combine(cacheDir, Path.GetFileName(file));
+            File.Move(file, dest, true);
+            job.DownloadSec = sw.Elapsed.TotalSeconds - job.InfoSec;
+            job.FileTcs.TrySetResult(dest);
+        }
+        finally { _running--; job.Process = null; }
+    }
+}
+
+/// <summary>Запуск yt-dlp «сведения + загрузка». Можно отменить на любом шаге.</summary>
+public sealed class YtJob
+{
+    public readonly string Url;
+    public string Id = "", Dir = "";
+    public volatile bool Cancelled;
+    public double LaunchSec = -1, InfoSec, DownloadSec;
+    internal Process Process;
+    internal Task Run;
+    internal readonly TaskCompletionSource<Track> InfoTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal readonly TaskCompletionSource<string> FileTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public Task<Track> Info => InfoTcs.Task;
+    public Task<string> File => FileTcs.Task;
+
+    public YtJob(string url) { Url = url; }
+
+    /// <summary>Остановить: процесс завершается, недокачанный файл удаляется (вместе с папкой загрузки).</summary>
+    public void Cancel()
+    {
+        if (Cancelled || File.IsCompleted) return;
+        Cancelled = true;
+        try { Process?.Kill(true); } catch { }
     }
 }

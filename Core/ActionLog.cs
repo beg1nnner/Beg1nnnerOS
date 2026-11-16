@@ -62,7 +62,8 @@ public sealed class ActionLog
     {
         lock (_lock)
         {
-            var items = _items.Where(i => string.IsNullOrEmpty(kind) || i.kind == kind).ToList();
+            // строки «Диагностика» (время шагов заказа и т. п.) в общем журнале не показываем — только по фильтру
+            var items = _items.Where(i => string.IsNullOrEmpty(kind) ? i.kind != "debug" : i.kind == kind).ToList();
             return items.Skip(Math.Max(0, items.Count - n)).ToList();
         }
     }

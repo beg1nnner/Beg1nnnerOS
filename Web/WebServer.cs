@@ -217,7 +217,7 @@ public sealed partial class WebServer
             _hub.Settings.Save();
             return Ok(_hub.Updater.State());
         }));
-        app.MapGet("/api/log", H((c, b) => Ok(_hub.Log.Tail(150, c.Request.Query["kind"].ToString()))));
+        app.MapGet("/api/log", H((c, b) => Ok(_hub.Log.Tail(150, c.Request.Query["kind"].ToString()))));   // «Диагностика» — только по фильтру
         app.MapPost("/api/log/clear", H((c, b) => { _hub.Log.Clear(); return Ok(); }));
         app.MapPost("/api/app/show", H((c, b) => { ShowWindow(); return Ok(); }));
 
@@ -709,6 +709,8 @@ public sealed partial class WebServer
                     nw["normalize_target"] = Math.Max(-24, Math.Min(-8, nw.Num("normalize_target", -14)));
                     if (!Chime.Styles.ContainsKey(nw.Str("order_sound_style"))) nw["order_sound_style"] = "bell";
                     if (nw.Str("search_first") != "youtube" && nw.Str("search_first") != "yandex") throw new UserError("Неизвестный источник поиска");
+                    nw["repeat_minutes"] = Math.Max(0, Math.Min(1440, nw.Int("repeat_minutes", 30)));
+                    nw["cache_mb"] = Math.Max(0, Math.Min(100_000, nw.Int("cache_mb", 2048)));
                     break;
                 case "chat_overlay":
                     nw["font_size"] = Math.Max(10, Math.Min(72, nw.Int("font_size", 20) == 0 ? 20 : nw.Int("font_size", 20)));
@@ -929,16 +931,23 @@ public sealed partial class WebServer
             case "volume":
                 m.SetVolume(b.Int("volume"));
                 break;
-            case "remove":
-                var t = m.Remove(b.Str("id"));
-                if (t?.Redemption != null && b.Bool("refund"))
-                    await _hub.Rewards.Complete(t.Redemption.Value.RewardId, t.Redemption.Value.RedemptionId, false);
+            case "remove":   // баллы за неподтверждённый заказ возвращаются (Music.Remove)
+                m.Remove(b.Str("id"));
                 break;
             case "move":
                 m.Move(b.Str("id"), b.Int("delta"));
                 break;
             case "clear":
-                m.Queue.Clear();
+                return Ok(null, new() { ["refunded"] = m.ClearQueue() });
+            case "cache":   // занято / лимит кэша музыки
+            {
+                var (used, limit) = m.CacheInfo();
+                return Ok(new { used, limit });
+            }
+            case "cache_clear":
+                return Ok(new { freed = m.ClearCache() });
+            case "bench":   // проверка скорости заказа: набор заказов прежним и новым способом
+                m.StartBench(((b["items"] as JsonArray) ?? new JsonArray()).Select(x => J.AsStr(x)).ToList());
                 break;
             case "chime":   // проверка звука заказа из настроек (без сохранения)
             {

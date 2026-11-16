@@ -15,6 +15,7 @@ public sealed class Player
     private VolumeSampleProvider _vol;
     private GainLimiter _gain;
     private double _gainDb;
+    private volatile int _rampSeq;
     private float _volume = 0.36f;
     private float _duck = 1f;
     private float _fade = 1f;   // плавное нарастание в начале трека (0…1)
@@ -69,9 +70,33 @@ public sealed class Player
         get => _gainDb;
         set
         {
+            _rampSeq++;   // идущее плавное изменение больше не нужно
             _gainDb = value;
             if (_gain != null) _gain.Gain = (float)Math.Pow(10, value / 20);
         }
+    }
+
+    /// <summary>Плавно меняет выравнивание громкости за seconds (громкость трека измерена, когда он уже играет).</summary>
+    public void RampGain(double toDb, double seconds)
+    {
+        var g = _gain;
+        if (g == null) { GainDb = toDb; return; }
+        var fromDb = 20 * Math.Log10(Math.Max(1e-6, g.Gain));   // откуда сейчас (в том числе посреди прошлого перехода)
+        _gainDb = toDb;
+        var seq = ++_rampSeq;
+        _ = Task.Run(async () =>
+        {
+            var start = DateTime.UtcNow;
+            while (true)
+            {
+                await Task.Delay(30).ConfigureAwait(false);
+                if (_gain != g || seq != _rampSeq) return;   // трек сменился или начался новый переход
+                var k = Math.Min(1, (DateTime.UtcNow - start).TotalSeconds / Math.Max(0.05, seconds));
+                var s = k * k * (3 - 2 * k);
+                g.Gain = (float)Math.Pow(10, (fromDb + (toDb - fromDb) * s) / 20);
+                if (k >= 1) return;
+            }
+        });
     }
 
     public static List<object> Devices()
