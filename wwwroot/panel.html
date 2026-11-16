@@ -338,6 +338,37 @@
   .wl-tbl .wl-act input[type=number] { flex:none; width:90px; min-width:0; }
   .wl-prev { aspect-ratio:1; border-radius:var(--r-md); overflow:hidden; background:repeating-conic-gradient(var(--checker-a) 0 25%, var(--checker-b) 0 50%) 0 0/24px 24px; }
   .wl-prev iframe { width:100%; height:100%; border:0; display:block; }
+  /* колесо зрителей */
+  [data-tab="wheel"].is-v .wl-n, [data-tab="wheel"]:not(.is-v) .wl-v { display:none !important; }
+  [data-tab="wheel"].is-v:not(.is-elim) .wl-elim, [data-tab="wheel"].is-elim .wl-norm, [data-tab="wheel"]:not(.is-part) .wl-part { display:none !important; }
+  .vw-rewards { display:flex; flex-direction:column; gap:var(--sp-3); }
+  .vw-rw { padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md); border:1px solid var(--hair); background:color-mix(in srgb, var(--fg) 3%, transparent); }
+  .vw-rw-top { display:grid; grid-template-columns:auto minmax(0, 1fr) 140px auto; gap:var(--sp-3); align-items:end; }
+  .vw-rw-lim { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:var(--sp-3); align-items:end; }
+  .vw-rw label.f { margin:0; }
+  .vw-rw input[type=color] { width:44px; height:var(--ctl-h, 44px); padding:3px; }
+  .vw-rw .ib { margin-bottom:4px; }
+  @media (max-width:700px) { .vw-rw-top { grid-template-columns:auto minmax(0, 1fr) auto; } .vw-rw-top .vw-cost { grid-column:2; } .vw-rw-lim { grid-template-columns:1fr; } }
+  .vw-perm { padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md); border:1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+    background:color-mix(in srgb, var(--warn) 10%, transparent); font-size:var(--fs-sm); }
+  .vw-perm .row { margin-top:var(--sp-2); }
+  .vw-timer { font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:600; }
+  .vw-winner { padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md); background:color-mix(in srgb, var(--accent) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  .vw-winner b { font-size:var(--fs-lg); }
+  .vw-tbl tr.vw-row { cursor:pointer; }
+  .vw-tbl tr.vw-row:hover td { background:color-mix(in srgb, var(--fg) 4%, transparent); }
+  .vw-tbl td.num, .vw-tbl th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .vw-tbl .vw-acts { display:flex; gap:var(--sp-1); justify-content:flex-end; }
+  .vw-tbl .vw-name { display:flex; align-items:center; gap:var(--sp-2); flex-wrap:wrap; }
+  .vw-tbl .vw-dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .vw-sim { display:inline-flex; align-items:center; gap:var(--sp-2); font-size:var(--fs-xs); padding:2px var(--sp-2); border-radius:var(--r-full);
+    background:color-mix(in srgb, var(--warn) 14%, transparent); color:color-mix(in srgb, var(--warn) 70%, var(--fg)); }
+  .vw-sim button { height:22px; padding:0 var(--sp-2); font-size:var(--fs-xs); }
+  .vw-contribs td { background:color-mix(in srgb, var(--fg) 2.5%, transparent); }
+  .vw-contribs .log { max-height:200px; }
+  .vw-pend { display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-2) 0; border-bottom:1px solid var(--hair); }
+  .vw-pend:last-child { border-bottom:0; }
   .wl-q { display:flex; align-items:center; gap:var(--sp-2); padding:var(--sp-2) 0; border-bottom:1px solid var(--line); font-size:var(--fs-md); }
   .wl-reward { padding-top:var(--sp-4); border-top:1px solid var(--line); }
   /* модели распознавания речи */
@@ -1916,10 +1947,11 @@
         <h3 class="card-t u-mt-0">Колесо фортуны</h3>
         <div class="row u-fw-wrap u-ai-fend u-mt-3">
           <label class="f grow u-minw-220px"><span>Колесо</span><select id="wl-sel" onchange="wlPick(this.value)"></select></label>
-          <div class="row u-mb-2"><button class="sm" onclick="wlAdd()">+ Новое</button><button class="sm" onclick="wlDup()">Копия</button>
+          <div class="row u-mb-2"><button class="sm" onclick="wlAdd()">+ Новое</button><button class="sm" onclick="vwAdd()">+ Колесо зрителей</button><button class="sm" onclick="wlDup()">Копия</button>
           <button class="ib danger" id="wl-del" onclick="wlDel()" aria-label="Удалить колесо" title="Удалить колесо"></button></div>
         </div>
         <label class="f u-mt-3"><span>Название колеса</span><input id="wl-name" maxlength="40" oninput="wlSet('name', this.value)"></label>
+        <div id="wl-normal">
         <div class="tbl-wrap u-mt-3"><table class="wl-tbl">
           <thead><tr><th scope="col">Цвет</th><th scope="col">Сектор</th><th scope="col">Вес</th><th scope="col">Шанс</th><th scope="col">Действие при выпадении</th><th scope="col"><span class="sr-only">Удалить</span></th></tr></thead>
           <tbody id="wl-sectors"></tbody></table></div>
@@ -1932,10 +1964,37 @@
           </div>
           <div class="small muted u-mt-1">Если колесо нельзя крутить (кулдаун, лимит, полная очередь), баллы вернутся зрителю автоматически.</div>
         </div>
+        </div>
+        <!-- Колесо зрителей: секторы появляются из покупок награды за баллы -->
+        <div id="vw-cfg" class="hidden">
+          <div class="vw-mode u-mt-3">
+            <label class="f"><span>Как наполняется колесо</span><select id="vw-mode" data-seg onchange="vwSet('mode', this.value)">
+              <option value="participants">Участники</option><option value="options">Варианты</option></select></label>
+            <div class="small muted u-mt-1" id="vw-mode-hint"></div>
+          </div>
+          <div id="vw-perm" class="vw-perm hidden u-mt-3" role="status"></div>
+          <div class="row u-mt-4 u-ai-center"><h4 class="grow u-m-0">Награды за баллы канала</h4><span class="small muted" id="vw-rw-count"></span></div>
+          <div class="small muted u-mt-1">Программа сама создаёт награды на канале: включает их при открытии сбора и ставит на паузу при закрытии. Крупная покупка даёт пропорционально больший сектор.</div>
+          <div id="vw-rewards" class="vw-rewards u-mt-3"></div>
+          <button class="sm u-mt-2" id="vw-rw-add" onclick="vwRewardAdd()">+ Награда</button>
+        </div>
       </div>
       <div class="card wl-side">
         <div class="row"><h3 class="card-t grow">Предпросмотр</h3><span class="pill" id="wl-state"></span></div>
         <div class="wl-prev"><iframe id="wl-frame" title="Предпросмотр колеса" tabindex="-1"></iframe></div>
+        <div id="vw-ctl" class="hidden u-mt-3">
+          <div class="row u-fw-wrap u-ai-center vw-status"><span class="pill" id="vw-st"></span><span class="vw-timer" id="vw-timer"></span><span class="grow"></span><span class="small muted" id="vw-total"></span></div>
+          <div class="row u-mt-3 u-fw-wrap">
+            <button class="primary" id="vw-open" onclick="vwAct('open')">Открыть сбор</button>
+            <button id="vw-close" onclick="vwAct('close')">Закрыть сбор</button>
+            <button id="vw-spin" onclick="vwAct('spin')">Крутить</button>
+            <button id="vw-next" class="primary hidden" onclick="vwAct('spin')">Дальше</button>
+            <button id="vw-reroll" class="hidden" onclick="vwReroll()">Перевыбрать</button>
+          </div>
+          <div class="small muted u-mt-2" id="vw-hint"></div>
+          <div id="vw-winner" class="vw-winner hidden u-mt-3"></div>
+        </div>
+        <div id="wl-ctl">
         <div class="row u-mt-3 u-fw-wrap">
           <button class="primary" onclick="wlSpin(true)">Крутить (проверка)</button>
           <button onclick="wlSpin(false)" title="Настоящий запуск: выполнится действие сектора и итог уйдёт в чат">Крутить</button>
@@ -1945,7 +2004,19 @@
         </div>
         <div class="small muted u-mt-2">Проверка крутит колесо в OBS, но не выполняет действия и ничего не пишет в чат.</div>
         <div id="wl-queue" class="u-mt-3"></div>
+        </div>
       </div>
+    </div>
+    <!-- Колесо зрителей: секторы в реальном времени -->
+    <div class="card hidden" id="vw-live">
+      <div class="row u-fw-wrap u-ai-center"><h3 class="card-t grow u-m-0">Секторы</h3>
+        <button class="sm" onclick="vwAddManual()">+ Добавить вручную</button>
+        <button class="sm danger" id="vw-clear" onclick="vwClear()">Очистить колесо</button></div>
+      <div id="vw-pending" class="hidden u-mt-3"></div>
+      <div class="tbl-wrap u-mt-3"><table class="vw-tbl">
+        <thead><tr><th scope="col">Сектор</th><th scope="col" class="num">Баллы</th><th scope="col" class="num">Шанс</th><th scope="col" class="num">Вкладчиков</th><th scope="col"><span class="sr-only">Действия</span></th></tr></thead>
+        <tbody id="vw-sectors"></tbody></table></div>
+      <div id="vw-out" class="small muted u-mt-2"></div>
     </div>
     <div class="masonry">
       <div class="card">
@@ -1957,15 +2028,65 @@
           <label class="switch u-mb-2"><input type="checkbox" data-s="wheel.show_title"> Название колеса и ник над ним</label>
         </div>
         <div class="small muted u-mt-1">Свою тему колеса можно собрать в «Темы оверлеев» → «+ Тема колеса».</div>
+        <label class="f u-mt-3 wl-v"><span>Колесо зрителей на экране</span><select data-vw="show" data-seg>
+          <option value="collect">Всё время сбора</option><option value="spin">Только при вращении</option></select></label>
+      </div>
+      <div class="card wl-v">
+        <h3 class="u-mt-0">Сбор</h3>
+        <div class="row u-fw-wrap u-ai-fend">
+          <label class="f u-w-170px"><span>Таймер сбора, мин (0 — без таймера)</span><input type="number" min="0" max="240" data-vw="timer_min" data-num></label>
+          <label class="f u-w-170px"><span>Покупка продлевает на, сек</span><input type="number" min="0" max="600" data-vw="extend_sec" data-num></label>
+          <label class="f u-w-170px"><span>Продлить не больше чем на, сек</span><input type="number" min="0" max="3600" data-vw="extend_max" data-num></label>
+        </div>
+        <label class="switch u-mt-3"><input type="checkbox" data-vw="approval"> Новые варианты — сначала на проверку</label>
+        <div class="small muted u-mt-1">Стример или модератор подтверждает вариант в списке «На проверке». Пополнение уже одобренного варианта проверки не требует.</div>
+        <label class="switch u-mt-3"><input type="checkbox" data-vw="confirm_on_spin"> Подтверждать покупки на Twitch только при вращении</label>
+        <div class="small muted u-mt-1">До вращения баллы за удалённый сектор можно вернуть. Иначе покупка подтверждается сразу и вернуть её нельзя.</div>
+      </div>
+      <div class="card wl-v">
+        <h3 class="u-mt-0">Вращение колеса зрителей</h3>
+        <label class="f"><span>Режим</span><select data-vw="spin_mode" data-seg><option value="normal">Обычный</option><option value="elimination">На выбывание</option></select></label>
+        <div class="small muted u-mt-1" id="vw-elim-hint">Каждое вращение убирает выпавший сектор, побеждает последний. Шанс выбыть обратно пропорционален баллам — крупный вклад по-прежнему даёт преимущество.</div>
+        <div class="row u-mt-3 u-fw-wrap u-ai-fend wl-elim">
+          <label class="switch u-mb-2"><input type="checkbox" data-vw="auto_next"> «Дальше» автоматически</label>
+          <label class="f u-w-150px"><span>Пауза между вращениями, сек</span><input type="number" min="2" max="120" data-vw="next_sec" data-num></label>
+        </div>
+        <label class="f u-mt-3 wl-norm"><span>После вращения</span><select data-vw="after_spin" data-seg><option value="keep">Оставить победителя</option><option value="remove">Убрать победителя</option></select></label>
+        <div class="small muted u-mt-1 wl-norm">«Убрать победителя» — чтобы разыграть следующее место среди остальных.</div>
+        <label class="f u-mt-3"><span>Длительность вращения: <b id="vw-sec-v"></b></span><input type="range" min="5" max="30" step="1" data-vw="spin_sec" data-num></label>
+      </div>
+      <div class="card wl-v">
+        <h3 class="u-mt-0">Сообщения в чат</h3>
+        <label class="switch"><input type="checkbox" data-vw="chat_add"> Сообщать о покупке</label>
+        <label class="f u-mt-2"><span>Текст</span><input data-vw="add_template" maxlength="300"></label>
+        <div class="small muted u-mt-1">Не чаще одного сообщения в 5 секунд: несколько покупок подряд объединяются. Переменные: <code>{user}</code>, <code>{option}</code>, <code>{chance}</code>, <code>{points}</code>, <code>{added}</code>.</div>
+        <label class="switch u-mt-3"><input type="checkbox" data-vw="chat_result"> Писать результат вращения</label>
+        <label class="f u-mt-2"><span>Текст</span><input data-vw="result_template" maxlength="300"></label>
+        <div class="small muted u-mt-1">Переменные: <code>{option}</code> — победитель, <code>{chance}</code> — его шанс, <code>{points}</code> — вложено баллов, <code>{user}</code> — главный вкладчик.</div>
+      </div>
+      <div class="card wl-v">
+        <h3 class="u-mt-0">Защита, донаты, розыгрыш</h3>
+        <label class="f u-w-230px"><span>Только фолловеры от, дней (0 — все)</span><input type="number" min="0" max="3650" data-vw="follower_days" data-num></label>
+        <label class="switch u-mt-3"><input type="checkbox" data-vw="use_blocklist"> Не принимать покупки от зрителей из «Музыка → Блокировки»</label>
+        <div class="small muted u-mt-1">Лимит покупок на зрителя задаётся у каждой награды. Отклонённые покупки возвращают баллы.</div>
+        <label class="switch u-mt-3"><input type="checkbox" data-vw="donation.enabled"> Донат DonationAlerts — вклад в сектор</label>
+        <div class="row u-mt-2 u-fw-wrap u-ai-fend"><label class="f u-w-170px"><span>1 рубль = баллов</span><input type="number" min="0.01" step="0.01" max="100000" data-vw="donation.rate" data-num></label></div>
+        <div class="small muted u-mt-1">Название варианта (или ник участника) в сообщении доната добавляет баллы в этот сектор. Учитываются донаты в рублях.</div>
+        <label class="switch u-mt-3 wl-part"><input type="checkbox" data-vw="giveaway"> Записывать победителя в текущий розыгрыш</label>
+        <label class="f u-mt-3"><span>Награды после завершения колеса</span><select data-vw="after_finish" data-seg><option value="hide">Скрыть</option><option value="delete">Удалить</option></select></label>
+      </div>
+      <div class="card wl-v">
+        <h3 class="u-mt-0">История колеса зрителей</h3>
+        <div id="vw-hist" class="log u-maxh-220px"></div>
       </div>
       <div class="card">
         <h3 class="u-mt-0">Вращение и звук</h3>
-        <label class="f"><span>Длительность вращения: <b id="wl-sec-v"></b></span><input type="range" min="5" max="8" step="0.5" data-s="wheel.spin_sec" oninput="$('wl-sec-v').textContent=this.value+' '+tr('сек')"></label>
+        <label class="f wl-n"><span>Длительность вращения: <b id="wl-sec-v"></b></span><input type="range" min="5" max="8" step="0.5" data-s="wheel.spin_sec" oninput="$('wl-sec-v').textContent=this.value+' '+tr('сек')"></label>
         <label class="f u-mt-2"><span>Сколько показывать результат, сек</span><input type="number" min="2" max="20" data-s="wheel.hold_sec" class="u-w-150px"></label>
         <label class="switch u-mt-3"><input type="checkbox" data-s="wheel.sound"> Звук щелчков и победы</label>
         <label class="f u-mt-2"><span>Громкость: <b id="wl-vol-v"></b></span><input type="range" min="0" max="100" data-s="wheel.volume" oninput="$('wl-vol-v').textContent=this.value"></label>
       </div>
-      <div class="card">
+      <div class="card wl-n">
         <h3 class="u-mt-0">Кто и как запускает</h3>
         <div class="small">Кнопкой здесь, в док-панели OBS, горячей клавишей (задайте её в «Настройки → Интерфейс и клавиши»), наградой за баллы, донатом или командой <b>!wheel</b> (<b>!колесо</b>).</div>
         <div class="small muted u-mt-1">Кто может писать <b>!wheel</b> — по умолчанию модераторы — меняется в «Чат → Команды → Стандартные команды». Можно указать название колеса: <code>!wheel Призы</code>.</div>
@@ -1980,7 +2101,7 @@
           <label class="f u-w-230px"><span>Какое колесо</span><select data-s="wheel.donation.wheel" id="wl-don-wheel"></select></label>
         </div>
       </div>
-      <div class="card">
+      <div class="card wl-n">
         <h3 class="u-mt-0">Итог в чат</h3>
         <label class="switch"><input type="checkbox" data-s="wheel.chat_result"> Писать результат в чат</label>
         <label class="f u-mt-2"><span>Текст</span><input data-s="wheel.chat_template" maxlength="300"></label>
@@ -4701,6 +4822,7 @@ async function wlOpen() {
 }
 async function wlLoad() {
   try { WL = await api("/wheel", undefined, undefined, {quiet: true}); } catch (e) { return; }
+  if (vwIs()) vwLoad();
   const cur = WL.current;
   $("wl-state").textContent = cur ? (WL.current_result ? `${tr("Выпало")}: ${WL.current_result}` : tr("крутится…")) : tr("ожидает");
   $("wl-state").className = "pill " + (cur ? "ok" : "");
@@ -4729,6 +4851,13 @@ function wlRender() {
   $("wl-del").disabled = list.length < 2;
   if (!w) return;
   $("wl-name").value = w.name || "";
+  const isV = w.type === "viewers", tab = document.querySelector('[data-tab="wheel"]');
+  tab.classList.toggle("is-v", isV);
+  ["wl-normal", "wl-ctl"].forEach(id => $(id).classList.toggle("hidden", isV));
+  ["vw-cfg", "vw-ctl", "vw-live"].forEach(id => $(id).classList.toggle("hidden", !isV));
+  $("wl-sec-v").textContent = (getPath(S, "wheel.spin_sec") || 6) + " " + tr("сек");
+  $("wl-vol-v").textContent = getPath(S, "wheel.volume") ?? 60;
+  if (isV) { vwRenderCfg(); if (!VWS || VWS.id !== w.id) { VWS = null; VW_OPEN.clear(); } vwLoad(); return; }
   const rw = w.reward || {};
   $("wl-rw-on").checked = !!rw.enabled; $("wl-rw-title").value = rw.title || ""; $("wl-rw-cost").value = rw.cost || 500;
   $("wl-rw-f").classList.toggle("hidden", !rw.enabled);
@@ -4786,10 +4915,13 @@ function wlAdd() {
 function wlDup() {
   const c = JSON.parse(JSON.stringify(wlCur())); c.id = wlNewId(); c.name = (c.name + " " + tr("копия")).slice(0, 40);
   if (c.reward) c.reward.enabled = false;
+  if (c.viewer) (c.viewer.rewards || []).forEach(r => r.title = (r.title + " 2").slice(0, 45));
   S.wheel.wheels.push(c); wlPick(c.id);
 }
 async function wlDel() {
   const w = wlCur(); if (wlList().length < 2) return;
+  if (w.type === "viewers" && VWS && VWS.sectors.length)
+    if (!await confirmDlg({title: "На колесе есть секторы", text: "Сначала очистите колесо — так баллы за ещё не подтверждённые покупки вернутся зрителям.", okLabel: "Всё равно удалить", danger: 1})) return;
   if (!await confirmDlg({title: "Удалить колесо?", text: `Колесо «${w.name}» и его награда за баллы будут удалены. Это нельзя отменить.`, okLabel: "Удалить", danger: 1})) return;
   S.wheel.wheels = wlList().filter(x => x.id !== w.id);
   wlPick(S.wheel.wheels[0].id);
@@ -4801,12 +4933,257 @@ function wlFrame() {
 }
 function wlPreview() {
   const w = wlCur(); if (!w) return;
+  if (w.type === "viewers") { vwPreview(); return; }
   try { $("wl-frame").contentWindow.postMessage({type: "b1-wheel", wheel: {name: w.name, sectors: (w.sectors || []).filter(x => (x.name || "").trim())}}, "*"); } catch (e) {}
 }
 async function wlSpin(test) {
   await flushSave();
   try { await api("/wheel/spin", {wheel: WL_ID, test}); toast(test ? "Проверка: колесо крутится в OBS" : "Колесо запущено"); } catch (e) {}
   wlLoad();
+}
+
+// ---------- колесо зрителей ----------
+// Секторы появляются из покупок награды за баллы; вес сектора — сумма баллов. Настройки — в самом колесе (wheel.wheels[i].viewer),
+// живое состояние сбора — /api/vwheel (секторы, вклады, проверка, история).
+let VWS = null, VW_OPEN = new Set(), VW_BUSY = false;
+const vwIs = () => (wlCur() || {}).type === "viewers";
+const vwOpt = () => { const w = wlCur(); w.viewer = w.viewer || {}; return w.viewer; };
+const VW_DEF = () => ({mode: "options", rewards: [{title: tr("Предложить вариант"), cost: 500, prompt: "", per_user: 0, total: 0, cooldown: 0, color: "#8B5CF6"}],
+  approval: false, chat_add: true, add_template: "", chat_result: true, result_template: tr("Победил «{option}» — {chance}%, вложено {points}"),
+  timer_min: 0, extend_sec: 0, extend_max: 120, show: "collect", spin_mode: "normal", auto_next: false, next_sec: 5, after_spin: "keep",
+  spin_sec: 10, confirm_on_spin: false, after_finish: "hide", follower_days: 0, use_blocklist: true, donation: {enabled: false, rate: 10}, giveaway: false});
+const VW_TPL = {participants: "{user} на колесе — шанс {chance}%", options: "{user} добавил «{option}» — теперь {chance}%"};
+function vwAdd() {
+  const w = {id: wlNewId(), name: tr("Колесо зрителей"), type: "viewers", reward: {enabled: false, title: "", cost: 500}, sectors: [], viewer: VW_DEF()};
+  w.viewer.add_template = tr(VW_TPL.options);
+  const used = new Set(wlList().flatMap(x => ((x.viewer || {}).rewards || []).map(r => r.title)));
+  let n = 1; while (used.has(w.viewer.rewards[0].title)) w.viewer.rewards[0].title = tr("Предложить вариант") + " " + (++n);
+  S.wheel.wheels.push(w); wlPick(w.id); $("wl-name").focus(); $("wl-name").select();
+}
+function vwSet(k, v) {
+  const o = vwOpt();
+  if (k === "mode") {
+    if (VWS && (VWS.sectors.length || VWS.pending.length) && v !== (o.mode || "participants")) {
+      toast("Режим нельзя сменить, пока на колесе есть секторы — сначала очистите колесо", true); $("vw-mode").value = o.mode || "participants"; segSync(); return;
+    }
+    // шаблон сообщения о покупке — под режим, если его не меняли вручную
+    const was = o.mode || "participants";
+    if (!o.add_template || o.add_template === tr(VW_TPL[was])) o.add_template = tr(VW_TPL[v]);
+    (o.rewards || []).forEach(r => { if (r.title === tr("Предложить вариант") && v === "participants") r.title = tr("Участие в колесе"); if (r.title === tr("Участие в колесе") && v === "options") r.title = tr("Предложить вариант"); });
+  }
+  setPath(o, k, v); vwRenderCfg(); vwPreview(); queueSave($("vw-cfg"), 700);
+}
+function vwRenderCfg() {
+  const w = wlCur(), o = vwOpt(), mode = o.mode || "participants", tab = document.querySelector('[data-tab="wheel"]');
+  tab.classList.toggle("is-elim", o.spin_mode === "elimination");
+  tab.classList.toggle("is-part", mode === "participants");
+  $("vw-mode").value = mode;
+  $("vw-mode-hint").textContent = tr(mode === "participants"
+    ? "Зритель покупает награду — на колесе появляется сектор с его ником. Повторная покупка увеличивает его сектор."
+    : "Зритель покупает награду и пишет вариант (игра, фильм, задание). Одинаковые варианты от разных зрителей складываются в один сектор.");
+  const rs = o.rewards || [];
+  $("vw-rewards").innerHTML = rs.map((r, i) => `<div class="vw-rw">
+    <div class="vw-rw-top">
+      <label class="f"><span>${tr("Цвет")}</span><input type="color" class="no-hex" value="${esc(r.color || "#8B5CF6")}" aria-label="${esc(tr("Цвет награды"))} ${i + 1}" oninput="vwRw(${i},'color',this.value.toUpperCase())"></label>
+      <label class="f"><span>${tr("Название награды в Twitch")}</span><input maxlength="45" value="${esc(r.title || "")}" oninput="vwRw(${i},'title',this.value)"></label>
+      <label class="f vw-cost"><span>${tr("Цена, баллов")}</span><input type="number" min="1" max="10000000" value="${+r.cost || 500}" oninput="vwRw(${i},'cost',+this.value)"></label>
+      <button class="ib danger" aria-label="${esc(tr("Удалить награду"))} ${i + 1}" title="${esc(tr("Удалить награду"))}" onclick="vwRewardDel(${i})" ${rs.length <= 1 ? "disabled" : ""}>${ICON.trash}</button>
+    </div>
+    <label class="f u-mt-2"><span>${tr("Описание награды")}</span><input maxlength="200" value="${esc(r.prompt || "")}" placeholder="${esc(tr(mode === "participants" ? "Участие в колесе: чем больше баллов, тем больше ваш сектор" : "Напишите вариант: игра, фильм или задание (2–40 символов)"))}" oninput="vwRw(${i},'prompt',this.value)"></label>
+    <div class="vw-rw-lim u-mt-2">
+      <label class="f"><span>${tr("На зрителя за сбор")}</span><input type="number" min="0" max="1000" value="${+r.per_user || 0}" oninput="vwRw(${i},'per_user',+this.value)"></label>
+      <label class="f"><span>${tr("Всего за сбор")}</span><input type="number" min="0" max="100000" value="${+r.total || 0}" oninput="vwRw(${i},'total',+this.value)"></label>
+      <label class="f"><span>${tr("Кулдаун, сек")}</span><input type="number" min="0" max="604800" value="${+r.cooldown || 0}" oninput="vwRw(${i},'cooldown',+this.value)"></label>
+    </div></div>`).join("") + (rs.length ? `<div class="small muted">${tr("Лимиты: 0 — без ограничения. Сверх лимита покупка отклоняется, баллы возвращаются.")}</div>` : "");
+  $("vw-rw-count").textContent = `${rs.length} ${tr("из")} 3`;
+  $("vw-rw-add").disabled = rs.length >= 3;
+  document.querySelectorAll("[data-vw]").forEach(el => {
+    const v = getPath(o, el.dataset.vw), d = getPath(VW_DEF(), el.dataset.vw);
+    const val = v ?? d;
+    if (el.type === "checkbox") el.checked = !!val; else if (document.activeElement !== el) el.value = val ?? "";
+  });
+  $("vw-sec-v").textContent = (o.spin_sec || 10) + " " + tr("сек");
+  segSync();
+}
+document.addEventListener("input", e => {
+  const el = e.target.closest && e.target.closest("[data-vw]"); if (!el || !vwIs()) return;
+  const v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-num") ? (el.value === "" ? 0 : +el.value) : el.value;
+  setPath(vwOpt(), el.dataset.vw, v);
+  if (el.dataset.vw === "spin_sec") $("vw-sec-v").textContent = v + " " + tr("сек");
+  if (el.dataset.vw === "spin_mode") { document.querySelector('[data-tab="wheel"]').classList.toggle("is-elim", v === "elimination"); }
+  queueSave(el, 700);
+});
+document.addEventListener("change", e => { const el = e.target.closest && e.target.closest("[data-vw]"); if (el && el.tagName === "SELECT" && vwIs()) el.dispatchEvent(new Event("input", {bubbles: true})); });
+function vwRw(i, k, v) { vwOpt().rewards[i][k] = v; queueSave($("vw-rewards"), 900); if (k === "title" || k === "cost") vwPreview(); }
+function vwRewardAdd() {
+  const o = vwOpt(); o.rewards = o.rewards || []; if (o.rewards.length >= 3) return;
+  const base = (o.rewards[0] || {}).title || tr("Награда"), costs = [500, 2000, 10000];
+  o.rewards.push({title: (base + " ×" + (o.rewards.length + 1)).slice(0, 45), cost: costs[o.rewards.length] || 500, prompt: "", per_user: 0, total: 0, cooldown: 0,
+    color: ["#8B5CF6", "#EC4899", "#F59E0B"][o.rewards.length] || "#8B5CF6"});
+  vwRenderCfg(); queueSave($("vw-rewards"), 500);
+}
+function vwRewardDel(i) { const o = vwOpt(); if ((o.rewards || []).length <= 1) return; o.rewards.splice(i, 1); vwRenderCfg(); queueSave($("vw-rewards"), 500); }
+
+async function vwLoad() {
+  const w = wlCur(); if (!w || w.type !== "viewers") return;
+  let st;
+  try { st = await api("/vwheel?wheel=" + encodeURIComponent(w.id), undefined, undefined, {quiet: true}); } catch (e) { return; }
+  if (!vwIs() || wlCur().id !== w.id) return;
+  VWS = st; vwRenderLive(); vwPreview();
+}
+const VW_STATUS = {idle: "Сбор не начат", open: "Сбор открыт", closed: "Сбор закрыт", spinning: "Крутится…", between: "Между вращениями", done: "Победитель выбран"};
+function vwFmt(n) { return Number(n || 0).toLocaleString(window.I18N_LANG === "en" ? "en-US" : "ru-RU"); }
+function vwTime(sec) { return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
+function vwRenderLive() {
+  const st = VWS; if (!st) return;
+  const o = vwOpt(), elim = o.spin_mode === "elimination", part = st.participants;
+  $("vw-st").textContent = tr(VW_STATUS[st.status] || st.status);
+  $("vw-st").className = "pill " + (st.status === "open" ? "ok" : st.status === "spinning" ? "warn" : "");
+  $("vw-timer").textContent = st.status === "open" && st.ends_in ? vwTime(st.ends_in) : st.status === "between" && st.next_in ? tr("дальше через") + " " + st.next_in + " " + tr("сек") : "";
+  $("vw-total").textContent = st.sectors.length ? `${st.sectors.length} ${tr(ruPlural(st.sectors.length, ["сектор", "сектора", "секторов"]))} · ${vwFmt(st.total)} ${tr("баллов")}` : "";
+  const spinning = st.status === "spinning";
+  $("vw-open").classList.toggle("hidden", st.status === "open");
+  $("vw-close").classList.toggle("hidden", st.status !== "open");
+  $("vw-open").disabled = spinning;
+  $("vw-open").textContent = tr(st.status === "done" ? "Новый сбор" : st.status === "closed" && st.sectors.length ? "Продолжить сбор" : "Открыть сбор");
+  $("vw-spin").classList.toggle("hidden", st.status === "between");
+  $("vw-next").classList.toggle("hidden", st.status !== "between");
+  $("vw-spin").disabled = spinning || st.sectors.length < 2;
+  $("vw-spin").textContent = tr(st.status === "done" ? "Крутить ещё раз" : elim ? "Крутить на выбывание" : "Крутить");
+  $("vw-reroll").classList.toggle("hidden", !(st.status === "done" && part && st.winner));
+  $("vw-hint").textContent = tr(st.status === "idle" ? "Откройте сбор — награды станут доступны зрителям. Закройте сбор, когда пора крутить; вращение само закрывает сбор."
+    : st.status === "open" ? "Покупки поступают прямо сейчас. «Крутить» закроет сбор и запустит колесо."
+    : st.sectors.length < 2 && st.status !== "done" ? "Чтобы крутить, нужно хотя бы 2 сектора." : "");
+  const win = st.winner;
+  $("vw-winner").classList.toggle("hidden", !win);
+  if (win) {
+    const seen = win.seen_ago >= 0 ? " · " + (win.seen_ago < 90 ? tr("был в чате только что") : tr("был в чате") + " " + Math.round(win.seen_ago / 60) + " " + tr("мин назад")) : "";
+    $("vw-winner").innerHTML = `<div class="micro">${tr("Победитель")}</div><b data-noi18n>${esc(win.name)}</b> <span class="small muted">· ${vwFmt(win.points)} ${tr("баллов")}${esc(seen)}</span>`;
+  }
+  // проверка вариантов
+  const pend = st.pending || [];
+  $("vw-pending").classList.toggle("hidden", !pend.length);
+  $("vw-pending").innerHTML = pend.length ? `<div class="micro">${tr("На проверке")} · ${pend.length}</div>` + pend.map(p => `<div class="vw-pend">
+      <span class="grow"><b data-noi18n>${esc(p.text)}</b> <span class="small muted">· <span data-noi18n>${esc(p.user)}</span> · ${vwFmt(p.points)}</span></span>
+      <button class="sm primary" onclick="vwApprove('${esc(p.id)}',true)">${tr("Одобрить")}</button>
+      <button class="sm danger" onclick="vwApprove('${esc(p.id)}',false)">${tr("Отклонить и вернуть баллы")}</button></div>`).join("") : "";
+  // таблица секторов: по сумме, клик — вклады
+  const n = st.sectors.length, order = st.sectors.map((x, i) => ({x, i})).sort((a, b) => b.x.points - a.x.points);
+  const PAL = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#a855f7", "#22c55e", "#eab308", "#06b6d4"];
+  $("vw-sectors").innerHTML = order.map(({x, i}) => {
+    const open = VW_OPEN.has(x.id), dis = spinning ? "disabled" : "";
+    const sim = x.similar ? `<span class="vw-sim"><span>${tr("Похоже на")} <span data-noi18n>«${esc(x.similar_name)}»</span></span><button class="sm" onclick="event.stopPropagation();vwMerge('${x.id}','${x.similar}')" ${dis}>${tr("Объединить")}</button></span>` : "";
+    return `<tr class="vw-row" onclick="vwToggle('${x.id}')" aria-expanded="${open}"><td><div class="vw-name"><span class="vw-dot" style="background:${PAL[i % PAL.length]}"></span><b data-noi18n>${esc(x.name)}</b>${sim}</div></td>
+      <td class="num">${vwFmt(x.points)}</td><td class="num">${esc(x.chance)}%</td><td class="num">${x.contributors}</td>
+      <td><div class="vw-acts" onclick="event.stopPropagation()">
+        <button class="ib" aria-label="${esc(tr("Переименовать"))} · ${esc(x.name)}" title="${esc(tr("Переименовать"))}" onclick="vwRename('${x.id}')" ${dis}>${ICON.edit}</button>
+        <button class="ib" aria-label="${esc(tr("Изменить сумму"))} · ${esc(x.name)}" title="${esc(tr("Изменить сумму"))}" onclick="vwPoints('${x.id}')" ${dis}>${ICON.coin}</button>
+        <button class="ib" aria-label="${esc(tr("Объединить с другим"))} · ${esc(x.name)}" title="${esc(tr("Объединить с другим"))}" onclick="vwMergePick('${x.id}')" ${dis || n < 2 ? "disabled" : ""}>${ICON.list}</button>
+        <button class="ib danger" aria-label="${esc(tr("Удалить сектор"))} · ${esc(x.name)}" title="${esc(tr("Удалить сектор"))}" onclick="vwDelete('${x.id}')" ${dis}>${ICON.trash}</button></div></td></tr>`
+      + (open ? `<tr class="vw-contribs"><td colspan="5"><div class="log">${(x.contribs || []).map(c => `<div class="lg"><span class="k">${new Date(c.ts * 1000).toLocaleTimeString()}</span><span class="lg-t"><b data-noi18n>${esc(c.user)}</b> +${vwFmt(c.points)}${c.source === "donation" ? " · " + tr("донат") : c.source === "manual" ? " · " + tr("вручную") : c.confirmed ? "" : " · " + tr("ещё не подтверждена")}</span></div>`).join("") || `<span class="muted small">${tr("Сумма задана вручную")}</span>`}</div></td></tr>` : "");
+  }).join("") || `<tr><td colspan="5">${emptyBox(st.status === "open" ? "Ждём первые покупки" : "Секторов пока нет", part ? "Зритель покупает награду — на колесе появляется сектор с его ником." : "Зритель покупает награду и пишет вариант — он появляется на колесе.")}</td></tr>`;
+  $("vw-clear").disabled = spinning || (!n && !pend.length && st.status === "idle");
+  const outs = st.out_sectors || [];
+  $("vw-out").textContent = outs.length ? `${tr(elim ? "Выбыли" : "Убраны с колеса")}: ` + outs.map(x => x.name + (x.no_answer ? " (" + tr("не ответил") + ")" : "")).join(", ") : "";
+  // права и баллы канала
+  const rw = st.rewards || {}, perm = $("vw-perm");
+  let msg = "", btn = "";
+  if (!rw.connected) { msg = "Войдите через Twitch — без входа программа не может создать награды за баллы."; btn = `<button class="sm primary" onclick="twLogin('streamer')">${tr("Войти через Twitch")}</button>`; }
+  else if (rw.no_points) msg = "У канала нет баллов канала: они появляются у компаньонов и партнёров Twitch. Колесо зрителей работает только с баллами — секторы можно добавлять вручную.";
+  else if (rw.scope_missing) { msg = "Программе не хватает права управлять наградами за баллы. Переподключите Twitch — права запросятся заново."; btn = `<button class="sm primary" onclick="twLogin('streamer')">${tr("Переподключить Twitch")}</button>`; }
+  else if (rw.foreign) msg = "Награда с таким названием уже создана на Twitch другим способом входа — программа не сможет возвращать за неё баллы. Удалите её в панели Twitch или переименуйте награду здесь.";
+  perm.classList.toggle("hidden", !msg);
+  perm.innerHTML = msg ? `${esc(tr(msg))}${btn ? `<div class="row">${btn}</div>` : ""}` : "";
+  // история
+  $("vw-hist").innerHTML = (st.history || []).map(h => `<div class="lg"><span class="k">${new Date(h.ts * 1000).toLocaleString()}</span>
+    <span class="lg-t"><b data-noi18n>${esc(h.winner)}</b> — ${esc(h.chance)}%, ${vwFmt(h.points)} ${tr("баллов")} · ${h.sectors} ${tr(ruPlural(h.sectors, ["сектор", "сектора", "секторов"]))}, ${h.contributors} ${tr(ruPlural(h.contributors, ["вкладчик", "вкладчика", "вкладчиков"]))}${h.elimination ? " · " + tr("на выбывание") : ""}</span></div>`).join("")
+    || emptyBox("Колесо ещё не разыгрывали", "Здесь появятся победители прошлых колёс.");
+}
+function vwToggle(id) { if (VW_OPEN.has(id)) VW_OPEN.delete(id); else VW_OPEN.add(id); vwRenderLive(); }
+function vwPreview() {
+  const w = wlCur(); if (!w || w.type !== "viewers") return;
+  const o = vwOpt(), rs = (o.rewards || []).filter(r => (r.title || "").trim());
+  const ov = (VWS && VWS.overlay) || {name: w.name, status: "idle", sectors: [], top: [], left: 0};
+  const label = rs.length ? `${rs[0].title} — ${rs.map(r => vwFmt(r.cost || 500)).join(" / ")} ${tr("баллов")}` : "";
+  const v = Object.assign({}, ov, {name: w.name, show: true, label: ov.status === "open" || ov.status === "idle" ? label : ""});
+  try { $("wl-frame").contentWindow.postMessage({type: "b1-vwheel", viewer: v}, "*"); } catch (e) {}
+}
+async function vwCall(path, body) {
+  if (VW_BUSY) return null; VW_BUSY = true;
+  try { await flushSave(); const r = await api("/vwheel/" + path, Object.assign({wheel: WL_ID}, body || {})); if (r && r.sectors) { VWS = r; vwRenderLive(); vwPreview(); } return r; }
+  catch (e) { return null; } finally { VW_BUSY = false; }
+}
+async function vwAct(what) {
+  const r = await vwCall(what);
+  if (r) toast(what === "open" ? "Сбор открыт — награды доступны зрителям" : what === "close" ? "Сбор закрыт — награды на паузе" : "Колесо крутится в OBS");
+}
+async function vwReroll() {
+  if (!await confirmDlg({title: "Перевыбрать победителя?", text: "Текущий победитель уйдёт с колеса, и колесо крутится ещё раз среди остальных.", okLabel: "Перевыбрать"})) return;
+  if (await vwCall("reroll")) toast("Колесо крутится ещё раз");
+}
+async function vwApprove(id, ok) { if (await vwCall("approve", {id, ok})) toast(ok ? "Вариант добавлен на колесо" : "Вариант отклонён, баллы возвращены"); }
+const vwSec = id => ((VWS && VWS.sectors) || []).find(x => x.id === id);
+async function vwRename(id) {
+  const x = vwSec(id); if (!x) return;
+  const v = await promptDlg({title: "Переименовать сектор", value: x.name, okLabel: "Сохранить"});
+  if (v != null && v.trim() && v.trim() !== x.name) await vwCall("rename", {sector: id, name: v.trim()});
+}
+async function vwPoints(id) {
+  const x = vwSec(id); if (!x) return;
+  const v = await promptDlg({title: "Сумма баллов сектора", text: "Шанс пересчитается. Вклады зрителей останутся в истории сектора.", value: String(x.points), okLabel: "Сохранить"});
+  const n = Math.round(+String(v || "").replace(/\s/g, ""));
+  if (v != null && n >= 1) await vwCall("points", {sector: id, points: n});
+  else if (v != null) toast("Сумма — целое число от 1", true);
+}
+async function vwMerge(id, into) { if (await vwCall("merge", {sector: id, into})) toast("Секторы объединены"); }
+async function vwMergePick(id) {
+  const x = vwSec(id); if (!x) return;
+  const others = VWS.sectors.filter(y => y.id !== id).sort((a, b) => b.points - a.points);
+  const into = await dlgOpen((box) => {
+    const ok = dlgHead(box, {title: "Объединить секторы", text: `Баллы и вклады «${x.name}» перейдут в выбранный сектор.`, okLabel: "Объединить"});
+    const sel = document.createElement("select"); sel.setAttribute("aria-label", tr("С каким сектором"));
+    sel.innerHTML = others.map(y => `<option value="${esc(y.id)}">${esc(y.name)} · ${vwFmt(y.points)}</option>`).join("");
+    box.querySelector(".dlg-body").appendChild(sel);
+    return {ok, accept: () => sel.value, cancel: () => null, focus: sel};
+  });
+  if (into) await vwMerge(id, into);
+}
+async function vwDelete(id) {
+  const x = vwSec(id); if (!x) return;
+  const res = await dlgOpen((box) => {
+    const ok = dlgHead(box, {title: `Удалить сектор «${x.name}»?`, okLabel: "Удалить", danger: 1});
+    const body = box.querySelector(".dlg-body");
+    if (x.refundable > 0) {
+      body.innerHTML = `<label class="switch"><input type="checkbox" checked> ${esc(tr("Вернуть баллы зрителям"))} (${x.refundable})</label>`
+        + (x.not_refundable ? `<p class="small muted u-mt-2">${esc(tr("За часть покупок вернуть баллы нельзя — они уже подтверждены на Twitch"))}: ${x.not_refundable}.</p>` : "");
+    } else if (x.not_refundable) {
+      body.innerHTML = `<p class="small">${esc(tr("Вернуть баллы не получится: покупки уже подтверждены на Twitch. Если нужно, верните их вручную в «Очереди запросов наград» на Twitch."))}</p>`;
+    } else body.innerHTML = `<p class="small muted">${esc(tr("В этом секторе нет покупок за баллы."))}</p>`;
+    const cb = body.querySelector("input[type=checkbox]");
+    return {ok, accept: () => ({refund: cb ? cb.checked : false}), cancel: () => null, focus: box.querySelector("[data-cancel]")};
+  });
+  if (!res) return;
+  const r = await vwCall("delete", {sector: id, refund: res.refund});
+  if (r) toast(r.refunded ? `${tr("Сектор удалён, баллы возвращены")}: ${r.refunded}` : "Сектор удалён");
+}
+async function vwAddManual() {
+  const res = await dlgOpen((box) => {
+    const ok = dlgHead(box, {title: "Добавить сектор вручную", text: "Для донатов наличными, вариантов стримера и т. п. Сумма — в баллах.", okLabel: "Добавить"});
+    const body = box.querySelector(".dlg-body");
+    body.innerHTML = `<label class="f"><span>${esc(tr(vwOpt().mode === "options" ? "Вариант" : "Ник участника"))}</span><input maxlength="40" id="vw-m-name"></label>
+      <label class="f u-mt-2"><span>${esc(tr("Сумма, баллов"))}</span><input type="number" min="1" value="500" id="vw-m-pts"></label>`;
+    return {ok, accept: () => ({name: body.querySelector("#vw-m-name").value.trim(), points: +body.querySelector("#vw-m-pts").value}), cancel: () => null, focus: body.querySelector("#vw-m-name")};
+  });
+  if (!res) return;
+  if (!res.name) { toast("Напишите название сектора", true); return; }
+  if (!(res.points >= 1)) { toast("Сумма — от 1 балла", true); return; }
+  if (await vwCall("add", res)) toast("Сектор добавлен");
+}
+async function vwClear() {
+  const can = ((VWS && VWS.sectors) || []).reduce((a, x) => a + (x.refundable || 0), 0) + ((VWS && VWS.pending) || []).length;
+  if (!await confirmDlg({title: "Очистить колесо?", text: "Все секторы и вклады будут убраны." + (can ? ` ${tr("За ещё не подтверждённые покупки баллы вернутся")}: ${can}.` : ""), okLabel: "Очистить", danger: 1})) return;
+  const r = await vwCall("clear");
+  if (r) toast(r.refunded ? `${tr("Колесо очищено, баллы возвращены")}: ${r.refunded}` : "Колесо очищено");
 }
 
 // ---------- поддержка разработчика ----------

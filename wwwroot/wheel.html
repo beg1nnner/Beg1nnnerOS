@@ -21,7 +21,26 @@
   .top { text-align:center; min-height:1em; }
   .wname { font-size:calc(3.2vmin * var(--scale)); font-weight:var(--weight); text-transform:var(--upper); text-shadow:var(--tshadow); letter-spacing:-.01em; }
   .who { font-size:calc(2.2vmin * var(--scale)); color:var(--muted); margin-top:.3vmin; text-shadow:var(--tshadow); }
+  #row { display:flex; align-items:center; justify-content:center; gap:4vmin; }
   #wrap { position:relative; width:min(68vmin, 900px); aspect-ratio:1; }
+  body.vw #wrap { width:min(62vmin, 820px); }
+  .wlabel { font-size:calc(2vmin * var(--scale)); color:var(--muted); font-weight:600; text-shadow:var(--tshadow); letter-spacing:.02em; margin-bottom:.4vmin; }
+  .timer { display:inline-block; margin-top:.8vmin; padding:.4vmin 1.4vmin; border-radius:999px; background:var(--label-bg); border:var(--label-border);
+    font-family:"Geist Mono",Consolas,monospace; font-size:calc(2.2vmin * var(--scale)); font-weight:600; font-variant-numeric:tabular-nums; }
+  .timer:empty { display:none; }
+  #side { display:none; width:min(30vmin, 420px); padding:1.8vmin 2vmin; border-radius:var(--radius); background:var(--label-bg); border:var(--label-border);
+    box-shadow:0 16px 40px -18px #000c; font-size:calc(2vmin * var(--scale)); }
+  body.vw.side #side { display:block; }
+  #toplist { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.9vmin; }
+  #toplist li { display:grid; grid-template-columns:1.2vmin 1fr auto; gap:1.1vmin; align-items:center; animation:pop .4s ease; }
+  #toplist .dot { width:1.2vmin; height:1.2vmin; border-radius:50%; }
+  #toplist .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; text-transform:var(--upper); }
+  #toplist .pc { font-family:"Geist Mono",Consolas,monospace; color:var(--muted); font-variant-numeric:tabular-nums; }
+  #lastbuy { margin-top:1.4vmin; padding-top:1.2vmin; border-top:1px solid color-mix(in srgb, var(--text) 14%, transparent); color:var(--muted); font-size:.85em;
+    overflow-wrap:anywhere; }
+  #lastbuy:empty { display:none; }
+  #lastbuy b { color:var(--text); }
+  @keyframes pop { from { opacity:0; transform:translateX(-1vmin); } }
   #wrap canvas { width:100%; height:100%; display:block; border-radius:50%; box-shadow:var(--glow); }
   #ptr { position:absolute; left:50%; top:-1.6vmin; width:6vmin; height:7vmin; transform:translateX(-50%); filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); z-index:2; }
   #ptr.tick { animation:tick .12s ease-out; }
@@ -46,16 +65,21 @@
 </head>
 <body>
 <div id="stage" aria-live="polite">
-  <div class="top"><div class="wname" id="wname"></div><div class="who" id="who"></div></div>
+  <div class="top"><div class="wlabel" id="wlabel"></div><div class="wname" id="wname"></div><div class="who" id="who"></div><div class="timer" id="timer"></div></div>
+  <div id="row">
   <div id="wrap">
     <svg id="ptr" viewBox="0 0 60 70" aria-hidden="true"><path d="M30 68L6 14a26 26 0 1 1 48 0z" fill="var(--accent)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><circle cx="30" cy="24" r="8" fill="#fff" opacity=".9"/></svg>
     <canvas id="cv" width="1000" height="1000"></canvas>
+  </div>
+  <aside id="side" aria-label="Крупнейшие секторы"><ol id="toplist"></ol><div id="lastbuy"></div></aside>
   </div>
   <div id="res"></div>
 </div>
 <script>
 // Источник для OBS: колесо фортуны. Результат выбирает программа до начала вращения — здесь только анимация.
 // Параметры: ?preview=1 — шахматный фон и пример колеса; ?theme=studio|classic|neon|minimal|retro|custom:ID.
+// Колесо зрителей: во время сбора колесо видно (или только во время вращения — настройка), секторы растут плавно,
+// рядом — крупнейшие секторы и последняя покупка; при большом числе секторов мелкие рисуются одним «Остальные (N)».
 const Q = new URLSearchParams(location.search);
 const PREVIEW = Q.get("preview") === "1" || Q.has("demo");
 if (PREVIEW) document.body.classList.add("preview");
@@ -63,22 +87,82 @@ const $ = id => document.getElementById(id);
 const cv = $("cv"), ctx = cv.getContext("2d");
 const tr = window.tr || (s => s);
 let CFG = {sound: true, volume: 60, theme: "studio", title: true, custom_themes: []};
-let previewTheme = null, previewWheel = null;
+let previewTheme = null, previewWheel = null, previewViewer = null;
 let angle = 0;                 // текущий поворот колеса, градусы
 let spin = null, anim = null;  // текущее вращение с сервера и его анимация
 let shownId = 0, doneId = 0;
 
+// ---------- палитры тем: цвета секторов колеса зрителей (у обычных колёс цвета заданы в секторах) ----------
+const PALETTES = {
+  studio: ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#a855f7", "#22c55e", "#eab308", "#06b6d4"],
+  classic: ["#dc2626", "#f5c542", "#16a34a", "#2563eb", "#f97316", "#7c3aed", "#0891b2", "#db2777"],
+  neon: ["#ff2bd6", "#22d3ee", "#a3e635", "#f59e0b", "#8b5cf6", "#f43f5e", "#2dd4bf", "#facc15"],
+  minimal: ["#e5e7eb", "#9ca3af", "#d1d5db", "#6b7280", "#f3f4f6", "#4b5563"],
+  retro: ["#14532d", "#22c55e", "#166534", "#4ade80", "#15803d", "#a3e635"],
+};
+const OTHERS_COLOR = "#4b4b57";
+let palette = PALETTES.studio;
+function hexHsl(hex) {
+  const h = (hex || "#8b5cf6").replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  let hh = 0; const ss = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  if (d) hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(hh * 60 + 360) % 360, ss * 100, l * 100];
+}
+function hsl2hex(h, s2, l) {
+  s2 /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s2 * Math.min(l, 1 - l);
+  const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, "0");
+  return "#" + f(0) + f(8) + f(4);
+}
+// своя тема: палитра из её акцентного цвета — шаг по тону, чередование светлоты
+function paletteFrom(accent) {
+  const [h, s2] = hexHsl(accent);
+  return Array.from({length: 10}, (_, i) => hsl2hex((h + i * 36) % 360, Math.max(55, Math.min(80, s2)), i % 2 ? 46 : 58));
+}
+// цвет по месту на колесе: соседние секторы (и последний с первым) — не одного цвета
+function colorAt(i, n) {
+  const P = palette.length;
+  let c = i % P;
+  if (n > 1 && i === n - 1 && c === 0) { c = (P > 2 && ((n - 2) % P) === 2) ? 3 % P : 2 % P; }
+  return palette[c];
+}
+function colored(sectors) {
+  const n = sectors.length;
+  return sectors.map((x, i) => x.color ? x : Object.assign({}, x, {color: x.others ? OTHERS_COLOR : colorAt(i, n)}));
+}
+// больше 45 секторов: самые мелкие визуально объединяются в «Остальные (N)»; на результат это не влияет
+const MERGE_FROM = 45, KEEP = 40;
+function forDisplay(sectors) {
+  const n = sectors.length, map = sectors.map((_, i) => i);
+  if (n <= MERGE_FROM) return {list: sectors, map};
+  const order = sectors.map((x, i) => i).sort((a, b) => (sectors[a].weight || 1) - (sectors[b].weight || 1));
+  const small = new Set(order.slice(0, n - KEEP));
+  const list = [], others = {name: "", weight: 0, others: true, id: "__others"};
+  let cnt = 0;
+  sectors.forEach((x, i) => { if (small.has(i)) { others.weight += Math.max(1, x.weight || 1); cnt++; } else { map[i] = list.length; list.push(x); } });
+  others.name = tr("Остальные") + ` (${cnt})`;
+  sectors.forEach((x, i) => { if (small.has(i)) map[i] = list.length; });
+  list.push(others);
+  return {list, map};
+}
+
 // ---------- рисование ----------
 function css(v) { return getComputedStyle(document.body).getPropertyValue(v).trim(); }
 function layout(sectors) {
-  const total = sectors.reduce((a, s) => a + Math.max(1, s.weight || 1), 0);
+  const total = sectors.reduce((a, s) => a + Math.max(0, s.weight ?? 1), 0) || 1;
   let a = 0;
-  return sectors.map(s => { const w = Math.max(1, s.weight || 1) / total * 360; const r = {s, from: a, to: a + w}; a += w; return r; });
+  return sectors.map(s => { const w = Math.max(0, s.weight ?? 1) / total * 360; const r = {s, from: a, to: a + w}; a += w; return r; });
 }
+// сначала уменьшаем шрифт (до 70%), потом сокращаем по словам и только в крайнем случае — по буквам
 function fitText(text, max, size) {
-  // сначала уменьшаем шрифт (до 70%), и только потом обрезаем многоточием
   const font = s => `${css("--weight") || 700} ${s}px ${css("--font")}`;
   for (let s = size; s >= size * 0.7; s -= size * 0.05) { ctx.font = font(s); if (ctx.measureText(text).width <= max) return text; }
+  const words = text.split(" ");
+  for (let n = words.length - 1; n >= 1; n--) {
+    if (n > 1 && words[n - 1].length <= 2) continue;   // не заканчиваем предлогом: «Приветствие в…» → «Приветствие…»
+    const t = words.slice(0, n).join(" ").replace(/[,.;:—-]+$/, "") + "…"; if (ctx.measureText(t).width <= max) return t;
+  }
   let t = text;
   while (t.length > 1 && ctx.measureText(t + "…").width > max) t = t.slice(0, -1);
   return t + "…";
@@ -90,31 +174,38 @@ function lum(hex) {
 }
 function draw(sectors, winner = -1) {
   const W = cv.width, R = W / 2, rim = parseFloat(css("--rim-w")) * 2 || 0, r = R - rim;
+  sectors = colored(sectors);
   ctx.clearRect(0, 0, W, W);
   ctx.save(); ctx.translate(R, R);
   // обод
   if (rim > 0) { ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = css("--rim"); ctx.fill(); }
   ctx.rotate((angle - 90) * Math.PI / 180);
   const L = layout(sectors), scale = parseFloat(css("--scale")) || 1, upper = css("--upper") === "uppercase";
+  if (!L.length) { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = "rgba(255,255,255,.06)"; ctx.fill(); }
   L.forEach((x, i) => {
+    if (x.to - x.from <= 0.01) return;
     const a0 = x.from * Math.PI / 180, a1 = x.to * Math.PI / 180;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a1); ctx.closePath();
     ctx.fillStyle = x.s.color || "#8b5cf6"; ctx.fill();
     if (winner >= 0 && i !== winner) { ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fill(); }
-    ctx.strokeStyle = css("--sep"); ctx.lineWidth = Math.max(2, W / 400); ctx.stroke();
-    // подпись вдоль радиуса
-    const mid = (a0 + a1) / 2, span = (x.to - x.from);
+    if (L.length > 1) { ctx.strokeStyle = css("--sep"); ctx.lineWidth = Math.max(1.5, Math.min(W / 400, (x.to - x.from) * W / 1400)); ctx.stroke(); }
+    // подпись вдоль радиуса; у узкого сектора подписи нет — сам сектор остаётся
+    const mid = (a0 + a1) / 2, span = (x.to - x.from) * Math.PI / 180;
+    const size = Math.min(W / 22, Math.max(W / 42, span * 180 / Math.PI * W / 900)) * scale;
+    // подпись идёт от края к центру: ближе к центру сектор уже, и подпись не должна вылезать на соседей
+    const inner = Math.max(W / 14 + W / 60, size * 1.15 / Math.max(span, 1e-6));
+    const room = Math.min(r - W / 28 - inner, r * 0.76 - W / 14);
+    if (room < size * 2.2) return;
     ctx.save(); ctx.rotate(mid);
-    const size = Math.min(W / 22, Math.max(W / 60, span * W / 900)) * scale;
     const name = upper ? x.s.name.toUpperCase() : x.s.name;
-    const t = fitText(name, r * 0.76 - W / 14, size);
+    const t = fitText(name, room, size);
     ctx.textAlign = "right"; ctx.textBaseline = "middle";
     ctx.fillStyle = lum(x.s.color || "#000") > 0.62 ? "#111" : "#fff";
     ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 4;
     ctx.fillText(t, r - W / 28, 0);
     ctx.restore();
   });
-  if (winner >= 0) {   // подсветка выигравшего сектора
+  if (winner >= 0 && L[winner]) {   // подсветка выигравшего сектора
     const x = L[winner];
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, x.from * Math.PI / 180, x.to * Math.PI / 180); ctx.closePath();
     ctx.lineWidth = W / 70; ctx.strokeStyle = "#fff"; ctx.shadowColor = css("--accent"); ctx.shadowBlur = W / 25; ctx.stroke();
@@ -141,17 +232,18 @@ function beep(freq, dur, type = "triangle", gain = 1, when = 0) {
 const tickSound = () => beep(1500, 0.04, "square", 0.35);
 const winSound = () => [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.5, "triangle", 0.9, i * 0.11));
 
-// ---------- анимация ----------
+// ---------- анимация вращения ----------
 const ease = x => 1 - Math.pow(1 - x, 4);   // быстро разгоняется и долго, плавно замедляется
 function startSpin(s) {
-  const L = layout(s.sectors), win = L[s.result];
+  stopGrow();
+  const disp = forDisplay(s.sectors), L = layout(disp.list), win = L[disp.map[s.result]];
   // точка внутри выигравшего сектора (не на самой границе)
   const pad = (win.to - win.from) * 0.18;
   const target = win.from + pad + Math.random() * Math.max(0, win.to - win.from - pad * 2);
   const base = ((angle % 360) + 360) % 360;
   let delta = ((360 - target) - base + 720) % 360;
-  delta += 360 * (Math.round(s.duration_ms / 1000) + 2);   // полные обороты
-  anim = {s, from: angle, delta, dur: Math.max(500, s.duration_ms), t0: performance.now() - Math.max(0, s.elapsed_ms), lastSector: -1, L};
+  delta += 360 * (Math.round(Math.min(s.duration_ms, 10000) / 1000) + 2);   // полные обороты
+  anim = {s, disp, from: angle, delta, dur: Math.max(500, s.duration_ms), t0: performance.now() - Math.max(0, s.elapsed_ms), lastSector: -1, L};
   $("res").classList.remove("show");
   requestAnimationFrame(frame);
 }
@@ -166,22 +258,80 @@ function frame(now) {
   const sec = sectorAt(angle, anim.L);
   if (sec !== anim.lastSector && anim.lastSector !== -1 && k < 1) { tickSound(); const p = $("ptr"); p.classList.remove("tick"); void p.offsetWidth; p.classList.add("tick"); }
   anim.lastSector = sec;
-  draw(anim.s.sectors);
+  draw(anim.disp.list);
   if (k < 1) { requestAnimationFrame(frame); return; }
-  const s = anim.s; anim = null; doneId = s.id;
-  draw(s.sectors, s.result);
+  const s = anim.s, disp = anim.disp; anim = null; doneId = s.id;
+  draw(disp.list, disp.map[s.result]);
   showResult(s);
   winSound();
 }
 function showResult(s) {
   const name = s.sectors[s.result].name;
-  $("res").innerHTML = `<small>${esc(tr(s.giveaway ? "Победитель" : "Выпало"))}</small>${esc(name)}`;
+  const label = s.giveaway ? "Победитель" : s.elimination ? "Выбывает" : s.viewer ? "Победил" : "Выпало";
+  $("res").innerHTML = `<small>${esc(tr(label))}</small>${esc(name)}`;
   $("res").classList.add("show");
 }
 function esc(t) { return String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function header(s) {
   $("wname").textContent = CFG.title === false ? "" : (s.giveaway ? tr("Розыгрыш") + ": " + s.wheel : s.wheel);
-  $("who").textContent = s.user ? `${tr("крутит")} ${s.user}` : "";
+  $("who").textContent = s.elimination ? `${tr("На выбывание")} · ${tr("круг")} ${s.round}` : s.user ? `${tr("крутит")} ${s.user}` : "";
+  $("wlabel").textContent = ""; $("timer").textContent = "";
+}
+
+// ---------- колесо зрителей: сбор ----------
+// Секторы появляются и растут плавно: показанный вес каждого сектора догоняет настоящий.
+let VW = null;               // последние данные сбора с сервера
+const cur = new Map();       // id сектора → показанный вес
+let growRaf = 0, growLast = 0;
+function vwTargets(v) { return (v && v.sectors) || []; }
+function vwFrame(t) {
+  growRaf = 0;
+  if (anim || !VW) return;
+  const dt = growLast ? Math.min(100, t - growLast) : 16; growLast = t;
+  const k = 1 - Math.pow(0.0025, dt / 1000);   // примерно 0,6 с до цели
+  const targets = vwTargets(VW), ids = new Set(targets.map(x => x.id));
+  let moving = false;
+  for (const x of targets) {
+    const c = cur.has(x.id) ? cur.get(x.id) : 0, w = Math.max(1, x.weight || 1);
+    const n = Math.abs(w - c) < w * 0.002 ? w : c + (w - c) * k;
+    if (n !== w) moving = true;
+    cur.set(x.id, n);
+  }
+  for (const [id, c] of cur) if (!ids.has(id)) { const n = c * (1 - k); if (n < 0.5) cur.delete(id); else { cur.set(id, n); moving = true; } }
+  const list = targets.map(x => ({id: x.id, name: x.name, weight: cur.get(x.id) || 0}));
+  for (const [id, c] of cur) if (!ids.has(id)) list.push({id, name: "", weight: c});
+  draw(forDisplay(list).list);
+  if (moving) growRaf = requestAnimationFrame(vwFrame); else growLast = 0;
+}
+function stopGrow() { if (growRaf) cancelAnimationFrame(growRaf); growRaf = 0; growLast = 0; }
+function fmtTime(sec) { const m = Math.floor(sec / 60), s2 = sec % 60; return `${m}:${String(s2).padStart(2, "0")}`; }
+function renderSide(v) {
+  const top = (v && v.top) || [], disp = forDisplay((v && v.sectors) || []).list, n = disp.length;
+  const ids = disp.map(x => x.name);
+  const html = top.map(x => {
+    const i = ids.indexOf(x.name);
+    return `<li><span class="dot" style="background:${i >= 0 ? colorAt(i, n) : OTHERS_COLOR}"></span><span class="nm">${esc(x.name)}</span><span class="pc">${esc(x.pct)}%</span></li>`;
+  }).join("");
+  if ($("toplist")._h !== html) { $("toplist")._h = html; $("toplist").innerHTML = html; }   // без перерисовки — анимация появления не повторяется
+  $("lastbuy").innerHTML = v && v.last ? `${esc(tr("последняя покупка"))}: <b>${esc(v.last.user)}</b> +${esc(Number(v.last.points).toLocaleString("ru-RU"))}` : "";
+  document.body.classList.toggle("side", top.length > 0);
+}
+function showViewer(v) {
+  VW = v;
+  document.body.classList.add("vw");
+  $("stage").classList.add("show");
+  $("wname").textContent = CFG.title === false ? "" : v.name;
+  $("wlabel").textContent = v.label || "";
+  $("who").textContent = v.status === "open" ? tr("Сбор открыт") : v.status === "between" ? `${tr("На выбывание")} · ${tr("осталось")} ${v.left}`
+    : v.status === "done" && v.winner ? `${tr("Победил")}: ${v.winner}` : v.status === "closed" ? tr("Сбор закрыт") : "";
+  $("timer").textContent = v.ends_in > 0 ? fmtTime(v.ends_in) : "";
+  renderSide(v);
+  if (!growRaf) growRaf = requestAnimationFrame(vwFrame);
+}
+function hideViewer() {
+  VW = null; stopGrow();
+  document.body.classList.remove("vw", "side");
+  $("wlabel").textContent = ""; $("timer").textContent = "";
 }
 
 // ---------- темы ----------
@@ -193,7 +343,10 @@ function applyTheme() {
   const want = Q.get("theme") || CFG.theme || "studio";
   const ct = previewTheme || (want.startsWith("custom:") ? (CFG.custom_themes || []).find(t => "custom:" + t.id === want) : null);
   const base = ct ? (BASES.includes(ct.base) ? ct.base : "studio") : (BASES.includes(want) ? want : "studio");
+  const keep = ["vw", "side"].filter(c => document.body.classList.contains(c));
   document.body.className = "t-" + base + (PREVIEW ? " preview" : "");
+  keep.forEach(c => document.body.classList.add(c));
+  palette = ct ? paletteFrom(ct.accent) : (PALETTES[base] || PALETTES.studio);
   const key = ct ? JSON.stringify(ct) : "";
   if (key === customKey) return;
   customKey = key;
@@ -209,13 +362,20 @@ function applyTheme() {
 window.addEventListener("message", e => {
   const d = e.data || {};
   if (d.type === "b1-theme") { previewTheme = d.theme; customKey = null; applyTheme(); redraw(); }
-  if (d.type === "b1-wheel") { previewWheel = d.wheel; if (!spin && !anim) showStatic(); }
+  if (d.type === "b1-wheel") { previewWheel = d.wheel; previewViewer = null; hideViewer(); if (!spin && !anim) showStatic(); }
+  // предпросмотр колеса зрителей в панели: данные сбора приходят от панели (в том числе в демо-режиме)
+  if (d.type === "b1-vwheel") { previewViewer = d.viewer; previewWheel = null; if (!spin && !anim) { if (d.viewer) showViewer(d.viewer); else { hideViewer(); $("stage").classList.remove("show"); } } }
   if (d.type === "b1-wheel-spin" && previewWheel) {   // проверка в предпросмотре панели — без сервера
     const s = {id: -Date.now(), wheel: previewWheel.name, user: "", sectors: previewWheel.sectors, result: d.result ?? 0, duration_ms: d.duration_ms || 6000, elapsed_ms: 0};
     $("stage").classList.add("show"); header(s); startSpin(s);
   }
 });
-function redraw() { if (anim) return; const s = spin || staticWheel(); if (s) draw(s.sectors, spin && doneId === spin.id ? spin.result : -1); }
+function redraw() {
+  if (anim) return;
+  if (VW && !spin) { if (!growRaf) growRaf = requestAnimationFrame(vwFrame); renderSide(VW); return; }
+  const s = spin || staticWheel(); if (!s) return;
+  const disp = forDisplay(s.sectors); draw(disp.list, spin && doneId === spin.id ? disp.map[spin.result] : -1);
+}
 const DEMO = {name: "Колесо фортуны", sectors: [
   {name: "Удача!", weight: 2, color: "#8b5cf6"}, {name: "Трек от стримера", weight: 3, color: "#ec4899"}, {name: "Таймаут 1 минута", weight: 1, color: "#ef4444"},
   {name: "Приветствие в чат", weight: 3, color: "#10b981"}, {name: "Ничего", weight: 4, color: "#3b82f6"}, {name: "Джекпот", weight: 1, color: "#f59e0b"}]};
@@ -234,17 +394,28 @@ async function poll() {
     const j = await r.json(); const d = j.data || j;
     CFG = Object.assign(CFG, d); applyTheme();
     const s = d.spin;
+    const v = previewViewer || (PREVIEW ? null : d.viewer);
     if (s && s.id !== shownId) {
       shownId = s.id; spin = s;
+      if (s.viewer && v) { VW = v; document.body.classList.add("vw"); renderSide(v); } else hideViewer();
       $("stage").classList.add("show"); header(s);
-      if (s.elapsed_ms >= s.duration_ms) { doneId = s.id; draw(s.sectors, s.result); showResult(s); }   // открыли уже после остановки
-      else if (s.elapsed_ms < -50) { draw(s.sectors); setTimeout(() => startSpin(Object.assign({}, s, {elapsed_ms: 0})), -s.elapsed_ms); }   // до старта — колесо уже видно
+      if (s.elapsed_ms >= s.duration_ms) {   // открыли уже после остановки — колесо сразу стоит выпавшим сектором под стрелкой
+        stopGrow(); doneId = s.id; const dp = forDisplay(s.sectors), x = layout(dp.list)[dp.map[s.result]];
+        if (x) angle = 360 - (x.from + x.to) / 2;
+        draw(dp.list, dp.map[s.result]); showResult(s);
+      }
+      else if (s.elapsed_ms < -50) { stopGrow(); draw(forDisplay(s.sectors).list); setTimeout(() => startSpin(Object.assign({}, s, {elapsed_ms: 0})), -s.elapsed_ms); }   // до старта — колесо уже видно
       else startSpin(s);
     } else if (!s && spin && !anim) {
       spin = null;
       $("res").classList.remove("show");
-      if (staticWheel()) showStatic(); else $("stage").classList.remove("show");
-    }
+      if (v && v.show) { cur.clear(); (v.sectors || []).forEach(x => cur.set(x.id, Math.max(1, x.weight || 1))); showViewer(v); }
+      else if (staticWheel()) { hideViewer(); showStatic(); } else { hideViewer(); $("stage").classList.remove("show"); }
+    } else if (!s && !spin && !anim) {
+      // колесо зрителей между вращениями: сбор, «Дальше», итог
+      if (v && v.show) showViewer(v);
+      else if (VW && !previewViewer) { hideViewer(); if (staticWheel()) showStatic(); else $("stage").classList.remove("show"); }
+    } else if (s && s.viewer && v) { VW = v; renderSide(v); }
   } catch (e) {}
   setTimeout(poll, 300);
 }

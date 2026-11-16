@@ -302,5 +302,7 @@ public sealed class DonationAlerts
             ["user"] = name, ["amount"] = amountText, ["currency"] = d.Str("currency"), ["message"] = d.Str("message").Trim(),
         });
         _hub.Wheel.OnDonation(name, amount);   // колесо фортуны за донат от заданной суммы
+        // колесо зрителей: донат с названием варианта добавляет баллы по курсу (если включено)
+        _hub.ViewerWheel.OnDonation(name, amount, d.Str("currency"), d.Str("message"));
     }
 }

@@ -47,6 +47,7 @@ public sealed class Hub
     public readonly Features.Captions Captions;
     public readonly Features.VoiceCommands Voice;
     public readonly Features.Wheel Wheel;
+    public readonly Features.ViewerWheel ViewerWheel;
 
     /// <summary>Перезапуск программы (смена профиля, восстановление копии) — задаётся окном.</summary>
     public Action RestartApp = () => { };
@@ -118,6 +119,7 @@ public sealed class Hub
         CommandImport = new Features.CommandImport(this);
         Voice = new Features.VoiceCommands(this);
         Wheel = new Features.Wheel(this);
+        ViewerWheel = new Features.ViewerWheel(this);
         Models = new Features.SpeechModels(this);
         Captions = new Features.Captions(this);
     }
@@ -136,6 +138,7 @@ public sealed class Hub
         Loop.Start(Alerts.Run);
         Loop.Start(Votes.Run);
         Loop.Start(Wheel.Run);
+        Loop.Start(ViewerWheel.Run);
         Loop.Post(() => Captions.Apply());
         Models.CheckOnStartup();   // только проверка скачанных моделей; загрузка — исключительно по кнопке
         Loop.Start(Donations.Run);
@@ -152,6 +155,8 @@ public sealed class Hub
 
     public void Stop()
     {
+        // открытый сбор колеса зрителей: награды на паузу, чтобы на канале не осталось активных наград без обработки
+        try { Loop.Run(ViewerWheel.PauseOnExit).Wait(5000); } catch { }
         try { Loop.CallSync(() => { Pro.Cloud.SaveOnExit(); Music.SaveQueue(true); Captions.Stop(); Music.Player.Stop(); return true; }).Wait(8000); } catch { }
     }
 
@@ -217,6 +222,7 @@ public sealed class Hub
             MessageId = mid, Badges = badges, ReplyBody = reply.Str("parent_message_body"), ReplyUser = reply.Str("parent_user_name"),
         };
         Stats.Chat(msg.Login, msg.Name, Stream.Key, msg.Text);
+        ViewerWheel.Seen(msg.Login);   // «был в чате N минут назад» для победителя колеса зрителей
         Timers.OnChatMessage();
         if (await Moderation.OnCommand(msg)) return;   // !разрешить ник
         if (await Pro.OnChat(msg)) return;   // розыгрыш

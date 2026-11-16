@@ -14,6 +14,8 @@ public sealed class Rewards
     private const string MusicPrompt = "Ссылка YouTube / Яндекс / Spotify или «исполнитель — название»";
     private readonly Hub _hub;
     public string Status = "не синхронизировано";
+    /// <summary>Twitch ответил 403 на список наград: у канала нет баллов (нужен статус компаньона или партнёра).</summary>
+    public bool NoPoints;
     private bool _running, _pending;
 
     public Rewards(Hub hub) { _hub = hub; }
@@ -46,7 +48,12 @@ public sealed class Rewards
     public string KeyFor(string rewardId) =>
         Ids.FirstOrDefault(p => J.AsStr(p.Value) == rewardId).Key;
 
-    private sealed record Desired(string Title, int Cost, bool Input, string Prompt);
+    /// <summary>Идентификатор награды Twitch по ключу программы («vwheel:main:0» и т. п.); пусто — награды нет.</summary>
+    public string IdFor(string key) => Ids.Str(key);
+
+    /// <summary>Награда, которую должна держать на канале программа. Enabled/Paused/Cooldown/Color — для колеса зрителей.</summary>
+    private sealed record Desired(string Title, int Cost, bool Input, string Prompt, bool Enabled = true, bool Paused = false,
+                                  int Cooldown = 0, string Color = "", bool Full = false);
 
     private Dictionary<string, Desired> GetDesired()
     {
@@ -67,6 +74,8 @@ public sealed class Rewards
                 }
         foreach (var (key, title, cost) in _hub.Wheel.RewardsWanted())
             outp[key] = new Desired(title, cost, false, L.TE("Крутит колесо фортуны на стриме"));
+        foreach (var r in _hub.ViewerWheel.RewardsWanted())
+            outp[r.Key] = new Desired(r.Title, r.Cost, r.Input, L.TE(r.Prompt), r.Enabled, r.Paused, r.Cooldown, r.Color, true);
         return outp;
     }
 
@@ -99,10 +108,12 @@ public sealed class Rewards
         }
         catch (TwitchException e)
         {
+            NoPoints = e.Status == 403;
             Status = e.Status == 403 ? "канал не имеет доступа к баллам (нужен статус компаньона/партнёра)" : $"ошибка: {e.Reason}";
             log.Error($"Награды: {Status}");
             return;
         }
+        NoPoints = false;
         var desired = GetDesired();
         var newIds = new JsonObject();
         var errors = 0;
@@ -123,17 +134,32 @@ public sealed class Rewards
             var title = d.Title.Length > 45 ? d.Title[..45] : d.Title;
             var body = new Dictionary<string, object>
             {
-                ["title"] = title, ["cost"] = Math.Max(1, d.Cost), ["is_enabled"] = true,
+                ["title"] = title, ["cost"] = Math.Max(1, d.Cost), ["is_enabled"] = d.Enabled,
                 ["is_user_input_required"] = d.Input, ["prompt"] = d.Prompt,
             };
+            if (d.Full)
+            {
+                body["is_global_cooldown_enabled"] = d.Cooldown > 0;
+                if (d.Cooldown > 0) body["global_cooldown_seconds"] = d.Cooldown;
+                if (d.Color != "") body["background_color"] = d.Color;
+            }
             var rid = Ids.Str(key);
             try
             {
                 if (rid != "" && existing.TryGetValue(rid, out var r))
                 {
-                    if (r.Str("title") != title || r.Int("cost") != Math.Max(1, d.Cost) || !r.Bool("is_enabled") ||
-                        r.Bool("is_user_input_required") != d.Input || r.Str("prompt") != d.Prompt)
+                    var differs = r.Str("title") != title || r.Int("cost") != Math.Max(1, d.Cost) || r.Bool("is_enabled") != d.Enabled ||
+                                  r.Bool("is_user_input_required") != d.Input || r.Str("prompt") != d.Prompt;
+                    if (d.Full)
+                        differs = differs || r.Bool("is_paused") != d.Paused ||
+                                  r.Bool("global_cooldown_setting.is_enabled") != d.Cooldown > 0 ||
+                                  d.Cooldown > 0 && r.Int("global_cooldown_setting.global_cooldown_seconds") != d.Cooldown ||
+                                  d.Color != "" && !string.Equals(r.Str("background_color"), d.Color, StringComparison.OrdinalIgnoreCase);
+                    if (differs)
+                    {
+                        if (d.Full) body["is_paused"] = d.Paused;
                         await tw.UpdateReward(rid, body);
+                    }
                     newIds[key] = rid;
                 }
                 else if (await FindForeign(title) is { } f)
@@ -147,6 +173,8 @@ public sealed class Rewards
                     var created = await tw.CreateReward(body);
                     newIds[key] = created.Str("id");
                     log.Add("system", $"Создана награда «{title}»");
+                    // при создании Twitch не принимает «на паузе» — ставим отдельным запросом
+                    if (d.Full && d.Paused) await tw.UpdateReward(created.Str("id"), new { is_paused = true });
                 }
             }
             catch (TwitchException e)
@@ -162,7 +190,7 @@ public sealed class Rewards
             var oldKey = Ids.FirstOrDefault(p => J.AsStr(p.Value) == rid).Key ?? "";
             try
             {
-                if (oldKey.StartsWith("alert:") || oldKey.StartsWith("wheel:"))
+                if (oldKey.StartsWith("alert:") || oldKey.StartsWith("wheel:") || oldKey.StartsWith("vwheel:"))
                     await tw.DeleteReward(rid);
                 else
                 {
@@ -226,6 +254,12 @@ public sealed class Rewards
             await _hub.Alerts.OnRedemption(key[6..], rid, redId, name, login);
         else if (key.StartsWith("wheel:"))
             await _hub.Wheel.OnRedemption(key[6..], rid, redId, name, login, ev.Str("user_id"));
+        else if (key.StartsWith("vwheel:"))
+        {
+            // vwheel:{колесо}:{номер награды}
+            var parts = key.Split(':');
+            await _hub.ViewerWheel.OnRedemption(parts.Length > 1 ? parts[1] : "", parts.Length > 2 && int.TryParse(parts[2], out var n) ? n : 0, ev);
+        }
         else
             await Complete(rid, redId, false);
     }

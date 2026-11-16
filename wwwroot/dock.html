@@ -84,6 +84,11 @@
     </div>
     <label class="dvol" title="Громкость музыки"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" min="0" max="100" id="vol" class="grow" aria-label="Громкость музыки"><span id="volv" class="num"></span></label>
   </div>
+  <!-- колесо зрителей: сбор и вращение (виден, только если колесо зрителей создано) -->
+  <div class="card hidden" id="vw">
+    <div class="row"><span class="micro grow">Колесо зрителей</span><span class="small muted num" id="vw-st"></span></div>
+    <div class="row" style="margin-top:8px"><button id="vw-toggle" class="grow">Открыть сбор</button><button id="vw-spin" class="primary grow">Крутить</button></div>
+  </div>
   <div class="card">
     <div class="row"><input id="q" class="grow" placeholder="Ссылка или «исполнитель — название»"><button id="add" class="primary">+</button></div>
     <div class="dq-h"><span class="micro">Очередь</span><span class="num muted small" id="qn"></span></div>
@@ -183,6 +188,30 @@ $("wheel").onclick = async () => {
   const m = $("likemsg"); m.textContent = j && j.ok ? tr2("Колесо запущено") : (j && (j.error || j.message)) || tr2("Не получилось запустить колесо");
   clearTimeout(m._t); m._t = setTimeout(() => m.textContent = "", 3000);
 };
+// колесо зрителей
+let VWD = null;
+const VWD_ST = {idle: "сбор не начат", open: "сбор открыт", closed: "сбор закрыт", spinning: "крутится…", between: "между вращениями", done: "победитель выбран"};
+async function vwTick() {
+  try {
+    const j = await (await fetch("/api/vwheel", {cache: "no-store"})).json();
+    if (!j.ok) { $("vw").classList.add("hidden"); return; }
+    VWD = j.data; $("vw").classList.remove("hidden");
+    const left = VWD.status === "open" && VWD.ends_in ? ` · ${Math.floor(VWD.ends_in / 60)}:${String(VWD.ends_in % 60).padStart(2, "0")}` : "";
+    $("vw-st").textContent = tr2(VWD_ST[VWD.status] || VWD.status) + ` · ${VWD.sectors.length}` + left;
+    $("vw-toggle").textContent = tr2(VWD.status === "open" ? "Закрыть сбор" : VWD.status === "done" ? "Новый сбор" : "Открыть сбор");
+    $("vw-toggle").disabled = VWD.status === "spinning";
+    $("vw-spin").textContent = tr2(VWD.status === "between" ? "Дальше" : "Крутить");
+    $("vw-spin").disabled = VWD.status === "spinning" || VWD.sectors.length < 2;
+  } catch (e) {}
+}
+function vwMsg(j, ok) { const m = $("likemsg"); m.textContent = j && j.ok ? tr2(ok) : (j && (j.error || j.message)) || tr2("Не получилось"); clearTimeout(m._t); m._t = setTimeout(() => m.textContent = "", 3500); }
+$("vw-toggle").onclick = async () => {
+  const open = VWD && VWD.status === "open";
+  const j = await post(open ? "/api/vwheel/close" : "/api/vwheel/open", {}).catch(() => null);
+  vwMsg(j, open ? "Сбор закрыт" : "Сбор открыт"); vwTick();
+};
+$("vw-spin").onclick = async () => { const j = await post("/api/vwheel/spin", {source: "dock"}).catch(() => null); vwMsg(j, "Колесо крутится"); vwTick(); };
+vwTick(); setInterval(vwTick, 2000);
 $("cc").onclick = async () => {
   const r = await post("/api/captions/toggle");
   if (r.ok) { $("cc").classList.toggle("on", r.data.enabled); return; }

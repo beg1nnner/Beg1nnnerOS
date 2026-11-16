@@ -37,6 +37,12 @@ public sealed class Wheel
         public double StartedAt;      // секунды (ActionLog.Now); 0 — ещё в очереди
         public int DurationMs;
         public double Ts;
+        // колесо зрителей: своё время вращения и идентификаторы секторов
+        public string ViewerId = "";
+        public bool ViewerElim;
+        public int ViewerRound;
+        public List<string> SectorIds = new();
+        public double FixedSec;
     }
 
     private readonly Hub _hub;
@@ -109,6 +115,8 @@ public sealed class Wheel
         var c = Cfg;
         var w = Find(wheelId);
         if (w == null) return "колесо не настроено";
+        if (ViewerWheel.IsViewer(w))
+            return test ? "у колеса зрителей нет проверочного вращения — крутите его, когда сбор закрыт" : _hub.ViewerWheel.SpinRequest(w.Str("id"), source);
         var sectors = SectorsOf(w);
         if (sectors.Count < MinSectors) return $"в колесе «{w.Str("name")}» меньше {MinSectors} секторов";
         var viewer = source is "reward" or "chat" or "donation";
@@ -152,6 +160,13 @@ public sealed class Wheel
         };
         Enqueue(spin);
         _hub.Log.Add("event", $"Розыгрыш «{prize}»: колесо из {sectors.Count} участников" + (entries.Count > sectors.Count ? $" (всего {entries.Count})" : ""));
+    }
+
+    /// <summary>Вращение колеса зрителей: секторы и результат уже выбраны (ViewerWheel).</summary>
+    public void EnqueueViewer(Spin s)
+    {
+        s.Id = ++_seq;
+        Enqueue(s);
     }
 
     private void Enqueue(Spin s)
@@ -203,7 +218,7 @@ public sealed class Wheel
             }
             var s = _queue[0];
             _queue.RemoveAt(0);
-            var sec = Math.Clamp(Cfg.Num("spin_sec", 6), 5, 8);
+            var sec = s.FixedSec > 0 ? Math.Clamp(s.FixedSec, 5, 30) : Math.Clamp(Cfg.Num("spin_sec", 6), 5, 8);
             s.DurationMs = (int)(sec * 1000);
             s.StartedAt = ActionLog.Now + 0.4;   // чуть позже — оверлей успеет показаться
             _current = s;
@@ -213,6 +228,7 @@ public sealed class Wheel
             if (_skip)
             {
                 _hub.Log.Add("skip", $"Колесо «{s.WheelName}»: вращение пропущено");
+                if (s.ViewerId != "") _hub.ViewerWheel.OnSpinSkipped(s);
                 await Refund(s, "вращение колеса пропущено");
                 _current = null;
                 continue;
@@ -229,6 +245,13 @@ public sealed class Wheel
     private async Task Finish(Spin s)
     {
         var sec = s.Sectors[s.Result];
+        if (s.ViewerId != "")
+        {
+            try { await _hub.ViewerWheel.OnSpinFinished(s); }
+            catch (Exception e) { _hub.Log.Error("Колесо зрителей: " + e.Message); }
+            AddHistory(s, sec, s.ViewerElim ? "выбывает" : "");
+            return;
+        }
         var who = s.User == "" ? SourceTitle(s.Source) : s.User;
         var result = "";
         if (!s.Test && !s.Giveaway)
@@ -307,6 +330,7 @@ public sealed class Wheel
         if (d == null || !d.Bool("enabled")) return;
         var min = Math.Max(1, d.Num("min", 100));
         if (amount < min) return;
+        if (ViewerWheel.IsViewer(Find(d.Str("wheel")))) return;   // в колесо зрителей донат идёт вкладом (ViewerWheel.OnDonation)
         var err = Request("donation", name, "", "", d.Str("wheel"));
         if (err != "") _hub.Log.Add("skip", $"Колесо: донат от {name} — {err}");
     }
@@ -329,6 +353,7 @@ public sealed class Wheel
     {
         foreach (var w in Wheels)
         {
+            if (ViewerWheel.IsViewer(w)) continue;   // у колеса зрителей свои награды (ViewerWheel.RewardsWanted)
             var r = w.Obj("reward");
             if (r == null || !r.Bool("enabled") || r.Str("title").Trim() == "") continue;
             yield return ("wheel:" + w.Str("id"), r.Str("title").Trim(), Math.Max(1, r.Int("cost", 500)));
@@ -339,7 +364,8 @@ public sealed class Wheel
     private static object SpinObj(Spin s, bool full) => new
     {
         id = s.Id, wheel = s.WheelName, user = s.User, source = s.Source, test = s.Test, giveaway = s.Giveaway,
-        sectors = full ? s.Sectors.Select(x => new { name = x.Name, weight = x.Weight, color = x.Color }) : null,
+        sectors = full ? s.Sectors.Select((x, i) => new { name = x.Name, weight = x.Weight, color = x.Color, id = i < s.SectorIds.Count ? s.SectorIds[i] : "" }) : null,
+        viewer = s.ViewerId != "", elimination = s.ViewerElim, round = s.ViewerRound,
         result = full ? s.Result : -1,
         // оверлею — сколько уже прошло от начала вращения (по часам сервера), чтобы поздно открытый источник догнал
         elapsed_ms = s.StartedAt > 0 ? (int)Math.Round((ActionLog.Now - s.StartedAt) * 1000) : 0,
@@ -356,6 +382,7 @@ public sealed class Wheel
             sound = c.Bool("sound", true), volume = Math.Clamp(c.Int("volume", 60), 0, 100),
             theme = c.Str("theme", "studio"), title = c.Bool("show_title", true),
             custom_themes = _hub.Pro.ThemesFor("wheel"),
+            viewer = _hub.ViewerWheel.Overlay(),
         };
     }
 

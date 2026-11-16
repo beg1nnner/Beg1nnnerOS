@@ -73,6 +73,25 @@ public sealed class Moderation
         return v;
     }
 
+    /// <summary>
+    /// Текст от зрителя, который покажется на экране (вариант на колесе зрителей): ссылки (кроме разрешённых сайтов)
+    /// и запрещённые слова из «Модерации». Пусто — текст можно показывать; иначе короткая причина для чата.
+    /// </summary>
+    public string CheckText(string text)
+    {
+        var c = Cfg;
+        if (FindLinks(text).Any(h => !Allowed(c, h))) return "ссылки нельзя";
+        var norm = " " + Normalize(text) + " ";
+        foreach (var w in c.StrList("words.list"))
+        {
+            var whole = w.StartsWith("=");
+            var nw = Normalize(whole ? w[1..] : w);
+            if (nw == "") continue;
+            if (whole ? norm.Contains(" " + nw + " ") : norm.Contains(nw)) return "запрещённое слово";
+        }
+        return "";
+    }
+
     /// <summary>Проверка фразы из панели — без действий и без учёта повторов.</summary>
     public object Test(string text)
     {

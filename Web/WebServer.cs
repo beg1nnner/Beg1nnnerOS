@@ -341,6 +341,32 @@ public sealed partial class WebServer
         app.MapPost("/api/wheel/skip", H((c, b) => { _hub.Wheel.SkipCurrent(); return Ok(_hub.Wheel.State()); }));
         app.MapPost("/api/wheel/clear", H((c, b) => { _hub.Wheel.ClearQueue(); return Ok(_hub.Wheel.State()); }));
         app.MapPost("/api/wheel/remove", H((c, b) => { _hub.Wheel.Remove(b.Int("id")); return Ok(_hub.Wheel.State()); }));
+        // колесо зрителей
+        string Vw(JsonNode b)
+        {
+            var id = b.Str("wheel");
+            if (id != "" && _hub.ViewerWheel.FindCfg(id) != null) return id;
+            var act = _hub.S.Str("wheel.active");
+            if (_hub.ViewerWheel.FindCfg(act) != null) return act;
+            return _hub.ViewerWheel.Wheels.FirstOrDefault()?.Str("id") ?? throw new UserError("Колесо зрителей не создано — добавьте его во вкладке «Колесо»");
+        }
+        app.MapGet("/api/vwheel", H((c, b) => Ok(_hub.ViewerWheel.State(Vw(new JsonObject { ["wheel"] = c.Request.Query["wheel"].ToString() })))));
+        app.MapPost("/api/vwheel/open", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.Open(id); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/close", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.Close(id); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/spin", H((c, b) =>
+        {
+            var id = Vw(b);
+            _hub.ViewerWheel.Spin(id, b.Str("source") == "dock" ? "dock" : "panel");
+            return Ok(_hub.ViewerWheel.State(id));
+        }));
+        app.MapPost("/api/vwheel/reroll", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.Reroll(id); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/clear", H(async (c, b) => { var id = Vw(b); var n = await _hub.ViewerWheel.Clear(id); return Ok(_hub.ViewerWheel.State(id), new() { ["refunded"] = n }); }));
+        app.MapPost("/api/vwheel/approve", H(async (c, b) => { var id = Vw(b); await _hub.ViewerWheel.Approve(id, b.Str("id"), b.Bool("ok")); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/rename", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.Rename(id, b.Str("sector"), b.Str("name")); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/points", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.SetPoints(id, b.Str("sector"), (long)b.Num("points")); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/merge", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.Merge(id, b.Str("sector"), b.Str("into")); return Ok(_hub.ViewerWheel.State(id)); }));
+        app.MapPost("/api/vwheel/delete", H(async (c, b) => { var id = Vw(b); var n = await _hub.ViewerWheel.Delete(id, b.Str("sector"), b.Bool("refund")); return Ok(_hub.ViewerWheel.State(id), new() { ["refunded"] = n }); }));
+        app.MapPost("/api/vwheel/add", H((c, b) => { var id = Vw(b); _hub.ViewerWheel.AddManual(id, b.Str("name"), (long)b.Num("points")); return Ok(_hub.ViewerWheel.State(id)); }));
         app.MapPost("/api/voice/test", H((c, b) => {
             if (_hub.Models.ForVoice() == null) { _hub.Models.NeedModel(); throw new UserError("Сначала скачайте модель распознавания"); }
             _hub.Voice.StartTest(); _hub.Captions.Apply();
@@ -654,7 +680,7 @@ public sealed partial class WebServer
         var oldPort = data.Int("server.port");
         var oldDa = _hub.Donations.Token;
         string RewardsSig() => data["music"]["rewards"].ToJsonString() + data.Str("music.rewards_enabled") + data.Str("alerts.enabled")
-                               + string.Join(";", _hub.Wheel.RewardsWanted());
+                               + string.Join(";", _hub.Wheel.RewardsWanted()) + _hub.ViewerWheel.RewardsSig();
         var oldRewards = RewardsSig();
         foreach (var sec in Sections)
         {
@@ -766,7 +792,56 @@ public sealed partial class WebServer
         return Ok(null, new() { ["restart_required"] = data.Int("server.port") != oldPort });
     }
 
-    private static void ValidateWheel(JsonObject w)
+    /// <summary>Настройки колеса зрителей: награды (до трёх), шаблоны, таймер сбора, вращение, защита.</summary>
+    private void ValidateViewer(JsonObject wh, string name, HashSet<string> titles)
+    {
+        if (wh["viewer"] is not JsonObject v) wh["viewer"] = v = new JsonObject();
+        var mode = v.Str("mode") == "options" ? "options" : "participants";
+        var st = _hub.ViewerWheel.StateOf(wh.Str("id"));
+        var old = _hub.ViewerWheel.FindCfg(wh.Str("id"));
+        if (old != null && old.Str("viewer.mode", "participants") != mode && (st.Sectors.Count > 0 || st.Pending.Count > 0))
+            throw new UserError($"Колесо «{name}»: режим нельзя сменить, пока на колесе есть секторы — сначала очистите его", "wheel.viewer.mode");
+        v["mode"] = mode;
+        var rewards = v.Arr("rewards") ?? new JsonArray();
+        if (rewards.Count > Features.ViewerWheel.MaxRewards) throw new UserError($"Колесо «{name}»: не больше {Features.ViewerWheel.MaxRewards} наград", "wheel.viewer.rewards");
+        var clean = new JsonArray();
+        foreach (var r in rewards)
+        {
+            var t = r.Str("title").Trim();
+            if (t == "") continue;
+            if (t.Length > 45) throw new UserError($"Колесо «{name}»: название награды — до 45 символов", "wheel.viewer.rewards");
+            if (!titles.Add(t)) throw new UserError($"Награды называются одинаково («{t}») — в Twitch названия должны отличаться", "wheel.viewer.rewards");
+            var cost = r.Int("cost", 500);
+            if (cost < 1 || cost > 10_000_000) throw new UserError($"Награда «{t}»: цена — от 1 до 10 000 000 баллов", "wheel.viewer.rewards");
+            var color = r.Str("color");
+            var prompt = r.Str("prompt").Trim();
+            if (prompt.Length > 200) prompt = prompt[..200];
+            clean.Add(new JsonObject
+            {
+                ["title"] = t, ["cost"] = cost, ["prompt"] = prompt,
+                ["per_user"] = Math.Clamp(r.Int("per_user", 0), 0, 1000), ["total"] = Math.Clamp(r.Int("total", 0), 0, 100000),
+                ["cooldown"] = Math.Clamp(r.Int("cooldown", 0), 0, 604800),
+                ["color"] = System.Text.RegularExpressions.Regex.IsMatch(color, "^#[0-9a-fA-F]{6}$") ? color : "",
+            });
+        }
+        v["rewards"] = clean;
+        foreach (var k in new[] { "add_template", "result_template" })
+            if (v.Str(k).Length > 300) throw new UserError("Шаблон сообщения — до 300 символов", "wheel.viewer." + k);
+        v["timer_min"] = Math.Clamp(v.Int("timer_min", 0), 0, 240);
+        v["extend_sec"] = Math.Clamp(v.Int("extend_sec", 0), 0, 600);
+        v["extend_max"] = Math.Clamp(v.Int("extend_max", 120), 0, 3600);
+        v["spin_sec"] = Math.Clamp(v.Num("spin_sec", 10), 5, 30);
+        v["next_sec"] = Math.Clamp(v.Int("next_sec", 5), 2, 120);
+        v["follower_days"] = Math.Clamp(v.Int("follower_days", 0), 0, 3650);
+        if (v.Str("show") is not ("collect" or "spin")) v["show"] = "collect";
+        if (v.Str("spin_mode") is not ("normal" or "elimination")) v["spin_mode"] = "normal";
+        if (v.Str("after_spin") is not ("keep" or "remove")) v["after_spin"] = "keep";
+        if (v.Str("after_finish") is not ("hide" or "delete")) v["after_finish"] = "hide";
+        if (v["donation"] is not JsonObject d) v["donation"] = d = new JsonObject();
+        d["rate"] = Math.Clamp(d.Num("rate", 10), 0.01, 100000);
+    }
+
+    private void ValidateWheel(JsonObject w)
     {
         var list = w.Arr("wheels") ?? new JsonArray();
         if (list.Count == 0) throw new UserError("Нужно хотя бы одно колесо");
@@ -780,6 +855,7 @@ public sealed partial class WebServer
             var name = wh.Str("name").Trim();
             if (name == "" || name.Length > 40) throw new UserError("Название колеса: от 1 до 40 символов", "wheel.name");
             wh["name"] = name;
+            if (Features.ViewerWheel.IsViewer(wh)) { ValidateViewer(wh, name, titles); continue; }
             var sectors = wh.Arr("sectors") ?? new JsonArray();
             var count = sectors.Count(s => s.Str("name").Trim() != "");
             if (count < Features.Wheel.MinSectors || count > Features.Wheel.MaxSectors)

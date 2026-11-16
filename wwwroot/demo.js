@@ -132,6 +132,54 @@
         {ts: ago(1500), wheel: L("Колесо фортуны", "Wheel of fortune"), user: VIEWERS[5], source: "chat", result: L("Ничего", "Nothing"), action: "", test: false, giveaway: false}],
       alerts: [{id: "da1", name: L("Аплодисменты", "Applause")}, {id: "da2", name: L("Звезда вечера", "Star of the night")}]};
   }
+  // колесо зрителей: вымышленные варианты, покупки «приходят» сами — раз в несколько секунд, без запросов к Twitch
+  const VW_OPTS = [["Hollow Knight", 4], ["Stardew Valley", 3], ["Celeste", 2], ["Outer Wilds", 3], ["Hades", 2], ["Terraria", 1],
+    ["Portal 2", 2], ["Dead Cells", 1], ["Disco Elysium", 1], ["Subnautica", 1], ["Inside", 1], ["Into the Breach", 1]];
+  const VW_COSTS = [500, 500, 500, 2000, 500, 10000, 500, 2000];
+  function vwDemo() {
+    const t = now() - D.t0, n = Math.min(40, 18 + Math.floor(t / 4));   // новая покупка примерно раз в 4 секунды
+    const sec = new Map(), contribs = [];
+    for (let i = 0; i < n; i++) {
+      // детерминированно: вариант и цена зависят только от номера покупки
+      let k = (i * 7 + (i >> 2)) % VW_OPTS.reduce((a, x) => a + x[1], 0), oi = 0;
+      while (k >= VW_OPTS[oi][1]) { k -= VW_OPTS[oi][1]; oi++; }
+      const [name] = VW_OPTS[oi], pts = VW_COSTS[(i * 5 + 3) % VW_COSTS.length], user = VIEWERS[(i * 3) % VIEWERS.length];
+      if (!sec.has(name)) sec.set(name, {id: "vs" + oi, name, points: 0, contribs: [], users: new Set(), order: i});
+      const x = sec.get(name); x.points += pts; x.users.add(user);
+      x.contribs.unshift({user, points: pts, ts: D.t0 - 600 + i * 15 + Math.max(0, i - 17) * 4, source: "reward", confirmed: true});
+      contribs.push({user, points: pts});
+    }
+    const list = [...sec.values()].sort((a, b) => a.order - b.order), total = list.reduce((a, x) => a + x.points, 0);
+    const pct = p => { const v = p * 100 / total; return v >= 10 ? String(Math.round(v)) : String(Math.round(v * 10) / 10); };
+    const last = contribs[contribs.length - 1];
+    const sectors = list.map(x => ({id: x.id, name: x.name, points: x.points, chance: pct(x.points), contributors: x.users.size, similar: "", similar_name: "",
+      refundable: 0, not_refundable: x.contribs.length, no_answer: false, contribs: x.contribs}));
+    // один вариант с опечаткой — пример пометки «Похоже на…»
+    sectors.push({id: "vs-typo", name: "Hollow Knigth", points: 500, chance: pct(500), contributors: 1, similar: "vs0", similar_name: "Hollow Knight",
+      refundable: 0, not_refundable: 1, no_answer: false, contribs: [{user: VIEWERS[6], points: 500, ts: now() - 40, source: "reward", confirmed: true}]});
+    const total2 = total + 500, ends = Math.max(0, 300 - Math.floor(t));
+    return {id: "demo-vw", exists: true, status: "open", participants: false, ends_in: ends, next_in: 0, total: total2, round: 0, sectors,
+      out_sectors: [], pending: [{id: "p1", text: L("Пройти игру с закрытыми глазами", "Beat the game blindfolded"), user: VIEWERS[4], points: 2000, ts: now() - 25}],
+      last: {user: last.user, points: last.points, ts: now() - (t % 4)}, winner: null,
+      history: [{ts: ago(86400), wheel: L("Во что играем дальше", "What do we play next"), winner: "Outer Wilds", chance: "23", points: 9500, sectors: 11, contributors: 17, elimination: false}],
+      rewards: {status: L("синхронизировано", "synced"), no_points: false, connected: true, scope_missing: false, foreign: 0},
+      overlay: {id: "demo-vw", name: L("Во что играем дальше", "What do we play next"), status: "open", label: "", show: true, ends_in: ends, elimination: false,
+        left: sectors.length, sectors: sectors.map(x => ({id: x.id, name: x.name, weight: x.points})),
+        top: [...sectors].sort((a, b) => b.points - a.points).slice(0, 8).map(x => ({name: x.name, pct: x.chance})),
+        last: {user: last.user, points: last.points}, winner: ""}};
+  }
+  // колесо зрителей в настройках примера (только в памяти панели; после выхода из примера настройки загружаются заново)
+  window.demoViewerWheel = function () {
+    if (!S || !S.wheel || !S.wheel.wheels || S.wheel.wheels.some(w => w.id === "demo-vw")) return;
+    S.wheel.wheels.push({id: "demo-vw", name: L("Во что играем дальше", "What do we play next"), type: "viewers", reward: {enabled: false, title: "", cost: 500}, sectors: [],
+      viewer: {mode: "options", rewards: [{title: L("Предложить игру", "Suggest a game"), cost: 500, prompt: "", per_user: 0, total: 0, cooldown: 0, color: "#8B5CF6"},
+        {title: L("Предложить игру ×4", "Suggest a game ×4"), cost: 2000, prompt: "", per_user: 3, total: 0, cooldown: 0, color: "#EC4899"},
+        {title: L("Предложить игру ×20", "Suggest a game ×20"), cost: 10000, prompt: "", per_user: 1, total: 5, cooldown: 60, color: "#F59E0B"}],
+        approval: true, chat_add: true, add_template: L("{user} добавил «{option}» — теперь {chance}%", "{user} added “{option}” — now {chance}%"), chat_result: true,
+        result_template: L("Победил «{option}» — {chance}%, вложено {points}", "“{option}” wins — {chance}%, {points} points in"), timer_min: 5, extend_sec: 10, extend_max: 120,
+        show: "collect", spin_mode: "normal", auto_next: false, next_sec: 5, after_spin: "keep", spin_sec: 12, confirm_on_spin: false, after_finish: "hide",
+        follower_days: 0, use_blocklist: true, donation: {enabled: true, rate: 10}, giveaway: false}});
+  };
   function commands(real) {
     const custom = [
       ["!привет", "!hello", L("Привет, {user}! Устраивайся поудобнее", "Hi {user}! Make yourself comfortable")],
@@ -244,6 +292,7 @@
     "/models": () => speech(),
     "/captions/devices": () => ({items: [{id: L("Микрофон (USB Audio)", "Microphone (USB Audio)")}]}),
     "/wheel": () => wheelState(),
+    "/vwheel": () => vwDemo(),
   };
   // итоги стрима — в том же виде, что собирает программа (Announce.Summary), из вымышленных цифр примера
   function streamSummaryText(id) {
@@ -304,6 +353,7 @@
     D.sec = (document.querySelector("main > section:not(.hidden)") || {id: "p-live"}).id.slice(2);
     banner(true);
     try { if (WZ.open) closeWizard(false); } catch (e) {}
+    try { window.demoViewerWheel(); } catch (e) {}
     await poll(); loadLiveMetrics(); loadLog();
     go("live");
     toast(tr("Показан пример работающей программы"));

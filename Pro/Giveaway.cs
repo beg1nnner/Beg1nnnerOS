@@ -196,6 +196,18 @@ public sealed class Giveaway
         return w;
     }
 
+    /// <summary>Победитель колеса зрителей (режим «Участники», колесо привязано к розыгрышу) — записывается в этот розыгрыш.</summary>
+    public void RecordWinner(string login, string name, string userId, string wheel)
+    {
+        if (Status == "idle" || login == "") return;
+        if (!Entries.TryGetValue(login, out var e))
+            Entries[login] = e = new Entry { Login = login, Name = name, UserId = userId, Tickets = 1, Ts = ActionLog.Now };
+        if (!Winners.Contains(e)) Winners.Add(e);
+        if (Status == "open") { Status = "closed"; EndsAt = 0; }
+        Save();
+        _hub.Log.Add("event", $"Розыгрыш «{Prize}»: победитель колеса «{wheel}» — {name}");
+    }
+
     public void Finish()
     {
         Status = "idle";
