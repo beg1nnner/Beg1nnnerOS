@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set VERSION=2.7.0
+set VERSION=2.7.1
 
 where dotnet >nul 2>nul || (echo .NET 8 SDK not found. Download: https://dotnet.microsoft.com/download/dotnet/8.0 & pause & exit /b 1)
 
