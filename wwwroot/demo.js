@@ -102,9 +102,9 @@
   }
   function alerts() {
     return {items: [
-      {id: "da1", name: L("Аплодисменты", "Applause"), media: "", media_kind: null, sound: "applause.mp3", text: "{user}!", cost: 300, reward_title: L("Аплодисменты", "Applause"), enabled: true, volume: 80},
-      {id: "da2", name: L("Звезда вечера", "Star of the night"), media: "", media_kind: null, sound: "", text: L("{user} — звезда вечера!", "{user} is the star of the night!"), cost: 1000, reward_title: L("Звезда вечера", "Star of the night"), enabled: true, volume: 70},
-      {id: "da3", name: L("Барабанная дробь", "Drum roll"), media: "", media_kind: null, sound: "drums.mp3", text: "", cost: 500, reward_title: L("Барабанная дробь", "Drum roll"), enabled: false, volume: 60},
+      {id: "da1", name: L("Аплодисменты", "Applause"), media: "", media_kind: null, sound: "applause.mp3", text: "{user}!", cost: 300, reward_title: L("Аплодисменты", "Applause"), enabled: true, volume: 80, duration: 5, duration_mode: "manual", scale: 1, x: 760, y: 340, random_pos: false, cooldown_global: 30, cooldown_user: 120},
+      {id: "da2", name: L("Звезда вечера", "Star of the night"), media: "", media_kind: null, sound: "", text: L("{user} — звезда вечера!", "{user} is the star of the night!"), cost: 1000, reward_title: L("Звезда вечера", "Star of the night"), enabled: true, volume: 70, duration: 7, duration_mode: "manual", scale: 1, x: 760, y: 340, random_pos: false, cooldown_global: 30, cooldown_user: 120},
+      {id: "da3", name: L("Барабанная дробь", "Drum roll"), media: "", media_kind: null, sound: "drums.mp3", text: "", cost: 500, reward_title: L("Барабанная дробь", "Drum roll"), enabled: false, volume: 60, duration: 4, duration_mode: "manual", scale: 1, x: 760, y: 340, random_pos: false, cooldown_global: 30, cooldown_user: 120},
     ], pending: [], clients: 1};
   }
   function stats(period) {
