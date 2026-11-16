@@ -176,6 +176,8 @@
   .lay-hidden { display:flex; align-items:center; gap:var(--sp-2); flex-wrap:wrap; padding:var(--sp-3) var(--sp-4); margin-bottom:var(--sp-4); border-radius:var(--r-md);
     border:1px dashed var(--line); background:var(--field); font-size:var(--fs-md); }
   .lay-hidden[hidden] { display:none; }
+  /* атрибут hidden должен побеждать display у карточек и кнопок (.card { display:flex } и т. п.) — иначе скрытая карточка «Эфира» остаётся на месте */
+  #live-grid [data-card][hidden], .lay-bar [hidden], #lay-reset[hidden], #lay-hint[hidden] { display:none !important; }
   .lay-hidden b { font-weight:600; margin-right:var(--sp-2); }
   @media (max-width:1100px) { .live-grid { grid-template-columns:1fr; } }
   @media (prefers-reduced-motion: no-preference) { .live-col > .card { transition:transform var(--t) var(--ease); } }
