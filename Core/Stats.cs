@@ -334,6 +334,22 @@ public sealed class Stats
         };
     }
 
+    /// <summary>Что программа сделала за стрим — для блока «Поблагодарить» в панели. Только то, что уже считается.</summary>
+    public object Thanks(string id)
+    {
+        var rows = Query("SELECT started, ended FROM streams WHERE id=$id", ("$id", id));
+        if (rows.Count == 0) return null;
+        var started = Convert.ToDouble(rows[0][0]);
+        var ended = rows[0][1] is DBNull ? ActionLog.Now : Convert.ToDouble(rows[0][1]);
+        return new
+        {
+            duration = Math.Round(ended - started),
+            orders = Scalar("SELECT COUNT(*) FROM music WHERE stream=$s AND kind IN ('order','priority') AND status='ok'", ("$s", id)),
+            commands = Scalar("SELECT COUNT(*) FROM words WHERE stream=$s AND substr(word,1,1) = '!'", ("$s", id)),
+            events = Scalar("SELECT COUNT(*) FROM events WHERE stream=$s AND type IN ('follow','sub','cheer','raid','donation')", ("$s", id)),
+        };
+    }
+
     /// <summary>Данные для итогов стрима: сводка + топ чата + треки стрима.</summary>
     public JsonObject SummaryData(string id)
     {

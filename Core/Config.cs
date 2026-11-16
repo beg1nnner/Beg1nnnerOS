@@ -11,6 +11,8 @@ public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
     public const string Version = "2.6.2";
+    /// <summary>Адрес «Поблагодарить разработчика» — единственное место; панель получает его в /state.</summary>
+    public const string SupportUrl = "https://www.donationalerts.com/r/beginner24";
     public const string RedirectUri = "http://localhost:4343/callback";
     public const int CallbackPort = 4343;
 
@@ -179,7 +181,7 @@ public static class Config
       "hotkeys": {"enabled": false, "pause_music": "ctrl+alt+p", "skip": "ctrl+alt+right",
                   "stop_alerts": "ctrl+alt+backspace", "pause_events": "ctrl+alt+n",
                   "like_track": "ctrl+alt+l", "captions_toggle": "ctrl+alt+s", "stream_safe": "ctrl+alt+h", "wheel_spin": ""},
-      "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru", "cover_tint": true, "live_layout": {}, "stream_safe": false},
+      "ui": {"tray": true, "theme": "studio", "close_action": "ask", "wizard_done": false, "language": "ru", "cover_tint": true, "thanks_report": true, "live_layout": {}, "stream_safe": false},
       "pro": {
         "themes": [],
         "cloud": {"enabled": false, "folder": "", "include_secrets": false, "password": "", "auto": true},

@@ -35,6 +35,17 @@
   /* подсказка — над всем рядом, чтобы не вылезать за край меню */
   .nav-link[data-tip]::after { content:attr(data-tip); position:absolute; left:0; right:0; bottom:calc(100% + 6px); z-index:20; text-align:center; padding:var(--sp-2) var(--sp-3); border-radius:var(--r-sm); background:var(--panel2); border:1px solid var(--line); color:var(--fg); font-size:var(--fs-sm); line-height:1.4; box-shadow:var(--pop-shadow); opacity:0; transform:translateY(4px); pointer-events:none; transition:opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
   .nav-link:hover::after, .nav-link:focus-visible::after { opacity:1; transform:none; }
+  /* «Поблагодарить разработчика»: тихая строка во всю ширину, сердечко бьётся один раз при наведении */
+  .nav-thanks { position:relative; display:flex; align-items:center; gap:var(--sp-3); margin-top:var(--sp-3); padding:var(--sp-2) var(--sp-3); min-height:38px;
+    border:1px solid var(--hair); border-radius:var(--r-md); background:transparent; color:var(--fg); text-decoration:none; font-size:var(--fs-md); font-weight:500; line-height:1.3;
+    transition:background-color var(--t-fast) var(--ease); }
+  .nav-thanks:hover, .nav-thanks:focus-visible { background:var(--hover); }
+  .nav-thanks .ic { color:var(--heart); flex:none; }
+  .nav-thanks[data-tip]::after { display:none; }
+  @keyframes heartbeat { 50% { transform:scale(1.15); } }
+  @media (prefers-reduced-motion: no-preference) {
+    .nav-thanks:hover .ic, .nav-thanks:focus-visible .ic, .thanks-act:hover .ic, .thanks-act:focus-visible .ic { animation:heartbeat .4s var(--ease) 1; }
+  }
   .nav-me { display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-3); margin-top:var(--sp-3); border-radius:var(--r-md); border:1px solid var(--hair); background:var(--field); }
   .nm-av { position:relative; width:34px; height:34px; border-radius:var(--r-full); flex:none; display:flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--accent) 22%, var(--bg)); color:var(--accent2); font-weight:700; font-size:var(--fs-base); text-transform:uppercase; }
   .nm-av.live::after { content:""; position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:var(--r-full); background:var(--live); border:2px solid var(--bg); }
@@ -57,6 +68,21 @@
   body.nav-mini .nav-link[data-tip]::after { left:calc(100% + 10px); right:auto; bottom:auto; top:50%; width:max-content; max-width:220px; text-align:left; transform:translate(-4px, -50%); }
   body.nav-mini .nav-link:hover::after, body.nav-mini .nav-link:focus-visible::after { transform:translate(0, -50%); }
   body.nav-mini .nav-me { padding:var(--sp-2); justify-content:center; }
+  body.nav-mini .nav-thanks { width:48px; padding:0; justify-content:center; }
+  body.nav-mini .nav-thanks span { display:none; }
+  body.nav-mini .nav-thanks[data-tip]::after { display:block; content:attr(data-tip); position:absolute; left:calc(100% + 10px); top:50%; z-index:20; width:max-content; max-width:220px;
+    padding:var(--sp-2) var(--sp-3); border-radius:var(--r-sm); background:var(--panel2); border:1px solid var(--line); color:var(--fg); font-size:var(--fs-sm); line-height:1.4;
+    box-shadow:var(--pop-shadow); opacity:0; transform:translate(-4px, -50%); pointer-events:none; transition:opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+  body.nav-mini .nav-thanks:hover::after, body.nav-mini .nav-thanks:focus-visible::after { opacity:1; transform:translate(0, -50%); }
+  /* кнопки со ссылкой на поддержку: обычные вторичные, сердечко — цветом --heart */
+  .thanks-act .ic { color:var(--heart); }
+  .dev-card { display:flex; gap:var(--sp-4); align-items:flex-start; }
+  .dev-card .logo-mark { flex:none; }
+  .dev-card p { margin:0 0 var(--sp-3); line-height:1.55; }
+  .sum-thanks { margin-top:var(--sp-4); padding-top:var(--sp-4); border-top:1px solid var(--hair); display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; }
+  .sum-thanks p { margin:0; flex:1; min-width:240px; font-size:var(--fs-md); line-height:1.5; }
+  button.linkish { background:none; border:none; padding:0; height:auto; color:var(--dim); font-size:var(--fs-sm); text-decoration:underline; text-underline-offset:2px; }
+  button.linkish:hover { color:var(--fg); }
   main { flex:1; padding:var(--sp-6) var(--sp-9) var(--sp-15); max-width:1360px; min-width:0; }
   /* ---------- шапка ---------- */
   .topbar { display:flex; align-items:center; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-6); }
@@ -367,6 +393,8 @@
   @keyframes fadeUp { from { opacity:0; transform:translateY(4px); } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
   a.btn-link { display:inline-flex; align-items:center; gap:var(--sp-2); height:40px; padding:0 var(--sp-4); border-radius:var(--r-md); border:1px solid var(--line); background:var(--field); color:var(--fg); text-decoration:none; font-weight:500; font-size:var(--fs-base); }
+  a.btn-link.quiet { background:transparent; border-color:var(--hair); color:var(--dim); }
+  a.btn-link.quiet:hover { color:var(--fg); background:var(--hover); }
   a.btn-link.primary { background:var(--accent); border-color:transparent; color:var(--on-accent); font-weight:600; }
   #tour { position:fixed; inset:0; z-index:80; }
   #tour.hidden { display:none; }
@@ -793,9 +821,9 @@
   <button class="upd-nav hidden" id="nav-upd" onclick="updNavClick()"></button>
   <div class="nav-links" role="group" aria-label="Автор программы">
     <a class="nav-link" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener" data-tip="Канал автора на Twitch" aria-label="Канал автора на Twitch"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v11l-4 4h-4l-3 3H7v-3H4z"/><path d="M11 7v4M15 7v4"/></svg></a>
-    <a class="nav-link" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener" data-tip="Поблагодарить разработчика (DonationAlerts)" aria-label="Поблагодарить разработчика через DonationAlerts"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.4 5.4 0 00-7.7 0L12 6.7l-1.1-1.1a5.4 5.4 0 10-7.7 7.7L12 22l8.8-8.7a5.4 5.4 0 000-7.7z"/></svg></a>
     <a class="nav-link" href="https://t.me/Beg1nnner" target="_blank" rel="noopener" data-tip="Связь, предложения и ошибки (Telegram)" aria-label="Связь, предложения и ошибки в Telegram"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-6"/></svg></a>
   </div>
+  <a class="nav-thanks" data-support target="_blank" rel="noopener" data-tip="Поблагодарить разработчика" aria-label="Поблагодарить разработчика (откроется в браузере)"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg><span>Поблагодарить разработчика</span></a>
   <div class="nav-me" id="nav-me"><span class="nm-av" id="nm-av">?</span><span class="nm-t"><b id="nm-login">Нет входа</b><small id="nm-sub">Twitch</small></span></div>
 </nav>
 <main>
@@ -1551,6 +1579,7 @@
     <div class="theme-grid" id="ui-themes"></div>
     <div class="muted small u-mt-2">Применяется сразу к панели и док-панели OBS.</div>
     <label class="switch u-mt-4"><input type="checkbox" data-s="ui.cover_tint" onchange="TINT_FOR=null"> Цвет карточки «Сейчас играет» от обложки трека</label>
+    <label class="switch u-mt-2"><input type="checkbox" data-s="ui.thanks_report"> Показывать благодарность в итогах стрима</label>
   </div>
   <div class="card">
     <h3>Язык / Language</h3>
@@ -1593,16 +1622,22 @@
     <div class="row"><button class="primary" onclick="updCheck()">Проверить обновления</button><button onclick="openWizard(0)">Мастер настройки</button><button onclick="saveReport()">Сохранить отчёт об ошибке</button></div>
     <label class="switch"><input type="checkbox" id="upd-auto" onchange="api('/update/auto',{on:this.checked})"> Проверять обновления автоматически</label>
   </div>
-  <div class="card"><h3>Что нового</h3><div id="chl"></div></div>
   <div class="card">
-    <h3>Поддержать проект</h3>
-    <div class="muted small">Программа бесплатная. Если она помогает вашему стриму — можно поблагодарить разработчика. Есть идея или нашли ошибку? Напишите в Telegram: что делали и что пошло не так, и приложите строку из журнала, если она есть.</div>
-    <div class="row u-mt-4">
-      <a class="thanks-btn" href="https://www.donationalerts.com/r/beginner24" target="_blank" rel="noopener">Поблагодарить разработчика</a>
-      <a class="twitch-btn" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener">Канал на Twitch</a>
-      <a class="contact-btn" href="https://t.me/Beg1nnner" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#29a9eb"/><path fill="#fff" d="M5.4 11.7l11.2-4.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg> Telegram</a>
+    <h3 class="u-mt-0">От разработчика</h3>
+    <div class="dev-card">
+      <span class="logo-mark" aria-hidden="true">B1</span>
+      <div class="grow">
+        <p>Привет! Я делаю Beg1nnnerOS сам, в свободное время, и сам же ей пользуюсь на стримах. Программа бесплатная и останется такой: заказ музыки, чат-бот и всё основное не будут закрыты.</p>
+        <p>Если она вам помогает, поддержите разработку — это время на новые функции и исправления. Любая сумма важна, а отзыв или рассказ о программе друзьям-стримерам помогает не меньше.</p>
+        <div class="row u-fw-wrap">
+          <a class="btn-link thanks-act" data-support target="_blank" rel="noopener" aria-label="Поблагодарить разработчика (откроется в браузере)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg><span>Поблагодарить разработчика</span></a>
+          <a class="btn-link quiet" href="https://www.twitch.tv/beg1nnner" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v11l-5 5h-4l-3 3v-3H4z"/><path d="M11 8v4M16 8v4"/></svg><span>Мой канал на Twitch</span></a>
+          <a class="btn-link quiet" href="https://t.me/Beg1nnner" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l9-6"/></svg><span>Написать разработчику</span></a>
+        </div>
+      </div>
     </div>
   </div>
+  <div class="card"><h3>Что нового</h3><div id="chl"></div></div>
   <div class="card">
     <div class="row"><h3 class="grow u-m-0">Резервные копии</h3><button onclick="api('/backups',{}).then(loadBackups)">Создать копию</button></div>
     <div class="muted small u-m-2-0">В копию входят настройки, команды, таймеры и файлы алертов. Ключи, входы и статистика не входят.</div>
@@ -2820,6 +2855,7 @@ async function poll(pushed) {
   const r = ST.ready, m = ST.music;
   // горячая клавиша меняет режим на сервере — подхватываем, если панель сама ничего не сохраняет
   if (!DEMO.on) { vcToast(ST.voice); spBrief(ST.models); }
+  if (ST.support_url && SUPPORT_URL !== ST.support_url) { SUPPORT_URL = ST.support_url; document.querySelectorAll("[data-support]").forEach(a => a.href = SUPPORT_URL); }
   if (typeof ST.stream_safe === "boolean" && ST.stream_safe !== SAFE && !SAVE_T && !SAVING) { safeSet(ST.stream_safe); if (S && S.ui) S.ui.stream_safe = SAFE; }
   $("demo-cta").classList.toggle("hidden", DEMO.on || !!(r.streamer && r.streamer.ok));
   $("ver").textContent = "v" + ST.version;
@@ -3143,6 +3179,7 @@ function ckIndex() {
   });
   // действия (не разделы): выполняются сразу
   out.push({t: tr(DEMO.on ? "Выйти из примера" : "Показать на примере"), where: tr("Действие"), run: () => DEMO.on ? demoStop() : demoStart()});
+  out.push({t: tr("Поблагодарить разработчика"), where: tr("Ссылка"), run: openSupport});
   out.push({t: tr(SAFE ? "Выключить «Безопасно для стрима»" : "Безопасно для стрима: скрыть ключи и адреса"), where: tr("Действие"), run: () => safeSet(!SAFE, true)});
   const seen = new Set();
   return out.filter(x => { const k = x.t + "|" + x.where; if (seen.has(k)) return false; seen.add(k); return true; });
@@ -4210,6 +4247,10 @@ async function streamSummary(id) {
       <button onclick="sendSummary('telegram')">Отправить в Telegram</button><button onclick="sendSummary('discord')">Отправить в Discord</button>
       <span class="grow"></span><button onclick="closeModal()">Закрыть</button></div>
     <div class="small muted u-mt-2">Текст можно поправить перед копированием. В Telegram и Discord уходит исходный вариант.</div>`;
+  const line = !DEMO.on && getPath(S, "ui.thanks_report") !== false ? thanksLine(r.thanks) : "";
+  if (line && SUPPORT_URL) $("modal-body").insertAdjacentHTML("beforeend", `<div class="sum-thanks" id="sum-thanks"><p data-noi18n>${esc(line)}</p>
+      <a class="btn-link thanks-act" href="${esc(SUPPORT_URL)}" target="_blank" rel="noopener" aria-label="${esc(tr("Поблагодарить разработчика (откроется в браузере)"))}">${ICON.heart}<span>${tr("Поблагодарить")}</span></a>
+      <button class="linkish" onclick="thanksHide()">${tr("Не показывать")}</button></div>`);
   $("modal").classList.remove("hidden");
 }
 let SUMMARY_ID = "";
@@ -4766,6 +4807,28 @@ async function wlSpin(test) {
   await flushSave();
   try { await api("/wheel/spin", {wheel: WL_ID, test}); toast(test ? "Проверка: колесо крутится в OBS" : "Колесо запущено"); } catch (e) {}
   wlLoad();
+}
+
+// ---------- поддержка разработчика ----------
+// Адрес задан в одном месте — Config.SupportUrl в программе; панель получает его в /state. Никаких счётчиков и проверок.
+let SUPPORT_URL = "";
+function openSupport() { if (SUPPORT_URL) window.open(SUPPORT_URL, "_blank", "noopener"); }
+const ruPlural = (n, f) => { const a = n % 10, b = n % 100; return f[a === 1 && b !== 11 ? 0 : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 1 : 2]; };
+// строка для итогов стрима: только ненулевые показатели; нет данных или стрим короче 10 минут — блока нет
+function thanksLine(t) {
+  if (!t || (t.duration || 0) < 600) return "";
+  const en = window.I18N_LANG === "en";
+  const parts = [[t.orders, ["заказ музыки", "заказа музыки", "заказов музыки"], ["music request", "music requests"]],
+    [t.commands, ["команду", "команды", "команд"], ["command", "commands"]], [t.events, ["событие", "события", "событий"], ["event", "events"]]]
+    .filter(p => p[0] > 0).map(([n, ru, enf]) => `${n} ${en ? enf[n === 1 ? 0 : 1] : ruPlural(n, ru)}`);
+  if (!parts.length) return "";
+  const list = parts.length > 1 ? parts.slice(0, -1).join(", ") + (en ? " and " : " и ") + parts[parts.length - 1] : parts[0];
+  return en ? `During this stream Beg1nnnerOS handled ${list}. If the app helped, thank the developer.`
+    : `За этот стрим Beg1nnnerOS обработала ${list}. Если программа помогла — поблагодарите разработчика.`;
+}
+function thanksHide() {
+  S.ui.thanks_report = false; queueSave(null, 100);
+  const b = $("sum-thanks"); if (b) b.remove();
 }
 
 // ---------- модели распознавания речи: одна карточка на «Субтитры», голосовые команды и мастер ----------

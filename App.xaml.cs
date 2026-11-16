@@ -151,7 +151,7 @@ public partial class App : Application
             menu.Items.Add(pauseEvents);
             menu.Items.Add(L.T("Остановить МедиаАлерты"), null, (s, e) => Hub.Loop.Post(() => RunAction("stop_alerts")));
             menu.Items.Add(new WinForms.ToolStripSeparator());
-            menu.Items.Add(L.T("Поблагодарить разработчика"), null, (s, e) => Shell.OpenUrl("https://www.donationalerts.com/r/beginner24"));
+            menu.Items.Add(L.T("Поблагодарить разработчика"), null, (s, e) => Shell.OpenUrl(Config.SupportUrl));
             menu.Items.Add(L.T("Связь, предложения и ошибки"), null, (s, e) => Shell.OpenUrl("https://t.me/Beg1nnner"));
             menu.Items.Add(L.T("Выход"), null, async (s, e) => await ExitApp());
             menu.Opening += (s, e) => pauseEvents.Checked = Hub.Events.Paused;

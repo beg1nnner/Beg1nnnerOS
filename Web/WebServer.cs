@@ -318,7 +318,8 @@ public sealed partial class WebServer
         app.MapPost("/api/announce/test", H(async (c, b) =>
             Ok(new { message = await _hub.Announce.Test(b.Str("target") == "discord" ? "discord" : "telegram") })));
         app.MapGet("/api/stream-summary/{id}", H((c, b) =>
-            Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных") })));
+            // thanks — только для панели (блок «Поблагодарить» под итогами); в текст для чата, Telegram и Discord не входит
+            Ok(new { text = _hub.Announce.Summary(Route(c, "id")) ?? throw new UserError("По этому стриму нет данных"), thanks = _hub.Stats.Thanks(Route(c, "id")) })));
         app.MapPost("/api/stream-summary/{id}/send", H(async (c, b) =>
             Ok(new { message = await _hub.Announce.SendSummary(Route(c, "id"), b.Str("target") == "discord" ? "discord" : "telegram") })));
 
@@ -964,7 +965,7 @@ public sealed partial class WebServer
     private object StateObj() => new
     {
         version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
-        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"), voice = _hub.Voice.Last(), models = _hub.Models.Brief(),
+        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"), voice = _hub.Voice.Last(), models = _hub.Models.Brief(), support_url = Config.SupportUrl,
         alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
         port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
         update = _hub.Updater.State(),
