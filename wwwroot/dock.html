@@ -183,7 +183,13 @@ $("wheel").onclick = async () => {
   const m = $("likemsg"); m.textContent = j && j.ok ? tr2("Колесо запущено") : (j && (j.error || j.message)) || tr2("Не получилось запустить колесо");
   clearTimeout(m._t); m._t = setTimeout(() => m.textContent = "", 3000);
 };
-$("cc").onclick = async () => { const r = await post("/api/captions/toggle"); if (r.ok) $("cc").classList.toggle("on", r.data.enabled); };
+$("cc").onclick = async () => {
+  const r = await post("/api/captions/toggle");
+  if (r.ok) { $("cc").classList.toggle("on", r.data.enabled); return; }
+  // модели нет — ничего не скачиваем, подсказываем, где её взять
+  const m = $("likemsg"); m.textContent = tr2("Сначала скачайте модель распознавания — в панели, раздел «Субтитры»");
+  clearTimeout(m._t); m._t = setTimeout(() => m.textContent = "", 5000);
+};
 setInterval(async () => { try { const j = await (await fetch("/api/captions", {cache: "no-store"})).json(); if (j.ok) $("cc").classList.toggle("on", !!j.data.enabled); } catch (e) {} }, 3000);
 let likeT = null;
 $("like").onclick = async () => {

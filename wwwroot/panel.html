@@ -314,6 +314,27 @@
   .wl-prev iframe { width:100%; height:100%; border:0; display:block; }
   .wl-q { display:flex; align-items:center; gap:var(--sp-2); padding:var(--sp-2) 0; border-bottom:1px solid var(--line); font-size:var(--fs-md); }
   .wl-reward { padding-top:var(--sp-4); border-top:1px solid var(--line); }
+  /* модели распознавания речи */
+  .sp-h { display:flex; gap:var(--sp-3); align-items:flex-start; }
+  .sp-h h3 { margin:0 0 var(--sp-1); }
+  .sp-ic { width:38px; height:38px; border-radius:var(--r-md); display:grid; place-items:center; flex:none; color:var(--accent2);
+    background:color-mix(in srgb, var(--accent) 14%, transparent); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .sp-embed { padding:var(--sp-4); margin-bottom:var(--sp-4); border:1px solid var(--line); border-radius:var(--r-lg); background:var(--field); }
+  .sp-offer { display:flex; flex-direction:column; gap:var(--sp-2); }
+  .sp-pick { display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-3) var(--sp-4); border:1px solid var(--line); border-radius:var(--r-md); cursor:pointer; }
+  .sp-pick:has(input:checked) { border-color:color-mix(in srgb, var(--accent) 45%, transparent); background:color-mix(in srgb, var(--accent) 7%, transparent); }
+  .sp-adv summary { cursor:pointer; font-weight:600; font-size:var(--fs-md); }
+  .sp-tbl td { vertical-align:middle; }
+  .sp-act { text-align:right; white-space:nowrap; }
+  .sp-act button + button { margin-left:var(--sp-1); }
+  .sp-need { margin-top:var(--sp-1); }
+  .sp .notice + .notice { margin-top:var(--sp-2); }
+  .card.flash { outline:2px solid var(--accent2); outline-offset:3px; transition:outline-color var(--t) var(--ease); }
+  .tb-dl { display:inline-flex; align-items:center; gap:var(--sp-2); padding:var(--sp-1) var(--sp-3); border-radius:var(--r-pill); font-size:var(--fs-sm); font-weight:600; }
+  .tb-dl[hidden] { display:none; }
+  .tb-dl .tb-dl-bar { width:46px; height:4px; border-radius:var(--r-pill); background:var(--line); overflow:hidden; display:block; }
+  .tb-dl .tb-dl-bar i { display:block; height:100%; background:var(--accent); width:0; transition:width var(--t) var(--ease); }
+  @media (prefers-reduced-motion: reduce) { .tb-dl .tb-dl-bar i, .card.flash { transition:none; } }
   .tbl-wrap { overflow-x:auto; }
   .vc-tbl td { vertical-align:top; }
   .vc-tbl input[type=text], .vc-tbl input:not([type]) { width:100%; min-width:180px; }
@@ -785,6 +806,7 @@
   <div class="tb-title"><span class="micro" id="tb-crumb">Панель управления</span><h1 id="tb-h">Эфир</h1></div>
   <button class="tb-search" onclick="openCmdk()" title="Поиск по разделам и настройкам"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Поиск по разделам и настройкам…</span><kbd>Ctrl K</kbd></button>
   <div class="grow"></div>
+  <button class="tb-dl" id="tb-dl" hidden onclick="spOpen()"><svg class="ic" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span id="tb-dl-t"></span><i class="tb-dl-bar"><i id="tb-dl-p"></i></i></button>
   <span class="tb-safe-b" id="tb-safe-b" hidden><svg class="ic" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/></svg><span>Безопасно для стрима</span></span>
   <button class="tb-bell tb-safe" id="tb-safe" onclick="safeSet(!SAFE, true)" aria-pressed="false" aria-label="Безопасно для стрима" title="Безопасно для стрима: скрыть ключи, токены и адреса"><svg class="ic sf-on" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.1 6.1C3.6 7.8 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.9-2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><svg class="ic sf-off" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <div class="tb-bell-w"><button class="tb-bell" id="tb-bell" onclick="toggleNotifs(event)" aria-label="Уведомления" title="Уведомления"><svg class="ic" aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><i id="tb-bell-n"></i></button>
@@ -857,7 +879,7 @@
           <button onclick="openRemote()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span>Пульт с телефона</span></button>
           <button onclick="openPrecheck()"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg><span>Проверка перед эфиром</span></button>
           <button id="btn-pause-ev" onclick="api('/events/pause',{}).then(poll)"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Пауза уведомлений</span><kbd data-hk="pause_events"></kbd></button>
-          <button onclick="api('/captions/toggle',{}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
+          <button onclick="api('/captions/toggle',{},undefined,{quiet:true}).then(r=>toast(r && r.enabled ? 'Субтитры включены' : 'Субтитры выключены')).catch(()=>{})"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 10.5a2 2 0 1 0 0 3M17 10.5a2 2 0 1 0 0 3"/></svg><span>Субтитры в OBS</span><kbd data-hk="captions_toggle"></kbd></button>
           <button onclick="go('votes')"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Опрос или прогноз</span></button>
           <button class="danger" onclick="api('/alerts/stop',{}).then(()=>toast('МедиаАлерты остановлены'))"><svg class="ic" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg><span>Остановить МедиаАлерты</span><kbd data-hk="stop_alerts"></kbd></button>
           <div class="muted small" id="alerts-q"></div>
@@ -1684,10 +1706,12 @@
 <section id="p-captions" class="hidden">
   <h2 class="u-m-0">Субтитры в OBS</h2>
   <div class="muted small u-m-1-0-3">Программа слушает ваш микрофон и выводит речь текстом на экран стрима. Распознавание идёт на этом компьютере — без интернета и платных сервисов. Можно сразу показывать перевод на английский.</div>
+  <div class="card sp" id="sp-cap" aria-live="polite"></div>
   <div class="card cap-hero">
     <div class="cap-stage"><span class="pill cap-tag">Предпросмотр OBS</span><iframe id="cap-prev" class="ov u-w-100 u-ar-32-9 u-h-auto u-br-r-md"></iframe></div>
     <div class="row cap-bar u-jc-space-between u-fw-wrap">
-      <label class="switch"><input type="checkbox" data-s="captions.enabled" data-autosave> <b>Субтитры включены</b></label>
+      <div><label class="switch"><input type="checkbox" data-s="captions.enabled" data-autosave> <b>Субтитры включены</b></label>
+        <div class="small muted sp-need" data-sp-need="captions" hidden>Сначала скачайте модель</div></div>
       <span class="pill" id="cap-status"></span>
     </div>
     <div class="row u-mt-3 u-fw-wrap u-ai-fend">
@@ -1700,21 +1724,13 @@
   </div>
   <div class="masonry">
   <div class="card">
-    <h3 class="u-mt-0">Движок распознавания</h3>
-    <div class="row u-fw-wrap u-gap-3">
-      <label class="opt cap-opt"><input type="radio" name="cap-eng" value="whisper" onchange="capEngine(this.value)"> <b>Точный · Whisper</b><div class="small muted">лучше понимает речь, ставит знаки препинания и сам переводит на английский; задержка 1–3 секунды</div></label>
-      <label class="opt cap-opt"><input type="radio" name="cap-eng" value="vosk" onchange="capEngine(this.value)"> <b>Быстрый · Vosk</b><div class="small muted">слова появляются сразу, подходит для слабых ПК; точность ниже, перевод — через локальный переводчик из «Чат → Инструменты»</div></label>
-    </div>
-    <input type="hidden" data-s="captions.engine" id="cap-engine">
-    <div class="row u-mt-3 u-ai-fend u-fw-wrap">
-      <label class="f u-w-300px" id="cap-model-f"><span>Модель Whisper</span><select data-s="captions.model" id="cap-model"></select></label>
+    <h3 class="u-mt-0">Ускорение Whisper</h3>
+    <div class="row u-ai-fend u-fw-wrap">
       <label class="f u-w-230px" id="cap-gpu-f"><span>Ускорение</span><select data-s="captions.gpu" data-bool data-seg>
         <option value="true">Видеокарта (Vulkan)</option><option value="false">Только процессор</option></select></label>
-      <button id="cap-dl" onclick="capDownload()">Скачать модель</button>
-      <div class="grow u-minw-220px" id="cap-dl-box"></div>
     </div>
     <div class="small u-mt-2" id="cap-accel"></div>
-    <div class="muted small u-mt-2">Модель скачивается один раз (с GitHub). Whisper работает на видеокарте NVIDIA, AMD или Intel через Vulkan — в несколько раз быстрее, и процессор остаётся игре. Если видеокарта не подойдёт, программа сама перейдёт на процессор. Если субтитры отстают — выберите модель поменьше или режим Vosk.</div>
+    <div class="muted small u-mt-2">Whisper работает на видеокарте NVIDIA, AMD или Intel через Vulkan — в несколько раз быстрее, и процессор остаётся игре. Если видеокарта не подходит, программа сама переключится на процессор. Выбор модели и движка — в карточке «Распознавание речи» → «Дополнительно».</div>
   </div>
   <div class="card">
     <h3 class="u-mt-0">Что показывать</h3>
@@ -1743,9 +1759,10 @@
   </div>
   <div class="card vc" id="vc-card">
     <div class="row u-fw-wrap"><h3 class="grow u-m-0">Голосовые команды</h3>
-      <label class="switch"><input type="checkbox" data-s="captions.voice.enabled" data-autosave> <b>Включены</b></label></div>
+      <div><label class="switch"><input type="checkbox" data-s="captions.voice.enabled" data-autosave> <b>Включены</b></label>
+        <div class="small muted sp-need" data-sp-need="voice" hidden>Сначала скачайте модель</div></div></div>
     <div class="muted small u-m-1-0-3">Скажите слово активации и команду: «бот, следующий трек». Используется то же распознавание, что у субтитров, — оно работает на этом компьютере без интернета, а сами субтитры при этом можно не включать.</div>
-    <div id="vc-model"></div>
+    <div class="sp sp-embed" id="sp-vc" aria-live="polite"></div>
     <div class="row u-fw-wrap u-ai-fend">
       <label class="f u-w-200px"><span>Слово активации</span><input data-s="captions.voice.wake" maxlength="20" placeholder="бот" aria-describedby="vc-wake-h"></label>
       <label class="switch u-mb-2"><input type="checkbox" data-s="captions.voice.hide"> Не показывать команды в субтитрах</label>
@@ -2001,6 +2018,8 @@ const svgIc = (d, size = 16, sw = 1.8) => `<svg class="ic" aria-hidden="true" wi
 const ICON = {
   check: svgIc('<path d="M20 6L9 17l-5-5"/>'),
   x: svgIc('<path d="M18 6L6 18M6 6l12 12"/>', 14),
+  mic: svgIc('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', 18),
+  refresh: svgIc('<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/>', 14),
   alert: svgIc('<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
   info: svgIc('<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>'),
   trash: svgIc('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>', 15),
@@ -2318,6 +2337,7 @@ async function loadSettings(keepFocus) {
     else el.value = v ?? "";
   });
   if (!LAY_GRAB && !document.querySelector(".lay-drag")) layApply();
+  spGate();
   if ($("xf-v")) { const v = +getPath(S, "music.crossfade") || 0; $("xf-v").textContent = v > 0 ? v + " сек" : "выключен"; }
   $("secret").placeholder = S.twitch.has_secret ? "•••••• сохранён (пусто — оставить прежний)" : "";
   document.querySelectorAll("[data-has]").forEach(el => el.placeholder = getPath(S, el.dataset.has) ? "•••••• сохранён (пусто — оставить прежний)" : "не указан");
@@ -2687,7 +2707,7 @@ async function saveReport() {
 
 // ---------- мастер первого запуска ----------
 const WZ = { open: false, step: 0, sender: null };
-const WZ_STEPS = ["twitch", "bot", "music", "obs"];
+const WZ_STEPS = ["twitch", "bot", "music", "speech", "obs"];
 function openWizard(step) { WZ.open = true; WZ.step = step || 0; $("wizard").classList.remove("hidden"); wzRender(); }
 async function closeWizard(done) {
   WZ.open = false; clearInterval(DEV_T); $("wizard").classList.add("hidden");
@@ -2707,7 +2727,7 @@ function wzRender() {
         <button class="sm ${(S && S.ui && S.ui.language === "en") ? "" : "primary"}" onclick="wzLang('ru')">Русский</button>
         <button class="sm ${(S && S.ui && S.ui.language === "en") ? "primary" : ""}" onclick="wzLang('en')">English</button></div>
       <h2 class="wz-h"><i class="wz-ic">${ICON.wave}</i>Добро пожаловать в Beg1nnnerOS</h2>
-      <div class="muted">Четыре коротких шага — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
+      <div class="muted">Пять коротких шагов — и всё готово к стриму. Шаг 1: вход в ваш аккаунт Twitch.</div>
       <div id="wz-tw" class="u-mt-4"></div>
       <div class="wz-demo"><span class="muted small">Сначала хотите посмотреть, как всё работает?</span><button class="sm" onclick="demoStart()">Показать на примере</button></div>`;
   } else if (k === "bot") {
@@ -2722,6 +2742,11 @@ function wzRender() {
       <div class="u-mt-4"><button onclick="ytCheck('wz-yt')">${ICON.pulse}<span>Проверить связь с YouTube</span></button></div>
       <div id="wz-yt" class="hidden u-mt-3"></div>
       <div class="small muted u-mt-3">Награды для заказа музыки создаются сами в разделе «Музыка». Там же можно включить резервный плейлист — он играет, когда заказов нет.</div>`;
+  } else if (k === "speech") {
+    body = `<h2 class="wz-h"><i class="wz-ic">${ICON.mic}</i>Субтитры и голосовые команды</h2>
+      <div class="muted">Программа может выводить вашу речь субтитрами на стрим и слушаться голосовых команд («бот, пауза»). Для этого нужна модель распознавания — её можно скачать сейчас или позже в разделе «Субтитры».</div>
+      <div class="sp sp-embed u-mt-3" id="wz-sp"></div>
+      <div class="row u-mt-2"><span class="grow"></span><button class="sm" onclick="wzGo(1)">Пропустить</button></div>`;
   } else {
     body = `<h2 class="wz-h"><i class="wz-ic">${ICON.film}</i>Источники в OBS</h2>
       <div class="muted">В OBS: «Источники» → «+» → <b>«Браузер»</b> → вставьте адрес. Индикатор загорится зелёным, когда источник откроется в OBS.</div>
@@ -2737,6 +2762,7 @@ function wzRender() {
     const cur = WZ.sender || (S && S.twitch ? S.twitch.sender : "streamer") || "streamer";
     const inp = document.querySelector(`input[name=wz-s][value=${cur}]`); if (inp) inp.checked = true;
   }
+  if (k === "speech") { SP_SIG["wz-sp"] = ""; if (MODELS) spRender("wz-sp"); spLoad().then(() => { if (MODELS && MODELS.download.active) spWatch(); }); }
   wzRefresh(true);
 }
 function wzRefresh(force) {
@@ -2793,7 +2819,7 @@ async function poll(pushed) {
   else { try { ST = (await api("/state")); } catch (e) { return; } }
   const r = ST.ready, m = ST.music;
   // горячая клавиша меняет режим на сервере — подхватываем, если панель сама ничего не сохраняет
-  if (!DEMO.on) vcToast(ST.voice);
+  if (!DEMO.on) { vcToast(ST.voice); spBrief(ST.models); }
   if (typeof ST.stream_safe === "boolean" && ST.stream_safe !== SAFE && !SAVE_T && !SAVING) { safeSet(ST.stream_safe); if (S && S.ui) S.ui.stream_safe = SAFE; }
   $("demo-cta").classList.toggle("hidden", DEMO.on || !!(r.streamer && r.streamer.ok));
   $("ver").textContent = "v" + ST.version;
@@ -2953,7 +2979,7 @@ function wsState() {
   let ws;
   try { ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/state"); } catch (e) { return; }
   ws.onopen = () => { WS_OK = true; WS_RETRY = 1000; };
-  ws.onmessage = e => { if (DEMO.on) return; try { const j = JSON.parse(e.data); if (j.ok) poll(j.data); } catch (x) {} };
+  ws.onmessage = e => { if (DEMO.on) { poll(); return; } try { const j = JSON.parse(e.data); if (j.ok) poll(j.data); } catch (x) {} };
   ws.onclose = () => { WS_OK = false; setTimeout(wsState, WS_RETRY); WS_RETRY = Math.min(15000, WS_RETRY * 2); };
   ws.onerror = () => { try { ws.close(); } catch (x) {} };
 }
@@ -4591,14 +4617,11 @@ async function capOpen() {
     $("cap-dev").innerHTML = '<option value="">Микрофон по умолчанию</option>' + d.items.map(x => `<option value="${esc(x.id)}">${esc(x.id)}</option>`).join("");
     $("cap-dev").value = cur;
   } catch (e) {}
-  const eng = getPath(S, "captions.engine") || "whisper";
-  document.querySelectorAll('input[name=cap-eng]').forEach(r => r.checked = r.value === eng);
   capPreview();
   await capLoad();
   clearInterval(CAP_T);
   CAP_T = setInterval(() => { if ($("p-captions").classList.contains("hidden")) { clearInterval(CAP_T); CAP_T = null; return; } capLoad(); }, 700);
 }
-function capEngine(v) { $("cap-engine").value = v; queueSave($("cap-engine"), 100); capRender(); }
 function capPreview() {
   const st = document.querySelector('[data-s="captions.style"]').value || "classic";
   const fs = document.querySelector('[data-s="captions.font_size"]').value || 30;
@@ -4607,28 +4630,13 @@ function capPreview() {
 async function capLoad() { try { CAP = await api("/captions?full=1"); } catch (e) { return; } capRender(); }
 function capRender() {
   const c = CAP; if (!c) return;
-  const eng = $("cap-engine").value || c.engine;
+  const eng = c.engine;
   $("cap-status").textContent = c.status;
   $("cap-status").className = "pill " + (c.running ? "ok" : c.status.startsWith("ошибка") || c.status.startsWith("микрофон") ? "err" : "");
   $("cap-level").style.width = Math.round((c.level || 0) * 100) + "%";
-  const models = eng === "vosk" ? c.vosk_models : c.whisper_models;
-  $("cap-model-f").classList.toggle("hidden", eng === "vosk");
-  $("cap-gpu-f").classList.toggle("hidden", eng === "vosk");
   $("cap-accel").innerHTML = (c.accel ? `Сейчас работает на: <b>${esc(c.accel)}</b>` + (c.speed ? ` · быстрее реального времени в <b>${c.speed}</b> раз` : "") : "")
     + (c.restart_needed ? `<div class="warn ic-tx u-mt-1">${ICON.alert}<span>Смена ускорения заработает после перезапуска программы</span></div>` : "");
-  const sel = $("cap-model"), want = getPath(S, "captions.model") || "base";
-  if (sel.dataset.sig !== JSON.stringify(c.whisper_models)) {
-    sel.innerHTML = c.whisper_models.map(m => `<option value="${m.key}">${esc(m.title)}${m.ready ? " · " + tr("скачана") : ""}</option>`).join("");
-    sel.value = sel.dataset.touched ? sel.value : want; sel.dataset.sig = JSON.stringify(c.whisper_models);
-  }
-  const key = eng === "vosk" ? (document.querySelector('[data-s="captions.lang"]').value === "en" ? "en" : "ru") : sel.value;
-  const m = models.find(x => x.key === key) || models[0];
-  const dl = c.download;
-  $("cap-dl").classList.toggle("hidden", !!(m && m.ready) || dl.active);
-  $("cap-dl").innerHTML = ICON.download + "<span>" + esc(tr("Скачать модель") + (m ? ` (${(m.title.split("·")[1] || "").trim()})` : "")) + "</span>";
-  $("cap-dl-box").innerHTML = dl.active ? `<div class="small muted">Скачиваю модель… ${Math.round(dl.progress * 100)}%</div><div class="bar"><i style="width:${Math.round(dl.progress * 100)}%"></i></div>`
-    : dl.error ? `<span class="small u-c-err">${esc(dl.error)}</span>`
-    : m && m.ready ? `<span class="small ok ic-tx">${ICON.check}<span>Модель скачана</span></span>` : "";
+  if (c.speech) { MODELS = c.speech; spRenderAll(); }
   const ln = (c.lines || []).slice(-3);
   $("cap-live").innerHTML = ln.map(l => `<div>${esc(l.text)}${l.en ? ` <span class="muted">— ${esc(l.en)}</span>` : ""}</div>`).join("")
     + (c.partial ? `<div class="muted"><i>${esc(c.partial)}</i></div>` : "") || '<span class="muted">пока тишина</span>';
@@ -4760,12 +4768,173 @@ async function wlSpin(test) {
   wlLoad();
 }
 
+// ---------- модели распознавания речи: одна карточка на «Субтитры», голосовые команды и мастер ----------
+// Программа никогда не скачивает модель сама: загрузка начинается только по кнопке «Скачать» / «Продолжить» / «Повторить».
+let MODELS = null, SP_T = null, SP_SEEN = null, SP_NEED = null;
+const SP_HOSTS = ["sp-cap", "sp-vc", "wz-sp"];
+const SP_SEL = {};      // хост → выбранные галочками модели
+const SP_ADV = {};      // хост → открыт ли блок «Дополнительно»
+const SP_SIG = {};
+const SP_PURPOSE = {captions: "для субтитров", voice: "для голосовых команд"};
+const fmtMb = n => n >= 1024 ? String(Math.round(n / 102.4) / 10).replace(".", ",") + " " + tr("ГБ") : Math.round(n) + " " + tr("МБ");
+const spModel = id => MODELS && MODELS.models.find(m => m.id === id);
+async function spLoad() {
+  try { MODELS = await api("/models", undefined, undefined, {quiet: true}); } catch (e) { return; }
+  spRenderAll();
+}
+function spRenderAll() { SP_HOSTS.forEach(h => { if ($(h)) spRender(h); }); spGate(); }
+// что нужно этому месту: голосовым командам — модель для них, «Субтитрам» и мастеру — для субтитров
+const spNeed = host => host === "sp-vc" ? "voice" : "captions";
+function spOffer(host) {
+  // рекомендуемые модели, которых ещё нет: своя — отмечена, для второй функции — предлагается галочкой
+  const need = spNeed(host), other = need === "voice" ? "captions" : "voice";
+  return [[need, MODELS.recommended[need], true], [other, MODELS.recommended[other], false]]
+    .filter(([p, id], i) => { const m = spModel(id); return m && m.status !== "ready" && (i === 0 || !MODELS.ready[p]); })
+    .filter((x, i, a) => a.findIndex(y => y[1] === x[1]) === i);
+}
+function spRender(host) {
+  const box = $(host), M = MODELS; if (!box || !M) return;
+  const dl = M.download, need = spNeed(host), ready = M.ready[need];
+  const partial = M.models.filter(m => m.status === "partial"), corrupt = M.models.filter(m => m.status === "corrupt");
+  const offer = spOffer(host);
+  if (!SP_SEL[host]) SP_SEL[host] = new Set(offer.filter(o => o[2]).map(o => o[1]));
+  const sel = [...SP_SEL[host]].filter(id => offer.some(o => o[1] === id));
+  const sum = sel.reduce((a, id) => a + spModel(id).size_mb, 0);
+  const kind = dl.active ? "dl" : dl.error ? "err" : partial.length ? "part" : corrupt.length && !ready ? "bad" : ready ? "ok" : "none";
+  const sig = JSON.stringify([kind, M.models.map(m => [m.status, m.in_use, m.part_mb]), sel, M.free_mb, M.captions_model, M.voice_model, dl.id, dl.phase, dl.attempt, dl.queue, dl.error,
+    getPath(S, "captions.engine"), getPath(S, "captions.model"), I18N_LANG]);
+  if (SP_SIG[host] === sig) { spProgress(box); return; }
+  SP_SIG[host] = sig;
+  const head = `<div class="sp-h"><i class="sp-ic">${ICON.mic}</i><div class="grow"><h3>${tr("Распознавание речи")}</h3>
+      <div class="small muted">${tr("Распознавание работает на вашем компьютере, без интернета. Нужно один раз скачать модель.")}</div></div>
+      ${kind === "ok" ? `<span class="pill ok">${ICON.check}<span>${tr("Модель скачана")}</span></span>` : kind === "dl" ? `<span class="pill warn">${tr("Скачивается")}</span>` : ""}</div>`;
+  let body = "";
+  if (kind === "dl") {
+    const q = dl.queue.length ? `${tr("Дальше")}: ${dl.queue.map(id => esc(spModel(id).name)).join(", ")}` : "";
+    body = `<div class="sp-dl"><div class="row"><b class="grow" data-noi18n>${esc(dl.name)}</b><span class="small muted num" data-sp="txt"></span></div>
+      <div class="bar u-h-8px u-mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(tr("Загрузка модели"))}" data-sp="bar"><i></i></div>
+      <div class="row u-mt-2 u-fw-wrap"><span class="small muted grow" data-sp="note"></span><span class="small muted">${q}</span>
+      <button class="sm" onclick="spCancel()">${tr("Отменить")}</button></div>
+      <div class="small muted u-mt-1">${tr("Можно перейти в другой раздел — загрузка продолжится.")}</div></div>`;
+  } else if (kind === "err") {
+    body = `<div class="notice err">${ICON.alert}<div class="grow">${esc(tr(dl.error))}</div><button class="sm" onclick='spDownload(${JSON.stringify(dl.error_ids)})'>${ICON.refresh}<span>${tr("Повторить")}</span></button></div>`;
+  } else if (kind === "part") {
+    body = partial.map(m => `<div class="notice warn">${ICON.alert}<div class="grow"><b>${tr("Загрузка не завершена")}</b> — <span data-noi18n>${esc(m.name)}</span>: ${tr("скачано")} ${fmtMb(m.part_mb)} ${tr("из")} ${fmtMb(m.size_mb)}</div>
+      <button class="sm primary" onclick='spDownload(["${m.id}"])'>${tr("Продолжить")}</button><button class="sm" onclick="spDelete('${m.id}', true)">${tr("Отменить")}</button></div>`).join("");
+  } else if (kind === "bad") {
+    body = corrupt.map(m => `<div class="notice err">${ICON.alert}<div class="grow">${tr("Модель повреждена — нужно скачать заново")}: <span data-noi18n>${esc(m.name)}</span></div>
+      <button class="sm primary" onclick='spDownload(["${m.id}"])'>${ICON.download}<span>${tr("Скачать заново")}</span></button></div>`).join("");
+  } else if (kind === "ok") {
+    const use = spModel(need === "voice" ? M.voice_model : M.captions_model);
+    body = `<div class="small">${tr("Используется")}: <b data-noi18n>${esc(use ? use.name : "")}</b></div>`
+      + (offer.length ? `<div class="small muted u-mt-1">${offer.map(o => `${tr("Можно добавить")} <span data-noi18n>${esc(spModel(o[1]).name)}</span> ${tr(SP_PURPOSE[o[0]])} — ${tr("в «Дополнительно»")}`).join("; ")}</div>` : "");
+  } else {
+    body = `<div class="sp-offer">${offer.map(([p, id]) => { const m = spModel(id);
+        return `<label class="sp-pick"><input type="checkbox" ${sel.includes(id) ? "checked" : ""} onchange="spPick('${host}', '${id}', this.checked)">
+          <span class="grow"><b data-noi18n>${esc(m.name)}</b> <span class="muted">— ${tr(SP_PURPOSE[p])}${id.startsWith("vosk") ? ", " + tr("быстрее") : ""}</span></span><span class="num muted">${fmtMb(m.size_mb)}</span></label>`; }).join("")}</div>
+      <div class="row u-mt-3 u-fw-wrap">
+        <button class="primary" ${sel.length ? "" : "disabled"} onclick="spDownload([...(SP_SEL['${host}'] || [])])">${ICON.download}<span>${sel.length ? `${tr(sel.length > 1 ? "Скачать модели" : "Скачать модель")} (${fmtMb(sum)})` : tr("Выберите модель")}</span></button>
+        <span class="small muted">${M.free_mb >= 0 ? `${tr("Свободно на диске")}: ${fmtMb(M.free_mb)}` : ""}</span></div>`;
+  }
+  box.innerHTML = head + `<div class="u-mt-3">${body}</div>` + spAdvanced(host);
+  const det = box.querySelector("details"); if (det) det.ontoggle = () => { SP_ADV[host] = det.open; };
+  spProgress(box);
+}
+function spProgress(box) {
+  const dl = MODELS.download; if (!dl.active) return;
+  const pct = dl.total_mb ? Math.min(100, dl.done_mb / dl.total_mb * 100) : 0;
+  const bar = box.querySelector('[data-sp="bar"]'); if (bar) { bar.firstElementChild.style.width = pct.toFixed(1) + "%"; bar.setAttribute("aria-valuenow", Math.round(pct)); }
+  const t = box.querySelector('[data-sp="txt"]');
+  if (t) t.textContent = `${fmtMb(dl.done_mb)} ${tr("из")} ${fmtMb(dl.total_mb)}` + (dl.phase === "download" && dl.speed_kb ? ` · ${String((dl.speed_kb / 1024).toFixed(1)).replace(".", ",")} ${tr("МБ/с")}` : "");
+  const n = box.querySelector('[data-sp="note"]');
+  if (n) n.textContent = dl.phase === "verify" ? tr("Проверяю файл…") : dl.phase === "unpack" ? tr("Распаковываю…")
+    : dl.attempt ? `${tr("Связь прервалась — повторная попытка")} ${dl.attempt} ${tr("из")} 3` : "";
+}
+function spAdvanced(host) {
+  const M = MODELS, eng = getPath(S, "captions.engine") || "whisper", wm = getPath(S, "captions.model") || "base";
+  const st = {ready: "скачана", downloading: "скачивается", queued: "в очереди", partial: "загрузка не завершена", corrupt: "повреждена", error: "ошибка", missing: ""};
+  const rows = M.models.map(m => {
+    const act = m.status === "ready" || m.status === "corrupt"
+      ? `${m.status === "corrupt" ? `<button class="sm" onclick='spDownload(["${m.id}"])'>${tr("Скачать заново")}</button>` : ""}<button class="sm danger" onclick="spDelete('${m.id}')" aria-label="${esc(tr("Удалить модель"))} ${esc(m.name)}">${ICON.trash}<span>${tr("Удалить")}</span></button>`
+      : m.status === "partial" ? `<button class="sm" onclick='spDownload(["${m.id}"])'>${tr("Продолжить")}</button>`
+      : m.status === "downloading" || m.status === "queued" ? "" : `<button class="sm" onclick='spDownload(["${m.id}"])' aria-label="${esc(tr("Скачать модель"))} ${esc(m.name)}">${ICON.download}<span>${tr("Скачать")}</span></button>`;
+    return `<tr><td><b data-noi18n>${esc(m.name)}</b>${m.in_use ? ` <span class="pill ok">${tr("используется")}</span>` : ""}<div class="small muted">${esc(tr(m.hint))}</div></td>
+      <td class="num">${fmtMb(m.size_mb)}</td><td class="small ${m.status === "ready" ? "ok" : m.status === "corrupt" || m.status === "error" ? "u-c-err" : "muted"}">${st[m.status] ? tr(st[m.status]) : ""}</td><td class="sp-act">${act}</td></tr>`;
+  }).join("");
+  const wsel = M.models.filter(m => m.engine === "whisper").map(m => `<option value="${m.key}" ${m.key === wm ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+  return `<details class="sp-adv u-mt-3" ${SP_ADV[host] ? "open" : ""}><summary>${tr("Дополнительно")}</summary>
+    <div class="row u-mt-3 u-fw-wrap u-ai-fend">
+      <label class="f u-w-230px"><span>${tr("Движок для субтитров")}</span><select onchange="spSet('engine', this.value)">
+        <option value="whisper" ${eng !== "vosk" ? "selected" : ""}>${tr("Точный · Whisper")}</option><option value="vosk" ${eng === "vosk" ? "selected" : ""}>${tr("Быстрый · Vosk")}</option></select></label>
+      ${eng !== "vosk" ? `<label class="f u-w-230px"><span>${tr("Модель Whisper")}</span><select onchange="spSet('model', this.value)" data-noi18n>${wsel}</select></label>` : ""}
+    </div>
+    <div class="small muted u-mt-2">${tr("Whisper точнее, ставит знаки препинания и сам переводит на английский; Vosk быстрее и подходит для слабых ПК. Голосовые команды работают на любой скачанной модели, быстрее всего — на Vosk.")}</div>
+    <div class="tbl-wrap u-mt-3"><table class="sp-tbl"><thead><tr><th scope="col">${tr("Модель")}</th><th scope="col">${tr("Размер")}</th><th scope="col">${tr("Состояние")}</th><th scope="col"><span class="sr-only">${tr("Действия")}</span></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></details>`;
+}
+function spPick(host, id, on) { SP_SEL[host] = SP_SEL[host] || new Set(); if (on) SP_SEL[host].add(id); else SP_SEL[host].delete(id); SP_SIG[host] = ""; spRender(host); }
+function spSet(k, v) { S.captions[k] = v; queueSave(null, 150); setTimeout(spLoad, 900); }
+async function spDownload(ids) {
+  if (!ids || !ids.length) return;
+  try { const r = await api("/models/download", {ids}); MODELS = r.state; } catch (e) {}
+  spRenderAll(); spWatch();
+}
+async function spCancel() {
+  if (!await confirmDlg({title: "Отменить загрузку модели?", text: "Скачанная часть будет удалена. Начать заново можно в любой момент.", okLabel: "Отменить загрузку", cancelLabel: "Продолжить загрузку", danger: 1})) return;
+  try { MODELS = await api("/models/cancel", {}); } catch (e) {}
+  setTimeout(spLoad, 700);
+}
+async function spDelete(id, partOnly) {
+  const m = spModel(id); if (!m) return;
+  if (!partOnly && !await confirmDlg({title: `Удалить модель «${m.name}»?`, text: `Освободится около ${fmtMb(m.disk_mb)}.`
+      + (m.in_use ? " Она сейчас используется — функции, которые на ней работают, будут выключены." : "") + " Скачать её снова можно в любой момент.", okLabel: "Удалить", danger: 1})) return;
+  try { const r = await api("/models/delete", {id}); MODELS = r.state; if (!partOnly) toast(r.message); await loadSettings(true); } catch (e) {}
+  SP_HOSTS.forEach(h => SP_SIG[h] = ""); spRenderAll();
+}
+// переключатели неактивны, пока нет модели (уже включённый можно выключить)
+function spGate() {
+  const r = MODELS && MODELS.ready; if (!r) return;
+  [["captions.enabled", "captions", r.captions], ["captions.voice.enabled", "voice", r.voice]].forEach(([path, k, ok]) => {
+    const inp = document.querySelector(`[data-s="${path}"]`);
+    if (inp) inp.disabled = !ok && !inp.checked;
+    document.querySelectorAll(`[data-sp-need="${k}"]`).forEach(el => el.hidden = ok);
+  });
+}
+// пока идёт загрузка и карточка на экране — обновляем чаще
+function spWatch() {
+  clearInterval(SP_T);
+  SP_T = setInterval(() => {
+    const visible = SP_HOSTS.some(h => $(h) && $(h).offsetParent);
+    if (!visible) { clearInterval(SP_T); SP_T = null; return; }
+    spLoad();
+    if (MODELS && !MODELS.download.active && !MODELS.download.queue.length) { clearInterval(SP_T); SP_T = null; }
+  }, 700);
+}
+function spOpen() {
+  if (WZ.open && $("wz-sp")) return;
+  go("captions");
+  setTimeout(() => { const el = $("sp-cap"); if (!el) return;
+    el.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600);
+    const b = el.querySelector("button.primary"); if (b) b.focus({preventScroll: true}); }, 350);
+}
+// из /state: индикатор в шапке, тост «Модель скачана», подсказка, если функцию пытались включить без модели
+function spBrief(b) {
+  if (!b) return;
+  $("tb-dl").hidden = !b.active;
+  if (b.active) {
+    $("tb-dl-t").textContent = `${tr("Модель")} ${Math.round(b.pct * 100)}%`; $("tb-dl-p").style.width = Math.round(b.pct * 100) + "%";
+    $("tb-dl").title = `${tr("Скачивается модель")} ${b.name}`; $("tb-dl").setAttribute("aria-label", $("tb-dl").title);
+  }
+  if (SP_SEEN === null) { SP_SEEN = b.seq; SP_NEED = b.need; return; }
+  if (b.seq !== SP_SEEN) { SP_SEEN = b.seq; toast(`${tr("Модель скачана")}: ${b.done}`); spLoad(); }
+  if (b.need !== SP_NEED) { SP_NEED = b.need; toast("Сначала скачайте модель распознавания", false, {label: "Открыть", run: spOpen}); }
+}
+
 // ---------- голосовые команды ----------
 const VC_TITLES = {skip: "Следующий трек", pause: "Пауза", resume: "Продолжить", clip: "Сделать клип"};
 function vcRender(c) {
   const v = c.voice; if (!v) return;
-  $("vc-model").innerHTML = c.has_model ? "" : `<div class="notice warn u-mb-3">${ICON.alert}<div>${tr("Для распознавания нужна модель — она скачивается один раз и дальше работает без интернета.")}
-    <div class="u-mt-2"><button class="sm" onclick="capDownload()">${ICON.download}<span>${tr("Скачать модель")}</span></button></div></div></div>`;
   const body = $("vc-cmds");
   if (body.dataset.sig !== JSON.stringify(v.commands.map(x => [x.key, x.on, x.custom]))) {
     const focused = document.activeElement && body.contains(document.activeElement) ? document.activeElement.id : "";
@@ -4801,14 +4970,6 @@ function vcToast(v) {
   VC_SEEN = v.id;
   toast(`${tr("Голосовая команда")}: ${tr(VC_TITLES[Object.keys(VC_TITLES).find(k => VC_TITLES[k] === v.title)] || v.title)} — ${tr(v.result)}`);
 }
-$("cap-model") && $("cap-model").addEventListener("change", e => { e.target.dataset.touched = "1"; capRender(); });
-async function capDownload() {
-  const eng = $("cap-engine").value || (CAP && CAP.engine) || "whisper";
-  const model = eng === "vosk" ? (document.querySelector('[data-s="captions.lang"]').value === "en" ? "en" : "ru") : $("cap-model").value;
-  try { const r = await api("/captions/download", {engine: eng, model}); toast(r.message); } catch (e) {}
-  capLoad();
-}
-
 // ---------- загрузчики: ошибка → сразу в карточку ----------
 [["loadAlerts", ["al-list"]], ["loadCommands", ["c-custom", "c-std"]], ["loadTimers", ["c-timers", "c-timers-mini"]], ["loadHistory", ["mh-list"]],
  ["loadLog", ["log"]], ["loadStats", ["ms-body"]], ["loadSettings", ["ev-list", "th-list"]]].forEach(([n, ids]) => skelGuard(n, ids));

@@ -38,9 +38,20 @@
   const STREAMER = "demo_streamer";
 
   const D = {on: false, t0: 0, notifs: 0, sec: "live"};
+  // Дополнительные демо-данные, которые можно задать снаружи (например, сценарием записи ролика):
+  // now — свой текущий трек {title, duration, cover, requester, pos0, t0, paused}, log — свои строки журнала [{ago, kind, text}].
+  const EXTRA = {now: null, log: []};
+  window.demoSet = function (patch) { Object.assign(EXTRA, patch || {}); };
 
   // текущий трек «играет»: позиция растёт от времени входа в демо
   function current() {
+    const x = EXTRA.now;
+    if (x) {
+      const pos = Math.min(x.duration, x.paused ? x.pos0 : x.pos0 + (now() - x.t0));
+      return {id: "dx", vid: "", title: x.title, page_url: "", duration: x.duration, requester: x.requester, login: String(x.requester).toLowerCase(),
+        priority: 0, source: "youtube", paid: true, position: Math.round(pos * 10) / 10, paused: !!x.paused, gain_db: 0, in_obs: true,
+        loading: false, views: -1, liked: false, artist: x.title.split(" — ")[0], channel: "", cover: x.cover};
+    }
     const t = TRACKS[0], pos = ((now() - D.t0) + 83) % t.dur;
     return {id: "d0", vid: "", title: t.title, page_url: "", duration: t.dur, requester: VIEWERS[0], login: VIEWERS[0].toLowerCase(),
       priority: 0, source: "youtube", paid: true, position: Math.round(pos * 10) / 10, paused: false, gain_db: 0, in_obs: true,
@@ -82,7 +93,44 @@
       [300, "music", L(`Играет: ${TRACKS[0].title} (заказ ${VIEWERS[0]})`, `Now playing: ${TRACKS[0].title} (requested by ${VIEWERS[0]})`)],
       [90, "command", L(`!song от ${VIEWERS[1]}`, `!song from ${VIEWERS[1]}`)],
     ];
+    if (EXTRA.now) rows[rows.length - 2] = [300, "music", L(`Играет: ${EXTRA.now.title} (заказ ${EXTRA.now.requester})`, `Now playing: ${EXTRA.now.title} (requested by ${EXTRA.now.requester})`)];
+    EXTRA.log.forEach(r => rows.push([r.ago, r.kind, r.text]));
+    rows.sort((a, b) => b[0] - a[0]);
     return rows.map(([s, kind, text], i) => ({id: i + 1, ts: ago(s), kind, text}));
+  }
+  // модели распознавания: в примере Whisper Base и Vosk уже скачаны (настоящее состояние программы не трогаем)
+  function speech() {
+    const m = [["whisper", "tiny", "Whisper Tiny", "для слабых ПК", 32, 32], ["whisper", "base", "Whisper Base", "рекомендуем для субтитров", 60, 60],
+      ["whisper", "small", "Whisper Small", "точнее, нужен мощный ПК", 190, 190], ["vosk", "ru", "Vosk · русский", "быстрая, для голосовых команд", 45, 90],
+      ["vosk", "en", "Vosk · English", "быстрая, для голосовых команд", 40, 70]];
+    const ready = new Set(["whisper:base", "vosk:" + (EN() ? "en" : "ru")]);
+    return {models: m.map(([engine, key, name, hint, size_mb, disk_mb]) => ({id: engine + ":" + key, engine, key, name, hint, size_mb, disk_mb,
+        status: ready.has(engine + ":" + key) ? "ready" : "missing", part_mb: 0, in_use: engine + ":" + key === "whisper:base"})),
+      free_mb: 120000, recommended: {captions: "whisper:base", voice: "vosk:" + (EN() ? "en" : "ru")}, ready: {captions: true, voice: true},
+      captions_model: "whisper:base", voice_model: "vosk:" + (EN() ? "en" : "ru"), checked_ok: true, seq: 0,
+      download: {active: false, id: "", name: "", phase: "", attempt: 0, done_mb: 0, total_mb: 0, speed_kb: 0, queue: [], error: "", error_ids: []}};
+  }
+  // субтитры и голосовые команды: распознавание «работает», но в демо ничего не распознано — последняя фраза пустая
+  async function captionsState(real) {
+    const r = await real().catch(() => ({}));
+    return Object.assign({}, r, {enabled: true, running: true, status: L("слушаю микрофон (Whisper)", "listening to the microphone (Whisper)"),
+      lines: [], partial: "", speaking: false, level: 0.12 + 0.1 * Math.abs(Math.sin(now() * 3)), now: now(),
+      engine: "whisper", model: "base", has_model: true, accel: L("видеокарта (Vulkan)", "GPU (Vulkan)"), speed: 6.4, restart_needed: false,
+      speech: speech(),
+      voice: {enabled: true, wake: L("бот", "bot"), hide: true, chime: true, testing: false, test_left: 0, last: null,
+        commands: [
+          {key: "skip", title: "Следующий трек", phrases: ["следующий трек", "скип", "next track"], on: true, custom: []},
+          {key: "pause", title: "Пауза", phrases: ["пауза", "поставь на паузу", "pause"], on: true, custom: []},
+          {key: "resume", title: "Продолжить", phrases: ["продолжай", "включи музыку", "resume"], on: true, custom: []},
+          {key: "clip", title: "Сделать клип", phrases: ["сделай клип", "клип", "clip that"], on: true, custom: []}]}});
+  }
+  function wheelState() {
+    return {current: null, current_result: "",
+      queue: [{id: 7, wheel: L("Колесо фортуны", "Wheel of fortune"), user: VIEWERS[1], source: "reward", test: false, elapsed_ms: 0, duration_ms: 0}],
+      history: [
+        {ts: ago(600), wheel: L("Колесо фортуны", "Wheel of fortune"), user: VIEWERS[3], source: "reward", result: L("Приветствие в чат", "Chat greeting"), action: L("сообщение в чат", "chat message"), test: false, giveaway: false},
+        {ts: ago(1500), wheel: L("Колесо фортуны", "Wheel of fortune"), user: VIEWERS[5], source: "chat", result: L("Ничего", "Nothing"), action: "", test: false, giveaway: false}],
+      alerts: [{id: "da1", name: L("Аплодисменты", "Applause")}, {id: "da2", name: L("Звезда вечера", "Star of the night")}]};
   }
   function commands(real) {
     const custom = [
@@ -187,6 +235,10 @@
     "/pro/streams": () => streams(),
     "/precheck": () => ({disk_free_gb: 214, audio: {custom: false, found: true, output: "app"}, yandex: {enabled: false, token: false}, timers_on: 2, mod_on: true, alerts_on: true, captions_on: false, music_points: true}),
     "/remote": () => ({enabled: false, running: false, error: "", port: 8081, addresses: []}),
+    "/captions": (real, q) => captionsState(real),
+    "/models": () => speech(),
+    "/captions/devices": () => ({items: [{id: L("Микрофон (USB Audio)", "Microphone (USB Audio)")}]}),
+    "/wheel": () => wheelState(),
   };
   const PREFIX = [["/pro/streams/", p => streamDetail(decodeURIComponent(p.slice("/pro/streams/".length)))]];
   // «чтение» через POST: ответить можно, ничего не меняя

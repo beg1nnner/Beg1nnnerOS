@@ -341,6 +341,7 @@ public sealed partial class WebServer
         app.MapPost("/api/wheel/clear", H((c, b) => { _hub.Wheel.ClearQueue(); return Ok(_hub.Wheel.State()); }));
         app.MapPost("/api/wheel/remove", H((c, b) => { _hub.Wheel.Remove(b.Int("id")); return Ok(_hub.Wheel.State()); }));
         app.MapPost("/api/voice/test", H((c, b) => {
+            if (_hub.Models.ForVoice() == null) { _hub.Models.NeedModel(); throw new UserError("Сначала скачайте модель распознавания"); }
             _hub.Voice.StartTest(); _hub.Captions.Apply();
             _hub.Loop.Start(async () => { await Task.Delay(21000); _hub.Captions.Apply(); });   // по окончании проверки — вернуть как было
             return Ok(_hub.Voice.State());
@@ -351,7 +352,15 @@ public sealed partial class WebServer
             var (wake, cmd) = _hub.Voice.Detect(b.Str("text"));
             return Ok(new { wake, command = cmd?.Key ?? "", title = cmd?.Title ?? "" });
         }));
-        app.MapPost("/api/captions/download", H((c, b) => Ok(new { message = _hub.Captions.StartDownload(b.Str("engine"), b.Str("model")) })));
+        // модели распознавания: одни на субтитры и голосовые команды; загрузка — только по кнопке в панели
+        app.MapGet("/api/models", H((c, b) => Ok(_hub.Models.State())));
+        app.MapPost("/api/models/download", H((c, b) =>
+        {
+            var ids = (b.Arr("ids") ?? new JsonArray()).Select(x => x?.ToString() ?? "").ToList();
+            return Ok(new { message = _hub.Models.Download(ids), state = _hub.Models.State() });
+        }));
+        app.MapPost("/api/models/cancel", H((c, b) => { _hub.Models.Cancel(); return Ok(_hub.Models.State()); }));
+        app.MapPost("/api/models/delete", H((c, b) => Ok(new { message = _hub.Models.Delete(b.Str("id")), state = _hub.Models.State() })));
 
         // фильтр спама и ссылок
         app.MapGet("/api/mod", H((c, b) => Ok(_hub.Moderation.State())));
@@ -955,7 +964,7 @@ public sealed partial class WebServer
     private object StateObj() => new
     {
         version = Config.Version, ready = _hub.Readiness(), music = _hub.Music.State(),
-        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"), voice = _hub.Voice.Last(),
+        next_timer = _hub.Timers.NextInfo(), paused_events = _hub.Events.Paused, stream_safe = _hub.S.Bool("ui.stream_safe"), voice = _hub.Voice.Last(), models = _hub.Models.Brief(),
         alerts = new { pending = _hub.Alerts.Pending.Count, current = _hub.Alerts.Current, volume = _hub.S.Int("alerts.volume", 80) },
         port = Port, ui_theme = _hub.S.Str("ui.theme", "studio"),
         update = _hub.Updater.State(),

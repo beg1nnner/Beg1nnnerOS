@@ -112,7 +112,8 @@ public partial class App : Application
             case "pause_music": Hub.Music.TogglePause(); break;
             case "skip": Hub.Music.Skip("горячая клавиша"); break;
             case "captions_toggle":
-                ShowBalloon(L.T("Субтитры"), Hub.Captions.Toggle() ? L.T("Субтитры включены") : L.T("Субтитры выключены"));
+                try { ShowBalloon(L.T("Субтитры"), Hub.Captions.Toggle() ? L.T("Субтитры включены") : L.T("Субтитры выключены")); }
+                catch (Beg1nnnerOS.Twitch.UserError e) { ShowBalloon(L.T("Субтитры"), L.T(e.Message)); }   // модели нет — ничего не скачиваем
                 break;
             case "like_track":
                 try

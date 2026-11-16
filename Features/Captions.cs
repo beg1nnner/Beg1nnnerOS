@@ -24,21 +24,6 @@ namespace Beg1nnnerOS.Features;
 /// </summary>
 public sealed class Captions : IDisposable
 {
-    public sealed record ModelInfo(string Key, string File, string Title, int SizeMb, string Fallback);
-
-    public static readonly ModelInfo[] WhisperModels =
-    {
-        new("tiny", "ggml-tiny-q5_1.bin", "Tiny · 32 МБ · для слабых ПК", 32, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin"),
-        new("base", "ggml-base-q5_1.bin", "Base · 60 МБ · рекомендуем", 60, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"),
-        new("small", "ggml-small-q5_1.bin", "Small · 190 МБ · точнее, нужен мощный ПК", 190, "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin"),
-    };
-    public static readonly ModelInfo[] VoskModels =
-    {
-        new("ru", "vosk-model-small-ru-0.22.zip", "Русский · 45 МБ", 45, "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip"),
-        new("en", "vosk-model-small-en-us-0.15.zip", "English · 40 МБ", 40, "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"),
-    };
-    private const string ModelsRelease = "https://github.com/beg1nnner/Beg1nnnerOS/releases/download/models/";
-
     // Whisper иногда «слышит» в тишине фразы из обучающих субтитров — их не показываем
     private static readonly Regex Hallucination = new(
         @"продолжение следует|субтитр|dimatorzok|редактор|корректор|спасибо за просмотр|подписывайтесь|thank you for watching|thanks for watching|please subscribe|^\W*$|^\s*\[.*\]\s*$|^\s*\(.*\)\s*$",
@@ -54,10 +39,8 @@ public sealed class Captions : IDisposable
     public string Status { get; private set; } = "выключены";
     public bool Running { get; private set; }
 
-    // загрузка модели
-    private string _dlKey = "";
-    private double _dlProgress;
-    private string _dlError = "";
+    /// <summary>Модель, на которой сейчас работает распознавание (общая для субтитров и голосовых команд).</summary>
+    public SpeechModels.Model CurrentModel { get; private set; }
 
     // захват и распознавание
     private WaveInEvent _wave;
@@ -91,97 +74,7 @@ public sealed class Captions : IDisposable
         _ => "",
     };
     private JsonObject Cfg => _hub.S.Obj("captions") ?? new JsonObject();
-    public static string ModelsDir => Path.Combine(Config.Root, "models");
-
-    // ---------- модели ----------
-    private static ModelInfo FindModel(string engine, string key) =>
-        (engine == "vosk" ? VoskModels : WhisperModels).FirstOrDefault(m => m.Key == key)
-        ?? (engine == "vosk" ? VoskModels[0] : WhisperModels[1]);
-
-    private static string ModelPath(ModelInfo m) =>
-        m.File.EndsWith(".zip") ? Path.Combine(ModelsDir, m.File[..^4]) : Path.Combine(ModelsDir, m.File);
-
-    public static bool HasModel(string engine, string key)
-    {
-        var p = ModelPath(FindModel(engine, key));
-        return engine == "vosk" ? Directory.Exists(p) : File.Exists(p) && new FileInfo(p).Length > 1_000_000;
-    }
-
-    private (string Engine, ModelInfo Model) Current()
-    {
-        var c = Cfg;
-        var engine = c.Str("engine", "whisper") == "vosk" ? "vosk" : "whisper";
-        var key = engine == "vosk" ? (c.Str("lang", "ru") == "en" ? "en" : "ru") : c.Str("model", "base");
-        return (engine, FindModel(engine, key));
-    }
-
-    /// <summary>Скачивает модель: сначала с GitHub (релиз «models»), если нет — с исходного сайта.</summary>
-    public string StartDownload(string engine, string key)
-    {
-        if (_dlKey != "") throw new UserError("Модель уже скачивается");
-        var m = FindModel(engine == "vosk" ? "vosk" : "whisper", key);
-        if (HasModel(engine, m.Key)) return "Модель уже скачана";
-        _dlKey = engine + ":" + m.Key; _dlProgress = 0; _dlError = "";
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                Directory.CreateDirectory(ModelsDir);
-                var tmp = Path.Combine(ModelsDir, m.File + ".part");
-                Exception last = null;
-                foreach (var url in new[] { ModelsRelease + m.File, m.Fallback })
-                {
-                    try { await Download(url, tmp, m.SizeMb); last = null; break; }
-                    catch (Exception e) { last = e; }
-                }
-                if (last != null) throw last;
-                if (m.File.EndsWith(".zip"))
-                {
-                    var dir = ModelPath(m);
-                    if (Directory.Exists(dir)) Directory.Delete(dir, true);
-                    ZipFile.ExtractToDirectory(tmp, ModelsDir, true);
-                    File.Delete(tmp);
-                    if (!Directory.Exists(dir)) throw new IOException("в архиве нет папки модели");
-                }
-                else File.Move(tmp, ModelPath(m), true);
-                _hub.Loop.Post(() =>
-                {
-                    _hub.Log.Add("system", $"Субтитры: модель «{m.Title}» скачана");
-                    Apply();
-                });
-            }
-            catch (Exception e)
-            {
-                _dlError = e is HttpRequestException or TaskCanceledException
-                    ? "не удалось скачать модель — проверьте интернет (GitHub или huggingface.co)"
-                    : e.Message;
-                _hub.Loop.Post(() => _hub.Log.Error("Субтитры: " + _dlError));
-            }
-            finally { _dlKey = ""; }
-        });
-        return "Скачиваю модель…";
-    }
-
-    private async Task Download(string url, string path, int sizeMb)
-    {
-        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd($"Beg1nnnerOS/{Config.Version}");
-        using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-        resp.EnsureSuccessStatusCode();
-        var total = resp.Content.Headers.ContentLength ?? sizeMb * 1024L * 1024;
-        await using var src = await resp.Content.ReadAsStreamAsync();
-        await using var dst = File.Create(path);
-        var buf = new byte[1 << 16];
-        long done = 0;
-        int n;
-        while ((n = await src.ReadAsync(buf)) > 0)
-        {
-            await dst.WriteAsync(buf.AsMemory(0, n));
-            done += n;
-            _dlProgress = Math.Min(1, done / (double)Math.Max(1, total));
-        }
-        if (done < total * 0.95) throw new IOException("файл скачался не полностью");
-    }
+    // Модели распознавания (список, папка, загрузка только по кнопке) — в SpeechModels, общие с голосовыми командами.
 
     // ---------- включение / выключение ----------
     /// <summary>Применяет настройки: запускает или останавливает распознавание.</summary>
@@ -189,15 +82,17 @@ public sealed class Captions : IDisposable
     {
         var c = Cfg;
         var voice = _hub.Voice.Wants;
-        var (engine, model) = Current();
+        // субтитры включены — модель субтитров (на ней же слушаются голосовые команды); только команды — быстрая модель для них
+        var model = c.Bool("enabled") ? _hub.Models.ForCaptions() : voice ? _hub.Models.ForVoice() : null;
+        var engine = model?.Engine ?? "";
         // распознаватель один на субтитры и голосовые команды; перезапускаем, только если изменилось что-то для него важное
-        var sig = string.Join("|", c.Bool("enabled") || voice, c.Str("device"), engine, model.Key, c.Str("lang"), c.Str("show"), c.Bool("gpu", true), c.Int("threads"), voice && c.Str("show") == "en");
+        var sig = string.Join("|", c.Bool("enabled") || voice, c.Str("device"), model?.Id, c.Str("lang"), c.Str("show"), c.Bool("gpu", true), c.Int("threads"), voice && c.Str("show") == "en");
         if (Running && sig == _sig) { Status = StatusText(engine); return; }
         Stop();
         _sig = "";
         if (!c.Bool("enabled") && !voice) { Status = "выключены"; return; }
-        if (!HasModel(engine, model.Key)) { Status = "нужно скачать модель"; return; }
-        try { Start(engine, model, c); _sig = sig; }
+        if (model == null) { Status = "нужно скачать модель"; return; }   // сами ничего не скачиваем
+        try { Start(engine, model, c); _sig = sig; CurrentModel = model; }
         catch (Exception e)
         {
             Stop();
@@ -209,6 +104,11 @@ public sealed class Captions : IDisposable
     public bool Toggle()
     {
         var on = !Cfg.Bool("enabled");
+        if (on && _hub.Models.ForCaptions() == null)
+        {
+            _hub.Models.NeedModel();   // панель покажет «Сначала скачайте модель распознавания» с переходом к карточке
+            throw new UserError("Сначала скачайте модель распознавания");
+        }
         _hub.S.Set("captions.enabled", on);
         _hub.Settings.Save();
         Apply();
@@ -216,14 +116,14 @@ public sealed class Captions : IDisposable
         return on;
     }
 
-    private void Start(string engine, ModelInfo model, JsonObject c)
+    private void Start(string engine, SpeechModels.Model model, JsonObject c)
     {
         _cts = new CancellationTokenSource();
         _audio = new BlockingCollection<short[]>(new ConcurrentQueue<short[]>(), 400);
         var lang = c.Str("lang", "ru") == "en" ? "en" : "ru";
         var show = c.Str("show", "both");
         var token = _cts.Token;
-        var path = ModelPath(model);
+        var path = SpeechModels.PathOf(model);
         if (engine == "whisper") PrepareRuntime(c.Bool("gpu", true));
         _worker = engine == "vosk"
             ? Task.Factory.StartNew(() => VoskLoop(path, lang, show, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default)
@@ -258,6 +158,7 @@ public sealed class Captions : IDisposable
 
     public void Stop()
     {
+        CurrentModel = null;
         Running = false;
         try { _wave?.StopRecording(); } catch { }
         try { _wave?.Dispose(); } catch { }
@@ -477,7 +378,8 @@ public sealed class Captions : IDisposable
             lines = _lines.Select(l => (object)new { id = l.Id, text = l.Text, en = l.En, ts = l.Ts }).ToList();
             partial = _partial;
         }
-        var (engine, model) = Current();
+        var model = CurrentModel;
+        var engine = model?.Engine ?? (c.Str("engine", "whisper") == "vosk" ? "vosk" : "whisper");
         var style = new
         {
             style = c.Str("style", "classic"), font_size = c.Int("font_size", 30), position = c.Str("position", "bottom"),
@@ -489,13 +391,11 @@ public sealed class Captions : IDisposable
         {
             enabled = c.Bool("enabled"), running = Running, status = Status, lines, partial, speaking = _speaking,
             level = Math.Round(Math.Min(1, _level * 6), 3), now = ActionLog.Now, cfg = style,
-            engine, model = model.Key, has_model = HasModel(engine, model.Key), voice = _hub.Voice.State(),
+            engine, model = model?.Key ?? "", has_model = _hub.Models.ForCaptions() != null, voice = _hub.Voice.State(),
+            speech = _hub.Models.State(),
             accel = Running ? (engine == "whisper" ? _accel : "процессор") : "",
             speed = engine == "whisper" && Running ? _rtf : 0,
             restart_needed = engine == "whisper" && _runtimeGpu.HasValue && _runtimeGpu.Value != c.Bool("gpu", true),
-            download = new { active = _dlKey != "", key = _dlKey, progress = Math.Round(_dlProgress, 3), error = _dlError },
-            whisper_models = WhisperModels.Select(m => new { key = m.Key, title = m.Title, ready = HasModel("whisper", m.Key) }),
-            vosk_models = VoskModels.Select(m => new { key = m.Key, title = m.Title, ready = HasModel("vosk", m.Key) }),
         };
     }
 }

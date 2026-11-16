@@ -238,7 +238,7 @@ async function poll() {
       shownId = s.id; spin = s;
       $("stage").classList.add("show"); header(s);
       if (s.elapsed_ms >= s.duration_ms) { doneId = s.id; draw(s.sectors, s.result); showResult(s); }   // открыли уже после остановки
-      else if (s.elapsed_ms < -50) setTimeout(() => startSpin(Object.assign({}, s, {elapsed_ms: 0})), -s.elapsed_ms);
+      else if (s.elapsed_ms < -50) { draw(s.sectors); setTimeout(() => startSpin(Object.assign({}, s, {elapsed_ms: 0})), -s.elapsed_ms); }   // до старта — колесо уже видно
       else startSpin(s);
     } else if (!s && spin && !anim) {
       spin = null;

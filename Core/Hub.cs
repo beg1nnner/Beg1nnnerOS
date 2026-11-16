@@ -43,6 +43,7 @@ public sealed class Hub
     public readonly Features.Moderation Moderation;
     public readonly Features.ModerationExtra ModExtra;
     public readonly Features.CommandImport CommandImport;
+    public readonly Features.SpeechModels Models;
     public readonly Features.Captions Captions;
     public readonly Features.VoiceCommands Voice;
     public readonly Features.Wheel Wheel;
@@ -117,6 +118,7 @@ public sealed class Hub
         CommandImport = new Features.CommandImport(this);
         Voice = new Features.VoiceCommands(this);
         Wheel = new Features.Wheel(this);
+        Models = new Features.SpeechModels(this);
         Captions = new Features.Captions(this);
     }
 
@@ -135,6 +137,7 @@ public sealed class Hub
         Loop.Start(Votes.Run);
         Loop.Start(Wheel.Run);
         Loop.Post(() => Captions.Apply());
+        Models.CheckOnStartup();   // только проверка скачанных моделей; загрузка — исключительно по кнопке
         Loop.Start(Donations.Run);
         Loop.Start(YtDlp.UpdateIfNeeded);
         Loop.Start(Updater.Run);
