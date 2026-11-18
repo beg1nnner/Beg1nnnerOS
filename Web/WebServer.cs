@@ -564,7 +564,7 @@ public sealed partial class WebServer
         // «Проверка перед эфиром»: то, чего нет в общем состоянии (место на диске, звук, источники музыки)
         app.MapGet("/api/precheck", H((c, b) => Ok(Precheck())));
         // обложка трека с того же адреса, что и панель: только превью YouTube и обложки Яндекса (для цвета карточки)
-        app.MapGet("/api/cover", (HttpContext c) => CoverProxy(c));   // лямбда, чтобы ответ (IResult) записался
+        app.MapGet("/api/cover", (Func<HttpContext, Task<IResult>>)(c => CoverProxy(c)));   // явный тип: иначе это RequestDelegate и ответ (IResult) отбрасывается
         // пульт с телефона
         app.MapGet("/api/remote", H((c, b) => Ok(RemoteInfo())));
         app.MapPost("/api/remote", H(async (c, b) => Ok(await RemoteSet(b.Bool("enabled"), b.Bool("new_key")))));
