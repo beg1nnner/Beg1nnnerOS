@@ -484,16 +484,18 @@ public sealed partial class WebServer
             var items = new List<object>();
             if (File.Exists(path))
             {
-                string ver = null; List<string> cur = null;
+                string ver = null, note = ""; List<string> cur = null;
                 foreach (var raw in File.ReadLines(path))
                 {
                     var line = raw.Trim();
                     if (line.StartsWith("## "))
                     {
-                        if (ver != null) items.Add(new { version = ver, items = cur });
+                        if (ver != null) items.Add(new { version = ver, note, items = cur });
                         if (items.Count >= 5) { ver = null; break; }
-                        ver = line[3..].Trim(); cur = new List<string>();
+                        ver = line[3..].Trim(); cur = new List<string>(); note = "";
                     }
+                    else if (ver != null && line.StartsWith("> "))
+                        note = (note == "" ? "" : note + " ") + L.T(line[2..].Trim());   // слово от автора — показывается целиком
                     else if (ver != null && line.StartsWith("- "))
                     {
                         var t = L.T(line[2..].Trim());
@@ -502,7 +504,7 @@ public sealed partial class WebServer
                         cur.Add(t);
                     }
                 }
-                if (ver != null && items.Count < 5) items.Add(new { version = ver, items = cur });
+                if (ver != null && items.Count < 5) items.Add(new { version = ver, note, items = cur });
             }
             return Ok(new { items });
         }));

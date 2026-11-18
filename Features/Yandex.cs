@@ -89,10 +89,15 @@ public sealed class YandexMusic
 
     public async Task<string> DirectLink(string id)
     {
-        var infos = (await Request(HttpMethod.Get, $"/tracks/{id}/download-info") as JsonArray ?? new JsonArray())
+        var all = (await Request(HttpMethod.Get, $"/tracks/{id}/download-info") as JsonArray ?? new JsonArray())
+            .OfType<JsonNode>().ToList();
+        // без подписки Плюс Яндекс отдаёт 30-секундный отрывок (preview) — такой файл как песню не играем
+        var infos = all.Where(i => !i.Bool("preview"))
             .OrderByDescending(i => i.Str("codec") == "mp3")
             .ThenByDescending(i => i.Int("bitrateInKbps"))
             .ToList();
+        if (infos.Count == 0 && all.Count > 0)
+            throw new YandexException("в Яндекс Музыке доступен только отрывок (нужна подписка Плюс)");
         foreach (var info in infos)
         {
             var url = info.Str("downloadInfoUrl");

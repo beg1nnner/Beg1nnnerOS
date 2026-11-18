@@ -549,6 +549,10 @@
   .incl span::before { content:""; width:14px; height:14px; flex:none; background:var(--ok); -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat; }
   .chl-v { display:flex; gap:var(--sp-4); padding:var(--sp-3) 0; border-top:1px solid var(--hair); }
   .chl-v:first-child { border-top:0; padding-top:0; }
+  .chl-body { min-width:0; flex:1; }
+  .chl-note { display:flex; gap:var(--sp-2); align-items:flex-start; margin:0 0 var(--sp-3); padding:var(--sp-3) var(--sp-4); border-radius:var(--r-md);
+    background:color-mix(in srgb, var(--accent) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent) 25%, transparent); line-height:1.5; }
+  .chl-note .ic { flex:none; margin-top:2px; color:var(--heart, var(--accent2)); }
   .chl-v .pill { flex:none; align-self:flex-start; color:var(--accent2); background:color-mix(in srgb, var(--accent) 14%, transparent); border-color:transparent; }
   .chl-v ul { margin:0; padding-left:var(--sp-5); font-size:var(--fs-base); line-height:1.5; }
   .masonry { column-count:2; column-gap:var(--sp-5); }
@@ -3050,6 +3054,11 @@ async function poll(pushed) {
   // ничего не играет: вместо прочерка — пустое состояние, полоса прогресса скрыта, кнопки управления треком неактивны
   document.querySelector("#p-live .np").classList.toggle("idle", !c);
   ["np-pause", "np-skip", "np-block", "np-like"].forEach(id => $(id).disabled = !c);
+  // трек не заиграл / сменилось устройство звука — сообщаем стримеру, а не пропускаем молча
+  if (m.notice && m.notice.id !== window.MUS_NOTICE) {
+    if (window.MUS_NOTICE !== undefined && m.notice.text && !DEMO.on) toast(m.notice.text, true);
+    window.MUS_NOTICE = m.notice.id;
+  }
   if (m.restored && !window.RESTORE_SHOWN) { window.RESTORE_SHOWN = true; toast(m.restored + " — заказы зрителей не потерялись"); }
   if ($("fb-liked-n")) $("fb-liked-n").textContent = m.liked_count ? `(${m.liked_count})` : "";
   $("np-who").textContent = c ? (c.requester ? "Заказ: " + c.requester : "Добавлен вручную") + (c.loading ? " · загрузка…" : c.paused ? " · пауза" : "")
@@ -3275,7 +3284,7 @@ async function loadChangelog() {
   if (CHL_DONE) return;
   let r; try { r = await api("/changelog"); } catch (e) { return; }
   CHL_DONE = true;
-  $("chl").innerHTML = (r.items || []).slice(0, 4).map(v => `<div class="chl-v"><span class="pill">${esc(v.version)}</span><ul>${v.items.slice(0, 4).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")
+  $("chl").innerHTML = (r.items || []).slice(0, 4).map(v => `<div class="chl-v"><span class="pill">${esc(v.version)}</span><div class="chl-body">${v.note ? `<p class="chl-note">${ICON.heart || ""}<span>${esc(v.note)}</span></p>` : ""}<ul>${v.items.slice(0, 4).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div></div>`).join("")
     || '<span class="muted small">История изменений недоступна</span>';
 }
 // ---------- сегмент-переключатели ----------

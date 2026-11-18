@@ -23,6 +23,8 @@ public sealed class Player
     public int Gen;
     public bool Paused;
     public string DeviceId = "";
+    /// <summary>Имя устройства, на котором играет текущий трек (для журнала).</summary>
+    public string DeviceName = "";
 
     /// <summary>Длина файла, с.</summary>
     public double Total
@@ -128,11 +130,36 @@ public sealed class Player
         return null;
     }
 
-    /// <summary>Запускает воспроизведение. onEnd(gen, ошибка) вызывается в контексте, где создан плеер.</summary>
-    public int Play(string path, Action<int, string> onEnd, double gainDb = 0, double startAt = 0, double fadeIn = 0)
+    /// <summary>Системное устройство вывода по умолчанию (как его выбирает WasapiOut без устройства).</summary>
+    private static string DefaultName()
+    {
+        try
+        {
+            using var en = new MMDeviceEnumerator();
+            return en.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console).FriendlyName;
+        }
+        catch { return "устройство по умолчанию"; }
+    }
+
+    /// <summary>
+    /// Запускает воспроизведение. onEnd(gen, ошибка) вызывается в контексте, где создан плеер.
+    /// useDefault — играть на системном устройстве по умолчанию, даже если выбрано другое (выбранное пропало).
+    /// </summary>
+    public int Play(string path, Action<int, string> onEnd, double gainDb = 0, double startAt = 0, double fadeIn = 0, bool useDefault = false)
     {
         Stop();
         var gen = ++Gen;
+        try { return Start(path, onEnd, gen, gainDb, startAt, fadeIn, useDefault); }
+        catch
+        {
+            // не оставляем открытый файл и наполовину созданный вывод (устройство занято, файл не открылся)
+            Stop();
+            throw;
+        }
+    }
+
+    private int Start(string path, Action<int, string> onEnd, int gen, double gainDb, double startAt, double fadeIn, bool useDefault)
+    {
         _reader = new MediaFoundationReader(path);
         if (startAt > 0.5)
         {
@@ -143,7 +170,8 @@ public sealed class Player
         GainDb = gainDb;
         _fade = fadeIn > 0.05 ? 0f : 1f;
         _vol = new VolumeSampleProvider(_gain) { Volume = _volume * _duck * _fade };
-        var device = FindDevice();
+        var device = useDefault ? null : FindDevice();
+        DeviceName = device?.FriendlyName ?? DefaultName();
         _out = device != null
             ? new WasapiOut(device, AudioClientShareMode.Shared, true, 200)
             : new WasapiOut(AudioClientShareMode.Shared, true, 200);

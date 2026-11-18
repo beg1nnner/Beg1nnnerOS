@@ -851,8 +851,51 @@ public sealed class Music
     {
         var sw = Stopwatch.StartNew();
         var p = await job.File;
+        EnsureComplete(t, p);
         AfterDownload(t, p, job.DownloadSec > 0 ? job.DownloadSec : sw.Elapsed.TotalSeconds);
         return p;
+    }
+
+    // ---------- проверка, что файл скачан целиком ----------
+    /// <summary>Длина звукового файла, с; −1 — не удалось прочитать (это решит плеер при запуске).</summary>
+    private static double FileSeconds(string path)
+    {
+        try
+        {
+            using var r = new NAudio.Wave.MediaFoundationReader(path);
+            return r.TotalTime.TotalSeconds;
+        }
+        catch { return -1; }
+    }
+
+    /// <summary>
+    /// Файл заметно короче трека: обрыв загрузки (вылет программы, выключение ПК, сбой сети)
+    /// или 30-секундный отрывок вместо песни. Короткие треки и треки без известной длины не проверяем.
+    /// </summary>
+    private static bool IsTruncated(Track t, double fileSec) =>
+        t.Duration >= 40 && fileSec > 0 && fileSec < t.Duration * 0.85 && t.Duration - fileSec > 8;
+
+    /// <summary>Проверяет свежескачанный файл. Обрезанный удаляется, а загрузка считается неудачной.</summary>
+    private void EnsureComplete(Track t, string path)
+    {
+        var sec = FileSeconds(path);
+        if (!IsTruncated(t, sec)) return;
+        try { File.Delete(path); } catch { }
+        _hub.Log.Add("skip", $"Файл «{Short(t.Title, 60)}» короче трека ({(int)sec} с из {t.Duration} с) — удалён");
+        throw new ResolveException(t.Vid.StartsWith("ym:") && sec <= 35
+            ? "в Яндекс Музыке доступен только отрывок (нужна подписка Плюс)"
+            : "файл скачался не полностью");
+    }
+
+    // ---------- уведомления в панели ----------
+    private int _noticeId;
+    private string _noticeText = "";
+
+    /// <summary>Сообщение стримеру в панели (всплывающее, с пометкой ошибки) — чтобы трек не пропадал молча.</summary>
+    private void Notice(string text)
+    {
+        _noticeId++;
+        _noticeText = text;
     }
 
     private void AfterDownload(Track t, string path, double sec)
@@ -867,6 +910,13 @@ public sealed class Music
     {
         Directory.CreateDirectory(Config.CacheDir);
         var cached = CachedFile(t.Vid);
+        if (cached != null && IsTruncated(t, FileSeconds(cached)))
+        {
+            // обрезанный файл от прошлых версий или после сбоя — иначе трек обрывался бы при каждом заказе
+            _hub.Log.Add("skip", $"В кэше обрезанный файл «{Short(t.Title, 60)}» — скачиваю заново");
+            try { File.Delete(cached); } catch { }
+            cached = null;
+        }
         if (cached != null)
         {
             if (t.Timing != null) { t.Timing.Download = 0; t.Timing.Cache += (t.Timing.Cache == "" ? "" : ", ") + "файл"; }
@@ -876,15 +926,32 @@ public sealed class Music
         {
             var path = Path.Combine(Config.CacheDir, "ym_" + t.Vid[3..] + ".mp3");
             var url = await _hub.Yandex.DirectLink(t.Vid[3..]);
-            var bytes = await _hub.Http.GetByteArrayAsync(url);
-            await File.WriteAllBytesAsync(path + ".tmp", bytes);
-            File.Move(path + ".tmp", path, true);
+            // пишем потоком во временный файл; в кэш попадает только полностью скачанный
+            var tmp = Path.Combine(Config.CacheDir, "ym_" + t.Vid[3..] + ".part.mp3");   // .mp3 в конце — чтобы файл открылся для проверки длины
+            try
+            {
+                using (var resp = await _hub.Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                {
+                    resp.EnsureSuccessStatusCode();
+                    var expected = resp.Content.Headers.ContentLength;
+                    await using (var src = await resp.Content.ReadAsStreamAsync())
+                    await using (var dst = File.Create(tmp))
+                        await src.CopyToAsync(dst);
+                    if (expected is > 0 && new FileInfo(tmp).Length != expected)
+                        throw new ResolveException("файл скачался не полностью");
+                }
+                EnsureComplete(t, tmp);
+                File.Move(tmp, path, true);
+            }
+            finally { try { if (File.Exists(tmp)) File.Delete(tmp); } catch { } }
             return path;
         }
         // сведения и звук — одним запуском yt-dlp (раньше сведения запрашивались ещё раз перед скачиванием)
         var job = _hub.YtDlp.Fetch(t.PageUrl != "" ? t.PageUrl : "https://www.youtube.com/watch?v=" + t.Vid, t.Source, Config.CacheDir);
         t.Job = job;
-        return await job.File;
+        var file = await job.File;
+        EnsureComplete(t, file);
+        return file;
     }
 
     private async Task PlayNext()
@@ -913,6 +980,7 @@ public sealed class Music
             Current = null;
             Wake();
             RefundPay(t, "не удалось открыть звук этого трека", false);
+            Notice($"Трек «{Short(t.Title, 60)}» пропущен — файл не открылся ({err})" + (t.Pay == "refunded" ? ". Баллы зрителю возвращены" : ""));
             await TellViewer(t, "не удалось открыть звук этого трека");
             return;
         }
@@ -945,14 +1013,17 @@ public sealed class Music
             if (Current != t) return null;   // пропущен во время загрузки — загрузка отменена, баллы уже обработаны
             var reason = Reason(e);
             // YouTube не отдал трек — пробуем найти этот же трек в Яндекс Музыке
-            var path = await YandexInstead(t, reason);
+            var (path, ymWhy) = await YandexInstead(t, reason);
             if (path != null) return path;
             Loading = false;
-            _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {reason}");
+            // причина целиком: и почему не YouTube, и почему не помогла Яндекс Музыка
+            var full = ymWhy != null ? $"YouTube: {reason}; Яндекс Музыка: {ymWhy}" : reason;
+            _hub.Log.Error($"Не удалось загрузить «{t.Title}»: {full}");
             if (Current == t) Current = null;
             Wake();
-            RefundPay(t, reason, false);
-            await TellViewer(t, reason);
+            RefundPay(t, full, false);
+            Notice($"Трек «{Short(t.Title, 60)}» пропущен — {full}" + (t.Pay == "refunded" ? ". Баллы зрителю возвращены" : ""));
+            await TellViewer(t, full);
             return null;
         }
         finally { Loading = false; }
@@ -1025,12 +1096,16 @@ public sealed class Music
         return Regex.Replace(s, @"\s{2,}", " ").Trim(' ', '-', '–', '—');
     }
 
-    /// <summary>Скачивает тот же трек из Яндекс Музыки. null — не нашёлся или запасной источник выключен.</summary>
-    private async Task<string> YandexInstead(Track t, string reason)
+    /// <summary>
+    /// Скачивает тот же трек из Яндекс Музыки. Path = null — не получилось; Why — почему (null, если Яндекс не пробовали:
+    /// запасной источник выключен или Яндекс не подключён).
+    /// </summary>
+    private async Task<(string Path, string Why)> YandexInstead(Track t, string reason)
     {
-        if (t.Vid.StartsWith("ym:") || !Cfg.Bool("yandex_fallback", true) || _hub.Yandex.Token == "") return null;
+        if (t.Vid.StartsWith("ym:") || !Cfg.Bool("yandex_fallback", true) || _hub.Yandex.Token == "") return (null, null);
         var query = CleanTitle(t.Title);
-        if (query.Length < 2) return null;
+        if (query.Length < 2) return (null, null);
+        var orig = (t.Vid, t.Title, t.PageUrl, t.Source, t.Duration);
         try
         {
             var y = await _hub.Yandex.Search(query);
@@ -1038,21 +1113,25 @@ public sealed class Music
             if (t.Duration > 0 && y.Duration > 0 && Math.Abs(t.Duration - y.Duration) > Math.Max(25, t.Duration * 0.15))
             {
                 _hub.Log.Add("skip", $"Яндекс Музыка: «{y.Title}» не похож по длительности на «{t.Title}» — не подменяю");
-                return null;
+                return (null, "нашёлся только другой вариант трека");
             }
-            if (Current != t) return null;
+            if (Current != t) return (null, null);
             var oldTitle = t.Title;
             t.Vid = "ym:" + y.Id; t.Title = y.Title; t.PageUrl = y.Url; t.Source = "yandex";
             if (y.Duration > 0) t.Duration = y.Duration;
             Loading = true;
             var path = await GetAudio(t);
             _hub.Log.Add("music", $"YouTube не отдал «{oldTitle}» ({reason}) — играет из Яндекс Музыки: {y.Title}");
-            return path;
+            Notice($"YouTube не отдал «{Short(oldTitle, 50)}» ({reason}) — играет из Яндекс Музыки");
+            return (path, null);
         }
         catch (Exception e)
         {
             _hub.Log.Add("skip", $"Яндекс Музыка как запасной источник: {e.Message}");
-            return null;
+            // подмена не удалась — возвращаем трек как был, чтобы в журнале и в чате было исходное название
+            _downloads.Remove(t.Vid);
+            (t.Vid, t.Title, t.PageUrl, t.Source, t.Duration) = orig;
+            return (null, e is ResolveException or YandexException ? e.Message : "ошибка ответа Яндекс Музыки");
         }
     }
 
@@ -1111,6 +1190,8 @@ public sealed class Music
     /// <summary>Запуск трека: в OBS (если выбран этот режим и OBS-страница на связи) или в программе.</summary>
     private void StartPlayback(Track t, string path, double startAt)
     {
+        _curPath = path;
+        _devRetries = 0;
         var fadeIn = _nextFade;
         _nextFade = 0;
         var gain = GainDb(t.Vid);
@@ -1145,6 +1226,8 @@ public sealed class Music
         _hub.Log.Add("music", $"Продолжаю «{t.Title}» в программе ({why})");
         try
         {
+            _curPath = _obsPath;
+            _devRetries = 0;
             Player.Play(_obsPath, OnEnd, GainDb(t.Vid), _obsPos);
             if (paused) Player.SetPaused(true);
         }
@@ -1278,10 +1361,50 @@ public sealed class Music
         };
     }
 
+    // ---------- устройство звука пропало посреди трека ----------
+    private string _curPath = "";
+    private int _devRetries;
+
+    /// <summary>
+    /// Воспроизведение оборвалось с ошибкой (выдернули наушники, отключили колонки, сменили устройство):
+    /// продолжаем тот же трек с того же места — сначала на выбранном устройстве, затем на системном по умолчанию.
+    /// true — трек продолжается.
+    /// </summary>
+    private bool ResumeAfterDeviceError(string error)
+    {
+        var t = Current;
+        if (t == null || _obsActive || _devRetries >= 3 || string.IsNullOrEmpty(_curPath) || !File.Exists(_curPath)) return false;
+        var pos = Player.Position;
+        var paused = Player.Paused;
+        var before = Player.DeviceName;
+        _devRetries++;
+        try
+        {
+            // первая попытка — снова «как в настройках» (если выбранного устройства больше нет, плеер сам возьмёт системное),
+            // дальше — принудительно системное по умолчанию
+            Player.Play(_curPath, OnEnd, GainDb(t.Vid), Math.Max(0, pos - 0.5), 0.3, useDefault: _devRetries > 1);
+            if (paused) Player.SetPaused(true);
+            var where = Player.DeviceName != before && before != "" ? $"«{before}» → «{Player.DeviceName}»" : $"«{Player.DeviceName}»";
+            _hub.Log.Error($"Звук: устройство перестало отвечать ({error}). «{t.Title}» продолжается с {(int)pos} с: {where}");
+            if (Player.DeviceName != before) Notice($"Устройство звука отключилось — музыка продолжается на «{Player.DeviceName}»");
+            return true;
+        }
+        catch (Exception e)
+        {
+            _hub.Log.Add("skip", $"Звук: не удалось продолжить на другом устройстве ({e.Message})");
+            return _devRetries < 3 && ResumeAfterDeviceError(error);
+        }
+    }
+
     private void OnEnd(int gen, string error)
     {
         if (gen != Player.Gen) return;
-        if (error != "") _hub.Log.Error($"Плеер: воспроизведение прервалось ({error})");
+        if (error != "" && ResumeAfterDeviceError(error)) return;
+        if (error != "")
+        {
+            _hub.Log.Error($"Плеер: воспроизведение прервалось ({error})");
+            if (Current != null) Notice($"Трек «{Short(Current.Title, 60)}» прервался: нет рабочего устройства звука ({error})");
+        }
         if (error == "") ConfirmPay(Current);   // доиграл до конца (короткий трек — раньше 30 секунд)
         else if (Current?.Pay == "pending" && Position < PaySeconds) RefundPay(Current, "воспроизведение прервалось");
         Current = null;
@@ -1957,6 +2080,7 @@ public sealed class Music
             votes = Votes.Count,
             votes_needed = Cfg.Int("skip_votes", 3),
             toast = new { id = ToastId, text = ToastText },
+            notice = new { id = _noticeId, text = _noticeText },
             output = Cfg.Str("output", "app"),
             fallback_status = FallbackStatus,
             liked_count = LikedItems.Count,
