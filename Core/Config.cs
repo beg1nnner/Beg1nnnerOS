@@ -10,7 +10,7 @@ public sealed record EventType(string Key, string Title, string[] Vars, string T
 public static class Config
 {
     public const string AppName = "Beg1nnnerOS";
-    public const string Version = "2.7.2";
+    public const string Version = "2.7.3";
     /// <summary>Адрес «Поблагодарить разработчика» — единственное место; панель получает его в /state.</summary>
     public const string SupportUrl = "https://www.donationalerts.com/r/beginner24";
     public const string RedirectUri = "http://localhost:4343/callback";
