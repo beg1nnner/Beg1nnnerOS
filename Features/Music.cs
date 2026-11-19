@@ -249,8 +249,8 @@ public sealed class Music
 
     /// <summary>
     /// Измеряет громкость скачанного файла в фоне: сначала первые 25 секунд (предварительная поправка, доли секунды),
-    /// затем весь файл (~1 с; это значение и попадает в кэш). Воспроизведение этого не ждёт:
-    /// если трек уже играет, поправка подтягивается плавно за 1,5 секунды.
+    /// затем весь файл (~1 с; это значение и попадает в кэш). Старт трека ждёт только предварительную оценку
+    /// (WaitQuickGain, не дольше 3 с); уточнение по всему файлу подтягивается плавно за 1,5 секунды.
     /// </summary>
     private Task StartMeasure(string vid, string path)
     {
@@ -259,6 +259,27 @@ public sealed class Music
         var task = MeasureBg(vid, path);
         _measuring[vid] = task;
         return task;
+    }
+
+    /// <summary>
+    /// Перед стартом ждём быструю оценку громкости по началу трека (обычно доли секунды, на слабом ПК — до 2–3 с).
+    /// Иначе новый трек первые секунды звучит без поправки (громкие треки — громко), а потом резко «проседает».
+    /// Не успели за 3 с — трек начинается с плавного нарастания, за которое поправка успевает подтянуться.
+    /// </summary>
+    private async Task WaitQuickGain(Track t, string path)
+    {
+        if (!Cfg.Bool("normalize", true) || _loud.ContainsKey(t.Vid) || _loudPartial.ContainsKey(t.Vid)) return;
+        _ = StartMeasure(t.Vid, path);
+        var sw = Stopwatch.StartNew();
+        while (sw.ElapsedMilliseconds < 3000 && _measuring.ContainsKey(t.Vid)
+               && !_loud.ContainsKey(t.Vid) && !_loudPartial.ContainsKey(t.Vid))
+            await Task.Delay(40);
+        if (t.Timing != null) t.Timing.Loudness = sw.Elapsed.TotalSeconds;
+        if (!_loud.ContainsKey(t.Vid) && !_loudPartial.ContainsKey(t.Vid))
+        {
+            _nextFade = Math.Max(_nextFade, 2.5);
+            _hub.Log.Add("skip", $"Громкость «{Short(t.Title, 60)}» ещё измеряется — трек начнётся с плавного нарастания");
+        }
     }
 
     private async Task MeasureBg(string vid, string path)
@@ -962,6 +983,8 @@ public sealed class Music
         Votes.Clear();
         var path = await LoadForPlay(t);
         if (path == null || Current != t) return;
+        await WaitQuickGain(t, path);
+        if (Current != t) return;
         var ok = TryStart(t, path, out var err);
         if (!ok)
         {
@@ -1056,7 +1079,7 @@ public sealed class Music
         if (tm == null || tm.Logged) return;
         tm.Logged = true;
         tm.Total = tm.Sw.Elapsed.TotalSeconds;
-        tm.Loudness = 0;   // старт не ждёт измерения громкости
+        if (tm.Loudness < 0) tm.Loudness = 0;   // старт ждёт только быструю оценку громкости (WaitQuickGain)
         var parts = new List<string>();
         if (tm.Priority >= 0) parts.Add("приоритет " + Sec(tm.Priority));
         if (tm.Search >= 0) parts.Add("поиск " + Sec(tm.Search));
